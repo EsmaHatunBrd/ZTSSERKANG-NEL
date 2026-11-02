@@ -1,0 +1,148 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/manrope";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Manrope Variable', 'Segoe UI', sans-serif;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-sari: var(--sari);
+    --color-marka: var(--marka);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    /* Zeytursan: koyu yeşil #183018 (ana marka), açık yeşil #80b840 (vurgu), krem-beyaz zemin #f7f8f3. */
+    --background: oklch(0.982 0.005 110);
+    --foreground: oklch(0.25 0.045 144);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.25 0.045 144);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.25 0.045 144);
+    --primary: oklch(0.282 0.052 144);
+    --primary-foreground: oklch(0.977 0.007 115.7);
+    --secondary: oklch(0.954 0.019 119.8);
+    --secondary-foreground: oklch(0.282 0.052 144);
+    --muted: oklch(0.954 0.019 119.8);
+    --muted-foreground: oklch(0.43 0.035 135);   /* daha koyu: küçük gri yazılar okunur kalsın */
+    --accent: oklch(0.939 0.034 121.5);
+    --accent-foreground: oklch(0.282 0.052 144);
+    --destructive: oklch(0.52 0.15 35);
+    --border: oklch(0.905 0.012 120);
+    --input: oklch(0.86 0.02 120);
+    --ring: oklch(0.55 0.14 135);
+    --marka: oklch(0.719 0.161 130.9);
+    --sari: oklch(0.967 0.05 101.1);
+    --chart-1: oklch(0.570 0.145 137.0);
+    --chart-2: oklch(0.563 0.133 251.2);
+    --chart-3: oklch(0.637 0.133 67.0);
+    --chart-4: oklch(0.574 0.149 302.4);
+    --chart-5: oklch(0.548 0.152 35.8);
+    --radius: 0.75rem;
+    --sidebar: oklch(0.992 0.004 115);
+    --sidebar-foreground: oklch(0.25 0.045 144);
+    --sidebar-primary: oklch(0.719 0.161 130.9);
+    --sidebar-primary-foreground: oklch(0.2 0.03 144);
+    --sidebar-accent: oklch(0.939 0.034 121.5);
+    --sidebar-accent-foreground: oklch(0.282 0.052 144);
+    --sidebar-border: oklch(0.89 0.02 120);
+    --sidebar-ring: oklch(0.55 0.14 135);
+}
+
+.dark {
+    --background: oklch(0.19 0.018 144.8);
+    --foreground: oklch(0.955 0.012 120);
+    --card: oklch(0.241 0.028 144.6);
+    --card-foreground: oklch(0.955 0.012 120);
+    --popover: oklch(0.241 0.028 144.6);
+    --popover-foreground: oklch(0.955 0.012 120);
+    --primary: oklch(0.719 0.161 130.9);
+    --primary-foreground: oklch(0.2 0.03 144);
+    --secondary: oklch(0.3 0.035 144.6);
+    --secondary-foreground: oklch(0.955 0.012 120);
+    --muted: oklch(0.3 0.035 144.6);
+    --muted-foreground: oklch(0.76 0.03 130);
+    --accent: oklch(0.32 0.05 140);
+    --accent-foreground: oklch(0.955 0.012 120);
+    --destructive: oklch(0.72 0.14 35);
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 16%);
+    --ring: oklch(0.719 0.161 130.9);
+    --marka: oklch(0.719 0.161 130.9);
+    --sari: oklch(0.34 0.055 100);
+    --chart-1: oklch(0.658 0.156 133.0);
+    --chart-2: oklch(0.645 0.140 253.4);
+    --chart-3: oklch(0.665 0.129 77.6);
+    --chart-4: oklch(0.644 0.151 298.3);
+    --chart-5: oklch(0.648 0.148 39.4);
+    --sidebar: oklch(0.2 0.022 144.7);
+    --sidebar-foreground: oklch(0.955 0.012 120);
+    --sidebar-primary: oklch(0.719 0.161 130.9);
+    --sidebar-primary-foreground: oklch(0.2 0.03 144);
+    --sidebar-accent: oklch(0.32 0.05 140);
+    --sidebar-accent-foreground: oklch(0.955 0.012 120);
+    --sidebar-border: oklch(1 0 0 / 12%);
+    --sidebar-ring: oklch(0.719 0.161 130.9);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    /* Kök ölçek 15px: 14px'te ince Manrope küçük ve soluk okunuyordu (26.10 kullanıcı geri bildirimi). */
+    font-size: 15px;
+    }
+  table {
+    font-variant-numeric: tabular-nums;
+    }
+  /* Klavye odağı: iki temada da belirgin 2px halka. Kendi halkasını tanımlayan bileşenler (outline-none + ring) bunu ezer. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    }
+}

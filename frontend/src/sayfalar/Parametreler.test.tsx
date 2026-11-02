@@ -1,0 +1,163 @@
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { http } from "msw";
+import { sunucu } from "@/test/msw/sunucu";
+import { dogrulamaHatasi } from "@/test/msw/isleyiciler";
+import { ayarlarIsleyicileri, yeniKayit, type YazimKaydi } from "@/test/msw/isleyiciler-ayarlar";
+import { kurSayfa } from "@/test/kur-ayarlar";
+import { bugunIso } from "@/yardimcilar/tarih";
+import Parametreler from "./Parametreler";
+
+beforeAll(() => sunucu.listen({ onUnhandledFrame: "error" }));
+afterEach(() => sunucu.resetHandlers());
+afterAll(() => sunucu.close());
+
+let kayit: YazimKaydi;
+beforeEach(() => {
+  localStorage.clear();
+  kayit = yeniKayit();
+  sunucu.use(...ayarlarIsleyicileri(kayit));
+});
+
+describe("Parametreler", () => {
+  it("grupları ve değerleri gösterir; dağıtım çarpanı salt okunurdur", async () => {
+    kurSayfa(<Parametreler />);
+    expect(await screen.findByRole("heading", { name: "Genel" })).toBeInTheDocument();
+    for (const g of ["Kurlar", "Faiz", "Stok süresi", "Teklif kâr oranları", "Dağıtım çarpanları"]) {
+      expect(screen.getByRole("heading", { name: new RegExp(g) })).toBeInTheDocument();
+    }
+    const satir = screen.getByText("enflasyon").closest("tr") as HTMLElement;
+    expect(await within(satir).findByText("25,00 %")).toBeInTheDocument();
+    expect(screen.getByText("Faz 3")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Değiştir dagitim_carpani.uretim" })).not.toBeInTheDocument();
+  });
+
+  it("neden boşsa gönderilmez", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Değiştir kur.USD" }));
+    await u.click(await screen.findByRole("button", { name: "Kaydet" }));
+    expect(await screen.findByText("Neden zorunlu")).toBeInTheDocument();
+    expect(kayit.parametre).toHaveLength(0);
+  });
+
+  it("genel kapsamda yeni değer ekler", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Değiştir kur.USD" }));
+    const d = await screen.findByLabelText(/Yeni değer/);
+    await u.clear(d);
+    await u.type(d, "52,5");
+    await u.type(screen.getByLabelText("Neden"), "Kur güncellemesi");
+    expect(screen.getByText(/kur\.USD.*52,5/)).toBeInTheDocument();
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(kayit.parametre).toHaveLength(1));
+    expect(kayit.parametre[0]).toEqual({
+      anahtar: "kur.USD",
+      govde: { deger: "52.5", gecerlilik_basi: bugunIso(), neden: "Kur güncellemesi", kapsam_tipi: "genel" },
+    });
+    expect(await screen.findByRole("status")).toHaveTextContent(/kur\.USD değeri kaydedildi/);
+  });
+
+  it("ürün kapsamında kapsam_id gönderir", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Değiştir satis_kar" }));
+    await u.click(await screen.findByLabelText("Yalnızca bir ürün için"));
+    await u.selectOptions(await screen.findByLabelText("Ürün"), "URUN-001");
+    const d = screen.getByLabelText(/Yeni değer/);
+    await u.clear(d);
+    await u.type(d, "0,3");
+    await u.type(screen.getByLabelText("Neden"), "Özel fiyat");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Kaydet" })).toBeEnabled());
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(kayit.parametre).toHaveLength(1));
+    expect(kayit.parametre[0].govde).toMatchObject({ deger: "0.3", kapsam_tipi: "urun", kapsam_id: 1 });
+  });
+
+  it("geçmişte 'Geri al' eski değeri yeni kayıt olarak POST eder", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Geçmiş kur.USD" }));
+    const li = (await screen.findByText("Sezon başı")).closest("li") as HTMLElement;
+    await u.click(within(li).getByRole("button", { name: /Geri al/ }));
+    expect(kayit.parametre).toHaveLength(0);
+    await u.click(await screen.findByRole("button", { name: "Onayla" }));
+    await waitFor(() => expect(kayit.parametre).toHaveLength(1));
+    expect(kayit.parametre[0]).toEqual({
+      anahtar: "kur.USD",
+      govde: {
+        deger: "45",
+        gecerlilik_basi: bugunIso(),
+        neden: "Geri alındı: 01.01.2026 değeri",
+        kapsam_tipi: "genel",
+        kapsam_id: null,
+      },
+    });
+  });
+
+  it("gerçekleşen senaryoda enflasyon kilitlidir ve açıklanır", async () => {
+    kurSayfa(<Parametreler />, 2);
+    await screen.findByRole("heading", { name: "Genel" });
+    expect(screen.getByText(/Gerçekleşen senaryoda enflasyon kilitlidir/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Değiştir enflasyon" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Değiştir kur.USD" })).toBeInTheDocument();
+  });
+
+  it("gerçekleşen senaryoda enflasyon geçmişinde Geri al yoktur, kur.USD'de vardır", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />, 2);
+    await u.click(await screen.findByRole("button", { name: "Geçmiş enflasyon" }));
+    await screen.findByText("Sezon başı");
+    expect(screen.queryByRole("button", { name: /Geri al/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/geri alınamaz/)).toBeInTheDocument();
+    await u.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByText("Sezon başı")).not.toBeInTheDocument());
+    await u.click(screen.getByRole("button", { name: "Geçmiş kur.USD" }));
+    await screen.findByText("Sezon başı");
+    expect(screen.getAllByRole("button", { name: /Geri al/ }).length).toBeGreaterThan(0);
+  });
+
+  it("geri al onay ister; sunucu hatası role=alert ile gösterilir", async () => {
+    const u = userEvent.setup();
+    sunucu.use(http.post("*/api/v1/parametreler/:anahtar/degerler", () => dogrulamaHatasi()));
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Geçmiş kur.USD" }));
+    const li = (await screen.findByText("Sezon başı")).closest("li") as HTMLElement;
+    await u.click(within(li).getByRole("button", { name: /Geri al/ }));
+    expect(await screen.findByText(/01\.01\.2026 tarihli 45 TL değeri bugünden itibaren geçerli olacak/)).toBeInTheDocument();
+    await u.click(screen.getByRole("button", { name: "Onayla" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/geçersiz/);
+  });
+
+  it("negatif parametre değeri (-0,05) kabul edilir ve POST edilir", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Değiştir enflasyon" }));
+    const d = await screen.findByLabelText(/Yeni değer/);
+    await u.clear(d);
+    await u.type(d, "-0,05");
+    await u.type(screen.getByLabelText("Neden"), "Deflasyon tahmini");
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(kayit.parametre).toHaveLength(1));
+    expect(kayit.parametre[0].govde).toMatchObject({ deger: "-0.05", kapsam_tipi: "genel" });
+  });
+
+  it("stok_ay.TL için -1 reddedilir, POST gitmez; sayı olmayan girdi 'Sayı olmalı' der", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Değiştir stok_ay.TL" }));
+    const d = await screen.findByLabelText(/Yeni değer/);
+    await u.clear(d);
+    await u.type(d, "-1");
+    await u.type(screen.getByLabelText("Neden"), "Deneme");
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    expect(await screen.findByText(/negatif olamaz/)).toBeInTheDocument();
+    await u.clear(d);
+    await u.type(d, "abc");
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    expect(await screen.findByText("Sayı olmalı")).toBeInTheDocument();
+    expect(kayit.parametre).toHaveLength(0);
+  });
+});
