@@ -1,8 +1,34 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
-fixtures/
-*.xlsx
-docs/parite-raporu-*.md
+*.egg-info/
+.pytest_cache/
+
+# Arayüz (frontend/.gitignore node_modules ve dist'i zaten kapsıyor; kökten de garanti)
+frontend/node_modules/
+frontend/src/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+.env
+.env.*
+!.env.example
+
+# Veri ve şirket dosyaları (hiçbiri depoya girmez)
 veri/
 *.db
+*.db-shm
+*.db-wal
+*.xlsx
+fixtures/
+docs/parite-raporu-*.md
+docs/ozel/
+
+# Yerel ayarlar ve geçici dosyalar
+.claude/settings.local.json
+.vscode/
+.idea/
+~$*
+Thumbs.db
+desktop.ini
