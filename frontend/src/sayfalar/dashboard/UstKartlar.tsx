@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Boxes, CircleAlert, PackageX, TrendingDown, TriangleAlert, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { yuzdeBicimle } from "@/yardimcilar/para";
 
 type Ton = "sakin" | "dikkat" | "hata";
 
@@ -76,13 +75,12 @@ interface Props {
   urunSayisi: number | null;
   /** Hesabı yapılamayan ürün sayısı; 0 ya da null ise kart gösterilmez. */
   hataSayisi: number | null;
+  /** Reçetede kullanılan fiyatsız malzeme sayısı (Veri Kontrolü ile aynı). */
   fiyatsizMalzeme: number | null;
   /** Uyarısı olan ürün sayısı (veri yoksa null -> "—"). */
   uyariliUrun?: number | null;
   /** Enflasyon eşiğinin altında kalan ürün sayısı (tüm ürünler, sunucudan; veri yoksa null -> "—"). */
   enflasyonAltinda?: number | null;
-  /** Payları 1'e eşit olmayan havuzlar. */
-  payKontrol: { havuz: string; toplam: string }[];
   /** Bağlantılara `?senaryo=` eklemek için. */
   senaryoId?: number | null;
   /** "Enflasyonun altında" kartı: tabloyu bu ürünlere süzer. */
@@ -97,7 +95,6 @@ export function UstKartlar({
   fiyatsizMalzeme,
   uyariliUrun = null,
   enflasyonAltinda = null,
-  payKontrol,
   senaryoId = null,
   onEnflasyonSuz,
   onHataSuz,
@@ -127,7 +124,7 @@ export function UstKartlar({
           deger={goster(fiyatsizMalzeme)}
           simge={PackageX}
           ton={fiyatsizMalzeme ? "dikkat" : "sakin"}
-          hedef={yol("/fiyatlar", "fiyatsiz=1")}
+          hedef={yol("/veri-kontrolu")}
         />
         <Kart
           baslik="Enflasyonun altındaki ürün"
@@ -138,19 +135,6 @@ export function UstKartlar({
           eylem="Göster"
         />
       </div>
-      {payKontrol.length > 0 && (
-        <div role="status" className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border bg-sari/60 px-3 py-2 text-sm">
-          <TriangleAlert className="size-4 shrink-0" aria-hidden />
-          <span>
-            <span className="font-medium">Gider paylarının toplamı %100 değil:</span>{" "}
-            {payKontrol.map((p) => `${p.havuz} (${yuzdeBicimle(p.toplam)})`).join(", ")}
-          </span>
-          <Link to={yol("/gider")} className="ml-auto inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline">
-            Gider Dağıtım&apos;da düzelt
-            <ArrowRight className="size-3.5" aria-hidden />
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

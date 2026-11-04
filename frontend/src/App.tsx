@@ -1,6 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { RouterProvider } from "react-router-dom";
+import { GirisKapisi } from "@/bilesenler/GirisKapisi";
 import { TooltipProvider } from "@/bilesenler/ui/tooltip";
 import { sorguIstemcisi } from "./api/sorguIstemcisi";
 import { yonlendirici } from "./yonlendirme";
@@ -11,7 +12,9 @@ export default function App() {
   return (
     <QueryClientProvider client={istemci}>
       <TooltipProvider>
-        <RouterProvider router={yon} />
+        <GirisKapisi>
+          <RouterProvider router={yon} />
+        </GirisKapisi>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -32,7 +32,12 @@ describe("taslakYamasi / taslakSayisi", () => {
     t = uygula(t, { parametreler: { "kur.USD": "52" }, urun: { hat: "Herbort" }, hedef: { dolum_personel: "7" } });
     expect(taslakSayisi(t)).toBe(5);
     // sunucudaki değere geri dönmek taslağı düşürür (kur.USD=50, hat=Niko, dolum=6, miktar=1)
-    t = uygula(t, { parametreler: { "kur.USD": "50.0" }, urun: { hat: "Niko" }, hedef: { dolum_personel: "6" }, satirlar: { 1: { miktar: "1.00" } } });
+    t = uygula(t, {
+      parametreler: { "kur.USD": "50.0" },
+      urun: { hat: "Niko" },
+      hedef: { dolum_personel: "6" },
+      satirlar: { 1: { miktar: "1.00" } },
+    });
     expect(taslak(t)).toEqual({ fire: "0.05" });
     expect(taslakSayisi(t)).toBe(1);
   });
@@ -131,7 +136,14 @@ describe("taslaktanKaydetGovdesi", () => {
     const g = taslaktanKaydetGovdesi(t, { ...temel, tarih: "2026-10-21", hesabiKaydet: false });
     expect(g.tarih).toBe("2026-10-21");
     expect(g.hesabi_kaydet).toBe(false);
-    expect(g.urun).toEqual({ ad: "Ürün A", ambalaj_hacmi: "720", hat: "Herbort", taze_tursu_sinifi: "Taze/Turşu", suzme_kg: "0.45", pazar: "Yurtiçi" });
+    expect(g.urun).toEqual({
+      ad: "Ürün A",
+      ambalaj_hacmi: "720",
+      hat: "Herbort",
+      taze_tursu_sinifi: "Taze/Turşu",
+      suzme_kg: "0.45",
+      pazar: "Yurtiçi",
+    });
     expect(g.uretim_hedefi).toMatchObject({ dolum_personel: "7", vardiya_uretim_adedi: "12000", pazarlama_yonetim_uygula: true });
     expect(g.recete).toBeUndefined();
   });
@@ -309,7 +321,14 @@ describe("Fix round 1: hat/sınıf değişince yetim gider oranları", () => {
   it("hat değişince elektrik_sn.<eski hat> düşer, dört _sn anahtarı ve mal kabul kalır", () => {
     const t = uygula(doldur(), { urun: { hat: "Herbort" } });
     expect(Object.keys(t.giderOranlari).sort()).toEqual(
-      ["diger_gug_sn", "dolum_iscilik_sn", "endirekt_iscilik_sn", "etiket_iscilik_sn", "mal_kabul_gug_kg.taze/turşu", "mal_kabul_iscilik_kg.taze/turşu"].sort(),
+      [
+        "diger_gug_sn",
+        "dolum_iscilik_sn",
+        "endirekt_iscilik_sn",
+        "etiket_iscilik_sn",
+        "mal_kabul_gug_kg.taze/turşu",
+        "mal_kabul_iscilik_kg.taze/turşu",
+      ].sort(),
     );
     expect(t.urun.hat).toBe("Herbort");
   });
@@ -328,5 +347,69 @@ describe("Fix round 1: hat/sınıf değişince yetim gider oranları", () => {
     t = uygula(t, { urun: { hat: "Niko" } }); // sunucu hattı
     expect(t.urun.hat).toBeUndefined();
     expect(t.giderOranlari).toEqual({});
+  });
+});
+
+describe("Elle gider hücreleri (Excel'de formül yerine yazılan I/K/M/P)", () => {
+  // Sunucu: elektrik satırının birim fiyatı elle 0, tutarı elle 0 (Excel 040 gibi); dolum formülle.
+  const tabanElle = {
+    ...urunExcelHesapYaniti,
+    satirlar: urunExcelHesapYaniti.satirlar.map((s) =>
+      s.kod === "elektrik" ? { ...s, birim_fiyat: "0", tutar: "0", elle_alanlar: ["birim_fiyat", "tutar"] } : s,
+    ),
+  };
+  const sunucuElle = sunucuDegerleri(tabanElle, recete);
+  const yaz = (t: Taslak, y: TaslakYamasi) => taslakYamasi(t, y, sunucuElle);
+
+  it("sunucuDegerleri kayıtlı elle hücreleri çıkarır; elle birim fiyat senaryo oranı sayılmaz", () => {
+    expect(sunucuElle.giderElle).toEqual({ elektrik: { birim_fiyat: "0", tutar: "0" } });
+    expect(Object.keys(sunucuElle.giderOranlari ?? {}).some((a) => a.startsWith("elektrik_sn"))).toBe(false);
+    expect(sunucuElle.giderOranlari?.dolum_iscilik_sn).toBe("925");
+  });
+
+  it("yazılan değer elle olur; kayıtlı değerle aynısı düşer; formüle dönmek yalnız kayıtlı elle varsa taslakta kalır", () => {
+    let t = yaz(taslakBos(), { giderElle: { dolum_iscilik: { tutar: "20" }, elektrik: { tutar: "0.0" } } });
+    expect(t.giderElle).toEqual({ dolum_iscilik: { tutar: "20" } });
+    t = yaz(t, { giderElle: { elektrik: { birim_fiyat: null }, dolum_iscilik: { miktar: null } } });
+    expect(t.giderElle).toEqual({ dolum_iscilik: { tutar: "20" }, elektrik: { birim_fiyat: null } });
+    expect(taslakSayisi(t)).toBe(2);
+  });
+
+  it("override ve kaydet gövdesi kayıtlı + taslak tam haritayı yollar (null = kaldırıldı)", () => {
+    const t = yaz(taslakBos(), { giderElle: { dolum_iscilik: { tutar: "20" }, elektrik: { birim_fiyat: null } } });
+    const beklenen = { elektrik: { tutar: "0" }, dolum_iscilik: { tutar: "20" } };
+    expect(taslaktanOverride(t, recete, sunucuElle.giderElle)?.gider_elle).toEqual(beklenen);
+    const urun = { ad: "Ürün A", ambalaj_hacmi: "720", hat: "Niko", taze_tursu_sinifi: "Taze/Turşu", suzme_kg: "0.45", pazar: "Yurtiçi" };
+    const g = taslaktanKaydetGovdesi(t, {
+      senaryoId: 1,
+      neden: "elle",
+      hesabiKaydet: false,
+      urun,
+      recete,
+      giderElle: sunucuElle.giderElle,
+    });
+    expect(g.gider_elle).toEqual(beklenen);
+    expect(taslaktanOverride(taslakBos(), recete, sunucuElle.giderElle)).toBeUndefined();
+  });
+
+  it("değişiklik listesi ve kayıtlı override listesi elle hücreleri okunur adla gösterir", () => {
+    const t = yaz(taslakBos(), { giderElle: { dolum_iscilik: { tutar: "20" }, elektrik: { tutar: null } } });
+    const l = degisiklikListesi(t, sunucuElle).filter((x) => x.alan.startsWith("gider_elle."));
+    expect(l.map((x) => [x.etiket, x.eski, x.yeni])).toEqual([
+      ["Dolum işçilik · elle tutar", "formül", "20"],
+      ["Elektrik · elle tutar", "0", "formüle döner"],
+    ]);
+    expect(kayitliOverrideListesi({ gider_elle: { diger_gug: { tutar: "10" } } })).toEqual([
+      { etiket: "Diğer GÜG · elle tutar", deger: "10" },
+    ]);
+  });
+
+  it("reçete kaydı Excel'den gelen elle Z/S ve para birimini korur", () => {
+    const r = recete.map((x) => (x.sira === 3 ? { ...x, zs_elle: "S", para_birimi_elle: "USD" } : x));
+    const t = taslakYamasi(taslakBos(), { satirlar: { 1: { miktar: "2" } } }, sunucuDegerleri(urunExcelHesapYaniti, r));
+    const urun = { ad: "Ürün A", ambalaj_hacmi: "720", hat: "Niko", taze_tursu_sinifi: "Taze/Turşu", suzme_kg: "0.45", pazar: "Yurtiçi" };
+    const g = taslaktanKaydetGovdesi(t, { senaryoId: 1, neden: "x", hesabiKaydet: false, urun, recete: r });
+    expect(g.recete?.[2]).toMatchObject({ zs_elle: "S", para_birimi_elle: "USD" });
+    expect(g.recete?.[0].zs_elle).toBeUndefined();
   });
 });

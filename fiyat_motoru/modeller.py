@@ -35,6 +35,8 @@ class ReceteSatiri:
     birim_fiyat_elle: Decimal | None = None   # elle girilen birim fiyat; varsa fiyat listesi atlanır
     alt_satiri_var: bool = False   # reçete ağacında altında (daha derin seviyeli) satırlar var: maliyeti alt satırlardan gelir,
                                    # fiyat listesinde olmaması beklenir -> "fiyat listesinde yok" uyarısı verilmez (fiyat girilebilir)
+    zs_elle: str | None = None     # Excel N sütununa elle yazılmış Z/S; varsa malzeme kartının Z/S'si yerine kullanılır
+    para_birimi_elle: str | None = None   # Excel O sütununa elle yazılmış para birimi; varsa kartınkinin yerine kullanılır
 
 
 @dataclass(frozen=True)
@@ -118,12 +120,38 @@ class GiderOranlari:
     yonetim_adet: dict[Decimal, Decimal]           # hacim -> G70:G91
 
 
+# Gider satırlarının kararlı anahtarları (MaliyetSatiri.kod) ve Excel ürün sayfasındaki etiketleri (satır 104-113, 118-119).
+GIDER_KALEMLERI = {
+    "mal_kabul_iscilik": "Mal Kabul ve Fermantasyon Giderleri", "dolum_iscilik": "Dolum Doğrudan İşçilik Giderleri",
+    "etiket_iscilik": "Etiketleme İşçilik Giderleri", "endirekt_iscilik": "Endirekt İşçilik Giderleri",
+    "mal_kabul_gug": "Mal Kabul ve Fermantasyon Genel Üretim Giderleri", "elektrik": "Elektrik Giderleri",
+    "dogalgaz": "Doğalgaz Giderleri", "amortisman": "Amortisman Giderleri", "diger_gug": "Diğer Genel Üretim Giderleri",
+    "pazarlama": "PAZARLAMA SATIŞ GİDERLERİ", "yonetim": "GENEL YÖNETİM GİDERLERİ",
+}
+# Elle yazılabilen gider hücreleri: alan adı -> Excel sütunu.
+GIDER_ELLE_ALANLARI = {"miktar": "I", "brut_miktar": "K", "birim_fiyat": "M", "tutar": "P"}
+
+
+@dataclass(frozen=True)
+class GiderElle:
+    """Gider satırında formül yerine elle yazılan hücreler (Excel I/K/M/P). None olan hücre formülle hesaplanır;
+    elle değer Excel'deki gibi sonraki hücrelere akar (I -> K -> P, M -> P)."""
+    miktar: Decimal | None = None
+    brut_miktar: Decimal | None = None
+    birim_fiyat: Decimal | None = None
+    tutar: Decimal | None = None
+
+    def dolu_alanlar(self) -> tuple[str, ...]:
+        return tuple(a for a in GIDER_ELLE_ALANLARI if getattr(self, a) is not None)
+
+
 @dataclass(frozen=True)
 class UrunGirdisi:
     kod: str
     ad: str
     recete: tuple[ReceteSatiri, ...]
     uretim: UretimBilgisi
+    gider_elle: dict[str, GiderElle] = field(default_factory=dict)   # gider kalemi anahtarı -> elle yazılmış hücreler
 
 
 @dataclass
@@ -140,6 +168,7 @@ class MaliyetSatiri:
     tutar_firesiz: Decimal = SIFIR       # fire uygulanmamış tutar
     miktar_kaynagi: str = "fire"         # 'fire' | 'elle' | '-' (gider satırları)
     fiyat_kaynagi: str = "liste"         # 'liste' | 'elle' | '-' (gider satırları)
+    elle_alanlar: tuple[str, ...] = ()   # gider satırı: elle yazılmış hücreler (GIDER_ELLE_ALANLARI anahtarları)
 
 
 @dataclass

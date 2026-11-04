@@ -1,4 +1,5 @@
 """F2/F3: Reçete satırının TL tutarı ve malzeme toplamı. Excel 001!P6:P99 ve P100."""
+from dataclasses import replace
 from decimal import Decimal
 from .fire import brut_miktar
 from .modeller import Malzeme, MaliyetSatiri, Parametreler, ReceteSatiri
@@ -10,6 +11,13 @@ DOVIZLER = ("USD", "EUR", "GBP", "CHF")
 def malzeme_tutari(satir: ReceteSatiri, malzeme: Malzeme | None, p: Parametreler) -> tuple[MaliyetSatiri, str | None]:
     elle_miktar = satir.brut_miktar_elle is not None
     elle_fiyat = satir.birim_fiyat_elle is not None
+    if satir.zs_elle or satir.para_birimi_elle:
+        # Excel N/O sütunu elle yazılmış: bu satır için kartın Z/S'si ve para birimi yerine. Kart yoksa ve fiyat elle
+        # girilmişse satır kendi Z/S + para birimiyle hesaplanır (Excel: M elle × kur).
+        if malzeme is None and elle_fiyat:
+            malzeme = Malzeme(kod=satir.malzeme_kodu, ad=satir.ad, tip=None, birim=satir.birim, para_birimi=None, fiyat=SIFIR, zs=None)
+        if malzeme is not None:
+            malzeme = replace(malzeme, zs=satir.zs_elle or malzeme.zs, para_birimi=satir.para_birimi_elle or malzeme.para_birimi)
     brut = satir.brut_miktar_elle if elle_miktar else brut_miktar(satir.miktar, satir.fire_orani)
     fiyat = satir.birim_fiyat_elle if elle_fiyat else (malzeme.fiyat if malzeme is not None else SIFIR)
     uyari = None

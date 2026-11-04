@@ -324,14 +324,16 @@ def _excel_tam_yukle(s: Session, excel_yolu: Path, sezon_ad: str, senaryo_ad: st
         if not (tamamla and s.scalar(select(m.UretimHedefi.id).where(m.UretimHedefi.urun_id == u.id, m.UretimHedefi.senaryo_id == sen.id)) is not None):
             hesap_servisi.uretim_hedefi_kaydet(s, u.id, sen.id, kullanici, vardiya_uretim_adedi=ub.vardiya_uretim_adedi, dolum_personel=ub.dolum_personel,
                                                etiketleme_adedi=ub.etiketleme_adedi, etiket_personel=ub.etiket_personel, mal_kabul_miktar_kg=ub.mal_kabul_miktar_kg,
-                                               mal_kabul_fire=ub.mal_kabul_fire, pazarlama_yonetim_uygula=ub.pazarlama_yonetim_uygula)
+                                               mal_kabul_fire=ub.mal_kabul_fire, pazarlama_yonetim_uygula=ub.pazarlama_yonetim_uygula,
+                                               gider_elle=girdi.gider_elle)
         seviyeler = recete_seviyeleri_oku(wb_v[ad])
         if len(seviyeler) != len(girdi.recete):
             ozet["uyarilar"].append(f"{ad}: reçete seviye sayısı ({len(seviyeler)}) satır sayısıyla ({len(girdi.recete)}) eşleşmedi; seviye yazılmadı")
             seviyeler = [None] * len(girdi.recete)
         recete_servisi.yeni_versiyon(s, u.id, sen.id, [{"malzeme_kodu": r.malzeme_kodu, "ad": r.ad, "miktar": r.miktar, "birim": r.birim,
                                                         "fire_override": r.fire_orani, "dugum_tipi": r.dugum_tipi,
-                                                        "brut_miktar_elle": r.brut_miktar_elle, "birim_fiyat_elle": r.birim_fiyat_elle, "seviye": sv}
+                                                        "brut_miktar_elle": r.brut_miktar_elle, "birim_fiyat_elle": r.birim_fiyat_elle, "seviye": sv,
+                                                        "zs_elle": r.zs_elle, "para_birimi_elle": r.para_birimi_elle}
                                                        for r, sv in zip(girdi.recete, seviyeler)], "import", kullanici)
         ozet["urun"] += 1; ozet["recete"] += 1
 

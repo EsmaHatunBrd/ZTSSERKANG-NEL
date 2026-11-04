@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Columns3, Copy, Download, PackagePlus, Upload, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import type Decimal from "decimal.js";
-import { useGiderHavuzlari } from "@/api/sorgular/gider";
-import { useMalzemeler } from "@/api/sorgular/malzemeler";
+import { useTutarlilik } from "@/api/sorgular/tutarlilik";
 import { useUrunler } from "@/api/sorgular/urunler";
 import { useUyarilar } from "@/api/sorgular/uyarilar";
 import type { ApiHatasi } from "@/api/istemci";
@@ -170,8 +169,8 @@ export default function Dashboard() {
     boyut: BOYUT,
     gecici: gecici || undefined,
   });
-  const fiyatsiz = useMalzemeler(senaryoId, { fiyatsiz: true, boyut: 1 });
-  const havuzlar = useGiderHavuzlari(senaryoId);
+  // Fiyatsız malzeme sayısı Veri Kontrolü ile aynı kaynaktan: yalnız reçetede kullanılan fiyatsız malzemeler (tüm kartlar değil).
+  const tutarlilik = useTutarlilik(senaryoId);
   const uyarilar = useUyarilar(senaryoId);
 
   const satirlar = useMemo(() => urunler.data?.kayitlar ?? [], [urunler.data]);
@@ -416,8 +415,7 @@ export default function Dashboard() {
         hataSayisi={hataSayisi}
         uyariliUrun={uyarilar.data ? uyariHaritasi.size : null}
         enflasyonAltinda={enflasyonAltinda}
-        fiyatsizMalzeme={fiyatsiz.data?.toplam ?? null}
-        payKontrol={havuzlar.data?.pay_kontrol ?? []}
+        fiyatsizMalzeme={tutarlilik.data ? (tutarlilik.data.kontroller.find((k) => k.kod === "fiyatsiz")?.sayi ?? 0) : null}
         senaryoId={senaryoId}
         onEnflasyonSuz={() => setEnflasyon("altinda")}
         onHataSuz={() => setYalnizHatali(true)}

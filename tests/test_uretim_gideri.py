@@ -74,3 +74,26 @@ def test_vardiya_adedi_sifir_uyarir():
         satirlar, uyarilar = f(u, O, P)
         assert "vardiya üretim adedi 0, saniye bazlı giderler 0 alındı" in uyarilar
         assert uyarilar.count("vardiya üretim adedi 0, saniye bazlı giderler 0 alındı") == 1
+
+
+def test_elle_hucre_formulun_yerine_gecer_ve_excel_gibi_akar():
+    """Excel I/K/M/P: elle miktar brüte ve tutara akar (K = I x personel), elle fiyat tutara akar, elle tutar her şeyi ezer."""
+    from fiyat_motoru.modeller import GiderElle
+    elle = {"dolum_iscilik": GiderElle(miktar=D_(1)), "endirekt_iscilik": GiderElle(birim_fiyat=SIFIR),
+            "etiket_iscilik": GiderElle(brut_miktar=SIFIR), "diger_gug": GiderElle(tutar=D_(10))}
+    di, _ = direkt_iscilik(U, O, P, elle)
+    gug, _ = genel_uretim(U, O, P, elle)
+    t = {s.kod: s for s in di + gug}
+    assert t["dolum_iscilik"].brut_miktar == D_(13) and yakin(t["dolum_iscilik"].tutar, 13 * O.dolum_iscilik_sn)
+    assert t["dolum_iscilik"].elle_alanlar == ("miktar",)
+    assert t["endirekt_iscilik"].tutar == SIFIR and t["endirekt_iscilik"].elle_alanlar == ("birim_fiyat",)
+    assert t["etiket_iscilik"].tutar == SIFIR
+    assert t["diger_gug"].tutar == D_(10) and t["diger_gug"].elle_alanlar == ("tutar",)
+    assert t["elektrik"].elle_alanlar == ()   # elle hücresi olmayan satır formülle
+
+
+def test_elle_tutar_pazarlama_satirinda_da_gecerli():
+    from fiyat_motoru.modeller import GiderElle
+    satirlar, _ = diger_giderler(U, O, {"yonetim": GiderElle(tutar=SIFIR)})
+    t = {s.kod: s.tutar for s in satirlar}
+    assert t["yonetim"] == SIFIR and yakin(t["pazarlama"], D_("0.5048087845717276"))

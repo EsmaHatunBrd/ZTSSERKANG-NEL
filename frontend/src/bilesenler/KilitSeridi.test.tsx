@@ -27,7 +27,18 @@ beforeEach(() => {
   sunucu.use(
     http.get("*/api/v1/uretim-kapasitesi", () =>
       HttpResponse.json({
-        kayitlar: [{ urun_kodu: "URUN-001", urun_ad: "Test", net_kapasite: "1", net_sure: "1", toplam_kapasite: "1", toplam_sure: "1", hedef_uretim: "1", ortalama_isci: "1" }],
+        kayitlar: [
+          {
+            urun_kodu: "URUN-001",
+            urun_ad: "Test",
+            net_kapasite: "1",
+            net_sure: "1",
+            toplam_kapasite: "1",
+            toplam_sure: "1",
+            hedef_uretim: "1",
+            ortalama_isci: "1",
+          },
+        ],
         toplam: 1,
       }),
     ),
@@ -95,12 +106,12 @@ describe("Senaryo kilidi: şerit ve pasif yazma düğmeleri", () => {
 });
 
 describe("Menü ve rotalar", () => {
-  it("Değişiklik Günlüğü Kontrol grubunda, Arşiv Çalışma grubunda; rotalar tanımlı", () => {
+  it("Değişiklik Günlüğü Kontrol grubunda, Arşiv Kıyasla altında; rotalar tanımlı", () => {
     const grup = (ad: string) => MENU_GRUPLARI.find((g) => g.grup === ad)?.ogeler.map((o) => o.etiket);
     expect(grup("Kontrol")).toContain("Değişiklik Günlüğü");
-    expect(grup("Çalışma")).toContain("Arşiv");
+    expect(grup("Çalışma")).toContain("Kıyasla");
     expect(MENU.find((m) => m.etiket === "Değişiklik Günlüğü")?.yol).toBe("/gunluk");
-    expect(MENU.find((m) => m.etiket === "Arşiv")?.yol).toBe("/arsiv");
+    expect(MENU.find((m) => m.etiket === "Kıyasla")?.ekYollar).toContain("/arsiv");
     const yollar = rotalar[0].children.map((c) => c.path);
     expect(yollar).toEqual(expect.arrayContaining(["gunluk", "arsiv"]));
   });

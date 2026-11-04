@@ -31,12 +31,18 @@ describe("yönlendirme", () => {
     expect(urun?.yol).toBe("/urunler");
   });
 
+  it("Ana Sayfa'da sol panel yok; bir bölüm kartı seçilince panel açılır", async () => {
+    kur("/?senaryo=1");
+    const kart = await screen.findByRole("link", { name: /Parametreler/ });
+    expect(screen.queryByRole("navigation", { name: "Ana menü" })).not.toBeInTheDocument();
+    await userEvent.click(kart);
+    expect(await screen.findByRole("navigation", { name: "Ana menü" })).toBeInTheDocument();
+  });
+
   it("menü bağlantıları seçili senaryoyu ?senaryo= ile taşır", async () => {
     kur("/parametreler?senaryo=2");
     const menu = screen.getByRole("navigation", { name: "Ana menü" });
-    await waitFor(() =>
-      expect(within(menu).getByRole("link", { name: "Ürün Maliyeti" })).toHaveAttribute("href", "/urunler?senaryo=2"),
-    );
+    await waitFor(() => expect(within(menu).getByRole("link", { name: "Ürün Maliyeti" })).toHaveAttribute("href", "/urunler?senaryo=2"));
     expect(within(menu).getByRole("link", { name: "Teklifler" })).toHaveAttribute("href", "/teklifler?senaryo=2");
   });
 
@@ -68,10 +74,7 @@ describe("yönlendirme", () => {
     const Patlak = () => {
       throw new Error("deneme hatası");
     };
-    const yon = createMemoryRouter(
-      [{ path: "/", element: <Patlak />, errorElement: rotalar[0].errorElement }],
-      { initialEntries: ["/"] },
-    );
+    const yon = createMemoryRouter([{ path: "/", element: <Patlak />, errorElement: rotalar[0].errorElement }], { initialEntries: ["/"] });
     const sus = vi.spyOn(console, "error").mockImplementation(() => undefined);
     render(<RouterProvider router={yon} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Beklenmeyen bir hata oluştu");

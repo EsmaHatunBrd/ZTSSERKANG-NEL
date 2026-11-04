@@ -52,7 +52,7 @@ test("gerçekleşen: Excel'i Gerçekleşen türüyle yükle -> kıyas listesi, s
     "Malzeme fiyatları",
     "Reçete (miktar, fire, elle fiyat)",
     "Üretim bilgileri",
-    "Gider oranları",
+    "Giderler (oran ve elle)",
     "Döviz kurları",
     "Enflasyon",
   ]) {
@@ -60,6 +60,6 @@ test("gerçekleşen: Excel'i Gerçekleşen türüyle yükle -> kıyas listesi, s
   }
   await expect(page.getByRole("region", { name: "Parametreler" })).toContainText("kur.USD");
 
-  await page.goto("/?senaryo=1");
+  await page.goto("/genel-bakis?senaryo=1");
   await expect(page.getByRole("status", { name: "Gerçekleşen kıyası" })).toContainText("67 üründen", { timeout: DASHBOARD_BEKLEME_MS });
 });

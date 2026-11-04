@@ -176,6 +176,17 @@ class ReceteSatirGiris(BaseModel):
     brut_miktar_elle: Decimal | None = Field(default=None, ge=0)
     birim_fiyat_elle: Decimal | None = Field(default=None, ge=0)
     seviye: int | None = Field(default=None, ge=0)   # Excel A sütunu (0-3); yalnız gösterim
+    zs_elle: Literal["Z", "S"] | None = None          # elle Z/S (Excel N); boşsa malzeme kartınınki
+    para_birimi_elle: str | None = Field(default=None, max_length=8)   # elle para birimi (Excel O); boşsa kartınki
+
+
+class GiderElleGiris(BaseModel):
+    """Bir gider satırının elle yazılmış hücreleri (Excel I/K/M/P); boş (null) olan formülle hesaplanır."""
+    model_config = ConfigDict(extra="forbid")
+    miktar: Decimal | None = Field(default=None, ge=0)
+    brut_miktar: Decimal | None = Field(default=None, ge=0)
+    birim_fiyat: Decimal | None = Field(default=None, ge=0)
+    tutar: Decimal | None = Field(default=None, ge=0)
 
 
 class UretimOverride(BaseModel):
@@ -217,6 +228,8 @@ class OverrideGiris(BaseModel):
     satirlar: dict[int, SatirOverride] = {}        # sira >= 1; üst sınır serviste
     urun: UrunOverride | None = None
     gider_oranlari: dict[str, Decimal] = {}        # dolum_iscilik_sn | ... | mal_kabul_iscilik_kg.<sınıf> | elektrik_sn.<hat>; desen serviste
+    # Elle gider hücreleri (kalem -> hücreler). Verilirse kayıtlı elle hücrelerin TAMAMI yerine geçer ({} = hepsi formülle).
+    gider_elle: dict[str, GiderElleGiris] | None = None
 
     @field_validator("satirlar")
     @classmethod
@@ -299,6 +312,8 @@ class TopluKaydetGiris(BaseModel):
     recete: list[ReceteSatirGiris] | None = None
     parametreler: list[ParametreYazGiris] | None = None
     gider_havuzlari: list[HavuzTutarGiris] | None = None
+    # Elle gider hücreleri (kalem -> hücreler). Alan gönderilirse kayıtlıların TAMAMI bununla değişir (null/{} = hepsi formülle).
+    gider_elle: dict[str, GiderElleGiris] | None = None
     hesabi_kaydet: bool = True
     override: OverrideGiris | None = None   # kalıcı olmayan what-if değerleri: yalnız kaydedilen hesabın girdi_snapshot.override'ına girer
 
@@ -420,6 +435,7 @@ class UretimHedefiCikis(BaseModel):
     mal_kabul_miktar_kg: str
     mal_kabul_fire: str
     pazarlama_yonetim_uygula: bool
+    gider_elle: dict[str, dict[str, str]] | None = None   # elle gider hücreleri: kalem -> {miktar|brut_miktar|birim_fiyat|tutar: değer}
 
 
 class UrunCikis(BaseModel):
@@ -457,6 +473,8 @@ class ReceteSatiriCikis(BaseModel):
     brut_miktar_elle: str | None
     birim_fiyat_elle: str | None
     seviye: int | None = None
+    zs_elle: str | None = None
+    para_birimi_elle: str | None = None
 
 
 class ReceteSatiriFireli(ReceteSatiriCikis):
@@ -527,7 +545,10 @@ class HesapSatiri(BaseModel):
     brut_miktar_elle: str | None
     birim_fiyat_elle: str | None
     birim: str | None = None         # malzeme: reçete satırı birimi; gider: SN/KG/ADET (kod eşlemesi); eski snapshot'ta null
-    zs: str | None = None            # malzeme kartındaki Z/S (yalnız malzeme satırları)
+    zs: str | None = None            # geçerli Z/S (yalnız malzeme satırları): elle yazılmışsa o, yoksa malzeme kartındaki
+    zs_elle: bool | None = None      # Z/S reçete satırına elle yazılmış (Excel N)
+    doviz_elle: bool | None = None   # para birimi reçete satırına elle yazılmış (Excel O)
+    elle_alanlar: list[str] | None = None   # gider satırı: formül yerine elle yazılmış hücreler (miktar | brut_miktar | birim_fiyat | tutar)
     dugum_tipi: str | None = None    # yaprak | ara_mamul (yalnız reçete satırları)
     seviye: int | None = None        # reçete satırı seviyesi (yalnız malzeme satırları; eski snapshot'ta null)
 

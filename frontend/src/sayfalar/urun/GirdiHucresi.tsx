@@ -18,6 +18,8 @@ interface Props {
   degisti?: boolean;
   /** Değişmeden önceki (kayıtlı) değerin okunur metni. */
   eski?: string;
+  /** İlk çizimde odaklan (metinden girdiye geçilen hücre). */
+  otomatikOdak?: boolean;
 }
 
 /** Değişen hücrenin vurgusu (ortak sınıf: kenarlık + sarı zemin). */
@@ -27,11 +29,12 @@ export const DEGISTI_SINIFI = "border-marka bg-sari";
  * Satır/alan içi sayı girdisi: yazarken yerel metni korur (boşaltıp yeniden yazmaya izin verir),
  * odaktan çıkınca gösterilen değere döner. Değişen hücre vurgulanır, ipucu eski değeri söyler.
  */
-export function GirdiHucresi({ etiket, deger, onMetin, disabled, className, title, aciklama, onCik, degisti, eski }: Props) {
+export function GirdiHucresi({ etiket, deger, onMetin, disabled, className, title, aciklama, onCik, degisti, eski, otomatikOdak }: Props) {
   const [metin, setMetin] = useState<string | null>(null);
   return (
     <Input
       aria-label={etiket}
+      autoFocus={otomatikOdak}
       title={title ?? (degisti && eski !== undefined ? `Eski değer: ${eski}` : undefined)}
       aria-description={aciklama}
       data-degisti={degisti ? "true" : undefined}

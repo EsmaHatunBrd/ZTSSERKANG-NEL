@@ -110,10 +110,10 @@ export default function UrunMaliyeti() {
     if (senaryoId === null) return null;
     const g: Sema["HesaplaGiris"] = { senaryo_id: senaryoId };
     if (tarih) g.tarih = tarih;
-    const o = taslaktanOverride(taslak, receteSatirlari);
+    const o = taslaktanOverride(taslak, receteSatirlari, sunucu.giderElle);
     if (o) g.override = o;
     return g;
-  }, [senaryoId, tarih, taslak, receteSatirlari]);
+  }, [senaryoId, tarih, taslak, receteSatirlari, sunucu.giderElle]);
 
   const receteHazir = !recete.isPending;
   const receteSurumu = recete.data?.id ?? null;
@@ -209,6 +209,7 @@ export default function UrunMaliyeti() {
         recete: receteSatirlari,
         kapsamSecimi: secim.kapsamSecimi,
         havuzlar,
+        giderElle: sunucu.giderElle,
       });
     } catch (e) {
       setKaydetHatasi(e instanceof Error ? e.message : "Kayıt hazırlanamadı");
@@ -440,6 +441,8 @@ export default function UrunMaliyeti() {
             uretim={sonuc.uretim}
             taslak={taslak.giderOranlari}
             sunucuOranlari={sunucu.giderOranlari}
+            taslakElle={taslak.giderElle}
+            sunucuElle={sunucu.giderElle}
             onTaslak={onTaslak}
           />
           <div className="grid gap-6 lg:grid-cols-2">

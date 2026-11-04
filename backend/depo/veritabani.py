@@ -45,7 +45,8 @@ def motor_olustur(url: str = AYARLAR.veritabani_url) -> Engine:
 EKSIK_KOLONLAR = (("recete_satiri", "seviye", "INTEGER"), ("urun", "aile", "VARCHAR(120)"),
                  ("senaryo", "kilitli", "BOOLEAN DEFAULT 0"), ("senaryo", "kaynak_dosya", "VARCHAR(200)"),
                  ("gider_havuzu", "taban_tutar", "VARCHAR(48)"), ("gider_havuzu", "carpanlar", "JSON"),
-                 ("urun", "aile_ad", "VARCHAR(120)"))
+                 ("urun", "aile_ad", "VARCHAR(120)"), ("uretim_hedefi", "gider_elle", "JSON"),
+                 ("recete_satiri", "zs_elle", "VARCHAR(1)"), ("recete_satiri", "para_birimi_elle", "VARCHAR(8)"))
 
 
 def eksik_kolonlari_tamamla(engine: Engine) -> list[str]:

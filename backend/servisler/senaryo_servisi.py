@@ -90,7 +90,7 @@ def _receteleri_kopyala(s: Session, kaynak_id: int, hedef_id: int, kullanici: st
         yeni = m.Recete(urun_id=r.urun_id, senaryo_id=hedef_id, versiyon=1, kaynak="kopya", aktif=True, olusturan=kullanici)
         yeni.satirlar = [m.ReceteSatiri(sira=x.sira, malzeme_kodu=x.malzeme_kodu, ad=x.ad, miktar=x.miktar, birim=x.birim, fire_override=x.fire_override,
                                         dugum_tipi=x.dugum_tipi, brut_miktar_elle=x.brut_miktar_elle, birim_fiyat_elle=x.birim_fiyat_elle, seviye=x.seviye,
-                                        olusturan=kullanici) for x in r.satirlar]
+                                        zs_elle=x.zs_elle, para_birimi_elle=x.para_birimi_elle, olusturan=kullanici) for x in r.satirlar]
         s.add(yeni); n += 1
     s.flush()
     return n
@@ -152,7 +152,8 @@ def _hedefleri_kopyala(s: Session, kaynak_id: int, hedef_id: int, kullanici: str
     for h in s.scalars(select(m.UretimHedefi).where(m.UretimHedefi.senaryo_id == kaynak_id).order_by(m.UretimHedefi.id)):
         if h.urun_id not in aktif:
             continue
-        s.add(m.UretimHedefi(urun_id=h.urun_id, senaryo_id=hedef_id, olusturan=kullanici, **{a: getattr(h, a) for a in hesap_servisi.URETIM_ALANLARI})); n += 1
+        s.add(m.UretimHedefi(urun_id=h.urun_id, senaryo_id=hedef_id, olusturan=kullanici, gider_elle=h.gider_elle,
+                             **{a: getattr(h, a) for a in hesap_servisi.URETIM_ALANLARI})); n += 1
     s.flush()
     return n
 

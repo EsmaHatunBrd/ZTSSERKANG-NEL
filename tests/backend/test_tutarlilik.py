@@ -9,7 +9,7 @@ from backend.servisler import import_servisi as ims, tutarlilik_servisi as ts
 from backend.uygulama import uygulama_olustur
 
 KODLAR = ["hesaplanamayan", "parametre_eksik", "fiyatsiz", "malzeme_karti", "pay", "hat", "parametre_uyari", "recetesiz", "gecici_kod",
-          "uretim_adetleri"]
+          "uretim_adetleri", "elle_hucre"]
 
 
 @pytest.fixture(scope="module")
@@ -40,7 +40,10 @@ def test_gercek_kitapta_bilinen_sorunlar(ortam):
     assert eslesmeyen and sum(o["etiket"].startswith("02.") for o in eslesmeyen) > len(eslesmeyen) * 0.9
     assert any("Mısır" in o["etiket"] for o in k["hat"]["ogeler"])
     assert k["malzeme_karti"]["sayi"] > 0
-    assert d["ozet"] == {d_: sum(1 for x in d["kontroller"] if x["durum"] == d_) for d_ in ("hata", "dikkat", "tamam")}
+    # Excel'de formül yerine elle yazılmış hücreler sorun değil, bilgi: 022'de dolum tutarı 20 ve diğer GÜG tutarı 10
+    assert k["elle_hucre"]["durum"] == "bilgi"
+    assert any("Dolum işçilik: tutar (P) 20" in o["aciklama"] and "Diğer GÜG: tutar (P) 10" in o["aciklama"] for o in k["elle_hucre"]["ogeler"])
+    assert d["ozet"] == {d_: sum(1 for x in d["kontroller"] if x["durum"] == d_) for d_ in ("hata", "dikkat", "tamam", "bilgi")}
 
 
 def test_sorun_yaratilinca_ilgili_kontrol_doner(ortam):

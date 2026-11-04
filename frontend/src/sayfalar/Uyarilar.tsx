@@ -6,6 +6,7 @@ import type { Uyari } from "@/api/tipler";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Badge } from "@/bilesenler/ui/badge";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { KONTROL_SEKMELERI, SayfaSekmeleri } from "@/bilesenler/SayfaSekmeleri";
 
 export type UyariKategorisi = "fiyat" | "kur" | "hat" | "sinif" | "yurtdisi" | "vardiya" | "diger";
 
@@ -123,7 +124,8 @@ export default function Uyarilar() {
   const url = (kod: string) => `/urunler/${encodeURIComponent(kod)}?senaryo=${senaryoId}`;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-4">
+      <SayfaSekmeleri etiket="Kontrol türü" sekmeler={KONTROL_SEKMELERI} />
       <SayfaBasligi baslik="Uyarılar" altBaslik="Seçili senaryodaki tüm ürünlerin hesap uyarıları, türüne göre." />
 
       {hata ? (

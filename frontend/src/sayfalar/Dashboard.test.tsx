@@ -7,6 +7,7 @@ import { http, HttpResponse } from "msw";
 import { sunucu } from "@/test/msw/sunucu";
 import { SenaryoSaglayici } from "@/bilesenler/SenaryoSecici";
 import { dashboardSatirlari, senaryolar } from "@/test/fikstur/urunler";
+import { tutarlilikSorunlu } from "@/test/fikstur/tutarlilik";
 import Dashboard, { SUTUN_ANAHTARI } from "./Dashboard";
 
 /** Tüm isteğe bağlı sütun gruplarını açık kaydeder (varsayılan tablo sadedir). */
@@ -60,7 +61,7 @@ describe("Dashboard", () => {
     expect(within(hataKarti).getByText("1")).toBeInTheDocument();
     await waitFor(() => {
       const k = screen.getByText("Fiyatsız malzeme").parentElement as HTMLElement;
-      expect(within(k).getByText("2")).toBeInTheDocument();
+      expect(within(k).getByText("0")).toBeInTheDocument();
     });
   });
 
@@ -133,24 +134,22 @@ describe("Dashboard", () => {
     expect(await screen.findByText(/Kapak M-77 fiyat listesinde yok/)).toBeInTheDocument();
   });
 
-  it("pay toplamı uyarısı yalnızca pay_kontrol doluysa görünür", async () => {
-    kur();
-    await yuklendi();
-    expect(screen.queryByText(/Gider paylarının toplamı %100 değil/)).not.toBeInTheDocument();
-  });
-
-  it("pay_kontrol doluysa uyarı kartı havuzu listeler", async () => {
+  it("fiyatsız malzeme kartı Veri Kontrolü sayısını gösterir (tüm kartlar değil); pay uyarısı ayrı şerit olarak tekrarlanmaz", async () => {
     sunucu.use(
+      http.get("*/api/v1/tutarlilik", () => HttpResponse.json(tutarlilikSorunlu)),
       http.get("*/api/v1/gider-havuzlari", () =>
         HttpResponse.json({ kayitlar: [], toplam: 0, pay_kontrol: [{ havuz: "uretim", toplam: "0.9" }] }),
       ),
     );
     kur();
     await yuklendi();
-    expect(await screen.findByText(/Gider paylarının toplamı %100 değil/)).toBeInTheDocument();
-    expect(screen.getByText(/uretim/)).toBeInTheDocument();
-    // M1: pay toplamı ham ondalık değil yüzde olarak gösterilir.
-    expect(screen.getByText(/uretim \(90,0 %\)/)).toBeInTheDocument();
+    await waitFor(() => {
+      const k = screen.getByRole("link", { name: /Fiyatsız malzeme/ });
+      expect(k).toHaveTextContent("2");
+      expect(k).toHaveAttribute("href", "/veri-kontrolu?senaryo=1");
+    });
+    expect(screen.getByRole("status", { name: "Veri Kontrolü" })).toBeInTheDocument();
+    expect(screen.queryByText(/Gider paylarının toplamı %100 değil/)).not.toBeInTheDocument();
   });
 
   it("M3: hiç senaryo yoksa boş veritabanı yönergesi ve Veri Aktar bağlantısı gösterilir", async () => {
@@ -204,9 +203,7 @@ describe("Dashboard", () => {
 
   it("API hatasında hata mesajı gösterir", async () => {
     sunucu.use(
-      http.get("*/api/v1/urunler", () =>
-        HttpResponse.json({ hata: "sunucu", mesaj: "sunucu hatası", alanlar: {} }, { status: 500 }),
-      ),
+      http.get("*/api/v1/urunler", () => HttpResponse.json({ hata: "sunucu", mesaj: "sunucu hatası", alanlar: {} }, { status: 500 })),
     );
     kur();
     expect(await screen.findByRole("alert")).toHaveTextContent("sunucu hatası");

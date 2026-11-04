@@ -15,6 +15,12 @@ def _ondalik_veya_none(x) -> Decimal | None:
     return None if x is None else Decimal(x)
 
 
+def _metin_veya_none(x) -> str | None:
+    """Elle Z/S / para birimi: kırpılmış büyük harf; boşsa None (karttaki değer kullanılır)."""
+    x = (x or "").strip().upper()
+    return x or None
+
+
 def yeni_versiyon(s: Session, urun_id: int, senaryo_id: int, satirlar: list[dict], kaynak: str, kullanici: str = "sistem") -> m.Recete:
     if not satirlar:
         raise DogrulamaHatasi("reçete boş olamaz")
@@ -27,7 +33,8 @@ def yeni_versiyon(s: Session, urun_id: int, senaryo_id: int, satirlar: list[dict
                                  dugum_tipi=d.get("dugum_tipi", "yaprak"),
                                  brut_miktar_elle=_ondalik_veya_none(d.get("brut_miktar_elle")),
                                  birim_fiyat_elle=_ondalik_veya_none(d.get("birim_fiyat_elle")),
-                                 seviye=d.get("seviye")) for i, d in enumerate(satirlar)]
+                                 seviye=d.get("seviye"), zs_elle=_metin_veya_none(d.get("zs_elle")),
+                                 para_birimi_elle=_metin_veya_none(d.get("para_birimi_elle"))) for i, d in enumerate(satirlar)]
     s.add(r); s.flush()
     return r
 
@@ -44,7 +51,8 @@ def kurallara_birak(s: Session, urun_id: int, senaryo_id: int, siralar: list[int
     satirlar = [{"malzeme_kodu": x.malzeme_kodu, "ad": x.ad, "miktar": x.miktar, "birim": x.birim, "dugum_tipi": x.dugum_tipi,
                  "fire_override": None if x.sira in secili else x.fire_override,
                  "brut_miktar_elle": None if (elle_degerleri_kaldir and x.sira in secili) else x.brut_miktar_elle,
-                 "birim_fiyat_elle": x.birim_fiyat_elle, "seviye": x.seviye} for x in r.satirlar]
+                 "birim_fiyat_elle": x.birim_fiyat_elle, "seviye": x.seviye, "zs_elle": x.zs_elle,
+                 "para_birimi_elle": x.para_birimi_elle} for x in r.satirlar]
     return yeni_versiyon(s, urun_id, senaryo_id, satirlar, "elle", kullanici)
 
 
@@ -145,6 +153,6 @@ def fire_uygulanmis(s: Session, recete: m.Recete, senaryo_id: int, tarih: date,
             kaynak = "elle"
         satirlar.append(MotorSatir(malzeme_kodu=rs_.malzeme_kodu, ad=rs_.ad, miktar=rs_.miktar, fire_orani=oran, birim=rs_.birim,
                                    dugum_tipi=rs_.dugum_tipi, brut_miktar_elle=brut_elle, birim_fiyat_elle=rs_.birim_fiyat_elle,
-                                   alt_satiri_var=alt_satiri_var))
+                                   alt_satiri_var=alt_satiri_var, zs_elle=rs_.zs_elle, para_birimi_elle=rs_.para_birimi_elle))
         kaynaklar.append(kaynak)
     return satirlar, kaynaklar

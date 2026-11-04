@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.exceptions import RequestValidationError
@@ -9,8 +9,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from .depo.veritabani import oturum_ver
 from .servisler import isitici, onbellek
-from .servisler.hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi, KilitliHatasi
-from .api import senaryolar, parametreler, malzemeler, gider, urunler, teklifler, fire, import_, disa_aktar, kapasite, satis, karsilastirma, aktarim, gunluk, kiyas, tutarlilik
+from .servisler.hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi, KilitliHatasi, KimlikHatasi, YetkiHatasi
+from .api import senaryolar, parametreler, malzemeler, gider, urunler, teklifler, fire, import_, disa_aktar, kapasite, satis, karsilastirma, aktarim, gunluk, kiyas, tutarlilik, kimlik
+from .api.bagimliliklar import kimlik_denetle
 
 
 def _hata(kod: int, hata: str, mesaj: str, alanlar: dict | None = None, ayrinti_kodu: str | None = None) -> JSONResponse:
@@ -28,8 +29,14 @@ def onbellegi_temizlemeli_mi(yontem: str, yol: str) -> bool:
     return not (yol.endswith("/hesapla") or yol == "/api/v1/import/fiyat-listesi")
 
 
-def uygulama_olustur(oturum_bagimliligi=None) -> FastAPI:
+def giris_zorunlu_mu() -> bool:
+    """GIRIS_ZORUNLU=0 giriş ekranını kapatır (testler, eski tek kullanıcılı kurulum). Varsayılan: açık."""
+    return os.environ.get("GIRIS_ZORUNLU", "1").strip().lower() not in ("0", "false", "hayir")
+
+
+def uygulama_olustur(oturum_bagimliligi=None, giris_zorunlu: bool | None = None) -> FastAPI:
     app = FastAPI(title="Fiyat Çalışması API", version="0.2.0")
+    app.state.giris_zorunlu = giris_zorunlu_mu() if giris_zorunlu is None else giris_zorunlu
     onbellek.temizle()   # yeni uygulama = temiz başlangıç (testlerde uygulamalar arası sızıntı olmaz)
 
     @app.middleware("http")
@@ -42,8 +49,10 @@ def uygulama_olustur(oturum_bagimliligi=None) -> FastAPI:
                 isitici.yazma_sonrasi(str(request.base_url))   # arka planda yeniden hesapla: kullanıcı dashboard'u soğuk bulmasın
     kokenler = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
     app.add_middleware(CORSMiddleware, allow_origins=kokenler, allow_methods=["*"], allow_headers=["*"])
-    for r in (senaryolar, parametreler, malzemeler, gider, urunler, teklifler, fire, import_, disa_aktar, kapasite, satis, karsilastirma, aktarim, gunluk, kiyas, tutarlilik):
-        app.include_router(r.router, prefix="/api/v1")
+    # Giriş ekranının uçları (giriş, çıkış, ben, şifre) denetimsiz; diğer tüm uçlar oturum ve rol denetiminden geçer.
+    app.include_router(kimlik.acik_router, prefix="/api/v1")
+    for r in (senaryolar, parametreler, malzemeler, gider, urunler, teklifler, fire, import_, disa_aktar, kapasite, satis, karsilastirma, aktarim, gunluk, kiyas, tutarlilik, kimlik):
+        app.include_router(r.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
     if oturum_bagimliligi is not None:
         app.dependency_overrides[oturum_ver] = oturum_bagimliligi
 
@@ -58,6 +67,14 @@ def uygulama_olustur(oturum_bagimliligi=None) -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def _422b(_: Request, e: RequestValidationError):
         return _hata(422, "dogrulama", "istek gövdesi geçersiz", {".".join(str(p) for p in x["loc"]): x["msg"] for x in e.errors()})
+
+    @app.exception_handler(KimlikHatasi)
+    async def _401(_: Request, e: KimlikHatasi):
+        return _hata(401, "giris", e.mesaj, e.alanlar, e.kod)
+
+    @app.exception_handler(YetkiHatasi)
+    async def _403(_: Request, e: YetkiHatasi):
+        return _hata(403, "yetki", e.mesaj, e.alanlar, e.kod)
 
     @app.exception_handler(KilitliHatasi)
     async def _409k(_: Request, e: KilitliHatasi):

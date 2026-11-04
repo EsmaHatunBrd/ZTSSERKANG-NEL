@@ -4,6 +4,80 @@
  */
 
 export interface paths {
+    "/api/v1/kimlik/ben": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ben
+         * @description Giriş zorunlu değilse {giris_zorunlu: false}. Zorunluysa oturumdaki kullanıcı; oturum yoksa 401.
+         */
+        get: operations["ben_api_v1_kimlik_ben_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kimlik/giris": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Giris */
+        post: operations["giris_api_v1_kimlik_giris_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kimlik/cikis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cikis */
+        post: operations["cikis_api_v1_kimlik_cikis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kimlik/sifre": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sifre Degistir
+         * @description Kendi şifresi (geçici şifreyle ilk girişte de bu kullanılır). Diğer cihazlardaki oturumlar kapanır.
+         */
+        post: operations["sifre_degistir_api_v1_kimlik_sifre_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/senaryolar": {
         parameters: {
             query?: never;
@@ -165,7 +239,8 @@ export interface paths {
         };
         /**
          * Listele
-         * @description revize=1: yalnız geçerli fiyatı ilk bütçeden (senaryodaki en eski kayıt) farklı olanlar.
+         * @description revize=1: yalnız geçerli fiyatı ilk bütçeden (senaryodaki en eski kayıt) farklı olanlar. arama: kod ya da adda geçen metin
+         *     (Türkçe büyük/küçük harf duyarsız); sayfalamadan ÖNCE süzülür, aranan malzeme hangi sayfada olursa olsun bulunur.
          */
         get: operations["listele_api_v1_malzemeler_get"];
         put?: never;
@@ -1301,6 +1376,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/kullanicilar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listele */
+        get: operations["listele_api_v1_kullanicilar_get"];
+        put?: never;
+        /** Ekle */
+        post: operations["ekle_api_v1_kullanicilar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kullanicilar/{kullanici_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Guncelle */
+        patch: operations["guncelle_api_v1_kullanicilar__kullanici_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/kullanicilar/{kullanici_id}/sifre-sifirla": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sifre Sifirla */
+        post: operations["sifre_sifirla_api_v1_kullanicilar__kullanici_id__sifre_sifirla_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1735,6 +1862,15 @@ export interface components {
             bitis: string;
             /** Senaryolar */
             senaryolar: components["schemas"]["ArsivSenaryo"][];
+        };
+        /**
+         * BenCikis
+         * @description giris_zorunlu=false (eski kurulum / testler): kullanici null, arayüz giriş ekranı göstermez.
+         */
+        BenCikis: {
+            /** Giris Zorunlu */
+            giris_zorunlu: boolean;
+            kullanici: components["schemas"]["KullaniciCikis"] | null;
         };
         /**
          * BgKarsiSenaryoCikis
@@ -2373,6 +2509,20 @@ export interface components {
             /** Baz Miktar */
             baz_miktar: string;
         };
+        /**
+         * GiderElleGiris
+         * @description Bir gider satırının elle yazılmış hücreleri (Excel I/K/M/P); boş (null) olan formülle hesaplanır.
+         */
+        GiderElleGiris: {
+            /** Miktar */
+            miktar?: number | string | null;
+            /** Brut Miktar */
+            brut_miktar?: number | string | null;
+            /** Birim Fiyat */
+            birim_fiyat?: number | string | null;
+            /** Tutar */
+            tutar?: number | string | null;
+        };
         /** GiderHavuzlariCikis */
         GiderHavuzlariCikis: {
             /** Kayitlar */
@@ -2406,6 +2556,13 @@ export interface components {
             carpanlar: components["schemas"]["CarpanCikis"][];
             /** Anahtarlar */
             anahtarlar: components["schemas"]["GiderAnahtari"][];
+        };
+        /** GirisGiris */
+        GirisGiris: {
+            /** Kullanici Adi */
+            kullanici_adi: string;
+            /** Sifre */
+            sifre: string;
         };
         /** GrupGiris */
         GrupGiris: {
@@ -2677,6 +2834,12 @@ export interface components {
             birim?: string | null;
             /** Zs */
             zs?: string | null;
+            /** Zs Elle */
+            zs_elle?: boolean | null;
+            /** Doviz Elle */
+            doviz_elle?: boolean | null;
+            /** Elle Alanlar */
+            elle_alanlar?: string[] | null;
             /** Dugum Tipi */
             dugum_tipi?: string | null;
             /** Seviye */
@@ -2956,6 +3119,62 @@ export interface components {
             /** Adet */
             adet: number;
         };
+        /** KullaniciCikis */
+        KullaniciCikis: {
+            /** Id */
+            id: number;
+            /** Kullanici Adi */
+            kullanici_adi: string;
+            /** Ad */
+            ad: string;
+            /**
+             * Rol
+             * @enum {string}
+             */
+            rol: "genel_direktor" | "muhasebe" | "satin_alma" | "izleyici";
+            /** Rol Ad */
+            rol_ad: string;
+            /** Aktif */
+            aktif: boolean;
+            /** Sifre Degismeli */
+            sifre_degismeli: boolean;
+            /** Son Giris */
+            son_giris?: string | null;
+        };
+        /** KullaniciEkleGiris */
+        KullaniciEkleGiris: {
+            /** Kullanici Adi */
+            kullanici_adi: string;
+            /** Ad */
+            ad: string;
+            /**
+             * Rol
+             * @enum {string}
+             */
+            rol: "genel_direktor" | "muhasebe" | "satin_alma" | "izleyici";
+            /** Gecici Sifre */
+            gecici_sifre: string;
+        };
+        /** KullaniciGuncelleGiris */
+        KullaniciGuncelleGiris: {
+            /** Ad */
+            ad?: string | null;
+            /** Rol */
+            rol?: ("genel_direktor" | "muhasebe" | "satin_alma" | "izleyici") | null;
+            /** Aktif */
+            aktif?: boolean | null;
+        };
+        /** KullaniciListesi */
+        KullaniciListesi: {
+            /** Kayitlar */
+            kayitlar: components["schemas"]["KullaniciCikis"][];
+            /** Toplam */
+            toplam: number;
+            /** Roller */
+            roller: {
+                [key: string]: string;
+            };
+        };
         /** KurallaraBirakCikis */
         KurallaraBirakCikis: {
             /** Id */
@@ -3115,6 +3334,10 @@ export interface components {
             gider_oranlari: {
                 [key: string]: number | string;
             };
+            /** Gider Elle */
+            gider_elle?: {
+                [key: string]: components["schemas"]["GiderElleGiris"];
+            } | null;
         };
         /** ParametreDegerCikis */
         ParametreDegerCikis: {
@@ -3367,6 +3590,10 @@ export interface components {
             birim_fiyat_elle?: number | string | null;
             /** Seviye */
             seviye?: number | null;
+            /** Zs Elle */
+            zs_elle?: ("Z" | "S") | null;
+            /** Para Birimi Elle */
+            para_birimi_elle?: string | null;
         };
         /** ReceteSatiriCikis */
         ReceteSatiriCikis: {
@@ -3393,6 +3620,10 @@ export interface components {
             birim_fiyat_elle: string | null;
             /** Seviye */
             seviye?: number | null;
+            /** Zs Elle */
+            zs_elle?: string | null;
+            /** Para Birimi Elle */
+            para_birimi_elle?: string | null;
         };
         /** ReceteSatiriFireli */
         ReceteSatiriFireli: {
@@ -3419,6 +3650,10 @@ export interface components {
             birim_fiyat_elle: string | null;
             /** Seviye */
             seviye?: number | null;
+            /** Zs Elle */
+            zs_elle?: string | null;
+            /** Para Birimi Elle */
+            para_birimi_elle?: string | null;
             /** Fire Orani */
             fire_orani: string;
             /** Fire Kaynagi */
@@ -3756,6 +3991,18 @@ export interface components {
             /** Olusturma Zamani */
             olusturma_zamani: string | null;
         };
+        /** SifreDegistirGiris */
+        SifreDegistirGiris: {
+            /** Eski Sifre */
+            eski_sifre: string;
+            /** Yeni Sifre */
+            yeni_sifre: string;
+        };
+        /** SifreSifirlaGiris */
+        SifreSifirlaGiris: {
+            /** Gecici Sifre */
+            gecici_sifre: string;
+        };
         /** TeklifCikis */
         TeklifCikis: {
             /** Id */
@@ -3825,6 +4072,10 @@ export interface components {
             parametreler?: components["schemas"]["ParametreYazGiris"][] | null;
             /** Gider Havuzlari */
             gider_havuzlari?: components["schemas"]["HavuzTutarGiris"][] | null;
+            /** Gider Elle */
+            gider_elle?: {
+                [key: string]: components["schemas"]["GiderElleGiris"];
+            } | null;
             /**
              * Hesabi Kaydet
              * @default true
@@ -3882,7 +4133,7 @@ export interface components {
              * Durum
              * @enum {string}
              */
-            durum: "tamam" | "dikkat" | "hata";
+            durum: "tamam" | "bilgi" | "dikkat" | "hata";
             /** Sayi */
             sayi: number;
             cozum: components["schemas"]["TutarlilikCozumu"];
@@ -3906,6 +4157,8 @@ export interface components {
             dikkat: number;
             /** Tamam */
             tamam: number;
+            /** Bilgi */
+            bilgi?: number | null;
         };
         /** UretimBilgisiCikis */
         UretimBilgisiCikis: {
@@ -3987,6 +4240,12 @@ export interface components {
             mal_kabul_fire: string;
             /** Pazarlama Yonetim Uygula */
             pazarlama_yonetim_uygula: boolean;
+            /** Gider Elle */
+            gider_elle?: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            } | null;
         };
         /** UretimHedefiGiris */
         UretimHedefiGiris: {
@@ -4188,6 +4447,146 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ben_api_v1_kimlik_ben_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenCikis"];
+                };
+            };
+        };
+    };
+    giris_api_v1_kimlik_giris_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GirisGiris"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    cikis_api_v1_kimlik_cikis_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    sifre_degistir_api_v1_kimlik_sifre_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SifreDegistirGiris"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KullaniciCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
     listele_api_v1_senaryolar_get: {
         parameters: {
             query?: never;
@@ -4725,6 +5124,7 @@ export interface operations {
                 revize?: boolean;
                 sayfa?: number;
                 boyut?: number;
+                arama?: string | null;
                 senaryo: number;
             };
             header?: never;
@@ -8198,6 +8598,210 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    listele_api_v1_kullanicilar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KullaniciListesi"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    ekle_api_v1_kullanicilar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KullaniciEkleGiris"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KullaniciCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    guncelle_api_v1_kullanicilar__kullanici_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kullanici_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KullaniciGuncelleGiris"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KullaniciCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    sifre_sifirla_api_v1_kullanicilar__kullanici_id__sifre_sifirla_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kullanici_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SifreSifirlaGiris"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KullaniciCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

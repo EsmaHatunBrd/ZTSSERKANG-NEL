@@ -92,7 +92,7 @@ describe("ReceteAktar - tüm çalışma kitabı", () => {
     expect(within(kart("Revize fiyat (S.ALMA BF I)")).getByText("23")).toBeInTheDocument();
     expect(within(ozet).getByText("Cam 720 → Cam 720 ml")).toBeInTheDocument();
     const link = within(ozet).getByRole("link", { name: "Genel Bakış'a git" });
-    expect(link).toHaveAttribute("href", "/?senaryo=7");
+    expect(link).toHaveAttribute("href", "/genel-bakis?senaryo=7");
 
     expect(yakala).toHaveLength(1);
     expect(yakala[0].icerikTuru).toMatch(/^multipart\/form-data; boundary=/);

@@ -6,6 +6,7 @@ import { useAileTrendi, useAileler } from "@/api/sorgular/karsilastirma";
 import type { AileSatiri } from "@/api/tipler";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { KIYAS_SEKMELERI, SayfaSekmeleri } from "@/bilesenler/SayfaSekmeleri";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Input } from "@/bilesenler/ui/input";
 import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
@@ -95,7 +96,9 @@ export default function Karsilastirma() {
   const gorunen = useMemo(() => {
     const q = tr(arama.trim());
     const hepsi = aileler.data ?? [];
-    return q ? hepsi.filter((a) => tr(a.aile_ad).includes(q) || a.urunler.some((u) => tr(u.ad).includes(q) || tr(u.kod).includes(q))) : hepsi;
+    return q
+      ? hepsi.filter((a) => tr(a.aile_ad).includes(q) || a.urunler.some((u) => tr(u.ad).includes(q) || tr(u.kod).includes(q)))
+      : hepsi;
   }, [aileler.data, arama]);
 
   function aileSec(aile: string) {
@@ -110,6 +113,7 @@ export default function Karsilastirma() {
   if (senaryoId === null) {
     return (
       <section className="p-4">
+        <SayfaSekmeleri etiket="Kıyas türü" sekmeler={KIYAS_SEKMELERI} />
         <SayfaBasligi baslik="Karşılaştırma" />
         <p className="mt-2 text-muted-foreground">
           {!senaryoYukleniyor && senaryolar.length === 0 ? (
@@ -133,11 +137,15 @@ export default function Karsilastirma() {
 
   return (
     <section className="flex flex-col gap-4 p-4">
+      <SayfaSekmeleri etiket="Kıyas türü" sekmeler={KIYAS_SEKMELERI} />
       <SayfaBasligi baslik="Karşılaştırma" altBaslik="Aynı ailedeki ürünlerin ambalaj hacmine göre satış fiyatları" />
       <p role="note" className="rounded-lg border border-marka/40 bg-accent/40 px-3 py-2 text-sm text-muted-foreground">
-        Bu sayfa yüklü fiyat çalışmasını kullanır: aileler ürün adlarından otomatik kurulur, fiyatlar bu yılın hesabıdır. Geçen yıl
-        kıyası ve enflasyon eşiği için{" "}
-        <Link to={senaryoId === null ? "/satis-gecmisi" : `/satis-gecmisi?senaryo=${senaryoId}`} className="text-primary underline-offset-4 hover:underline">
+        Bu sayfa yüklü fiyat çalışmasını kullanır: aileler ürün adlarından otomatik kurulur, fiyatlar bu yılın hesabıdır. Geçen yıl kıyası
+        ve enflasyon eşiği için{" "}
+        <Link
+          to={senaryoId === null ? "/satis-gecmisi" : `/satis-gecmisi?senaryo=${senaryoId}`}
+          className="text-primary underline-offset-4 hover:underline"
+        >
           Satış Geçmişi
         </Link>{" "}
         yükleyin.
@@ -199,10 +207,13 @@ export default function Karsilastirma() {
             <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">Soldan bir aile seçin.</div>
           ) : (
             <>
-              <h2 className="text-base font-semibold">{trend.data?.aile_ad ?? aileler.data?.find((a) => a.aile === secili)?.aile_ad ?? secili}</h2>
+              <h2 className="text-base font-semibold">
+                {trend.data?.aile_ad ?? aileler.data?.find((a) => a.aile === secili)?.aile_ad ?? secili}
+              </h2>
               {aileler.data?.find((a) => a.aile === secili)?.tek_uyeli && (
                 <p role="note" data-testid="tek-uyeli-notu" className="text-sm text-muted-foreground">
-                  Bu aile tek üyeli: karşılaştırılacak başka ambalaj yok. Aynı ürünün diğer ambalajlarını ürün ekranından bu aileye atayabilirsiniz.
+                  Bu aile tek üyeli: karşılaştırılacak başka ambalaj yok. Aynı ürünün diğer ambalajlarını ürün ekranından bu aileye
+                  atayabilirsiniz.
                 </p>
               )}
               <div className="overflow-x-auto">
@@ -215,7 +226,13 @@ export default function Karsilastirma() {
                 />
               </div>
               {grafikSatirSayisi > 0 && (
-                <Suspense fallback={<div role="status" className="text-sm text-muted-foreground">Grafik yükleniyor…</div>}>
+                <Suspense
+                  fallback={
+                    <div role="status" className="text-sm text-muted-foreground">
+                      Grafik yükleniyor…
+                    </div>
+                  }
+                >
                   <AileGrafigi satirlar={satirlar} aile={trend.data?.aile_ad ?? secili} />
                 </Suspense>
               )}

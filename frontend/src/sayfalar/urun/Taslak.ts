@@ -33,6 +33,12 @@ export interface SatirTaslagi {
   birim_fiyat_elle?: string | null;
 }
 
+/** Gider satırında elle yazılabilen hücreler (Excel I/K/M/P). */
+export const GIDER_ELLE_ALANLARI = ["miktar", "brut_miktar", "birim_fiyat", "tutar"] as const;
+export type GiderElleAlani = (typeof GIDER_ELLE_ALANLARI)[number];
+/** Gider kalemi kodu -> elle hücre -> değer. Taslakta `null` = "formüle dön" (kayıtlı elle değeri kaldır). */
+export type GiderElle = Record<string, Partial<Record<GiderElleAlani, string | null>>>;
+
 export interface Taslak {
   urun: Partial<Record<UrunAlani, string>>;
   /** Değerler metin; yalnız `pazarlama_yonetim_uygula` mantıksaldır. Mal kabul fire oran olarak (0.05). */
@@ -42,6 +48,8 @@ export interface Taslak {
   /** kur.USD, enflasyon, faiz.TL, stok_ay.TL, vardiya_saati, maliyet_sapma ... (API değeri: oranlar 0.25 gibi). */
   parametreler: Record<string, string>;
   giderOranlari: Record<string, string>;
+  /** Bu ürüne özel elle gider hücreleri (senaryo oranından bağımsız). */
+  giderElle: GiderElle;
 }
 
 /**
@@ -54,20 +62,19 @@ export interface TaslakYamasi {
   satirlar?: Record<number, { [K in keyof SatirTaslagi]?: SatirTaslagi[K] | undefined }>;
   parametreler?: Record<string, string | undefined>;
   giderOranlari?: Record<string, string | undefined>;
+  giderElle?: Record<string, Partial<Record<GiderElleAlani, string | null | undefined>>>;
 }
 
-export const taslakBos = (): Taslak => ({ urun: {}, hedef: {}, satirlar: {}, parametreler: {}, giderOranlari: {} });
+export const taslakBos = (): Taslak => ({ urun: {}, hedef: {}, satirlar: {}, parametreler: {}, giderOranlari: {}, giderElle: {} });
 
 const SATIR_ALANLARI = ["miktar", "fire", "brut_miktar_elle", "birim_fiyat_elle"] as const;
 
 /** Taslaktaki değişen alan sayısı. */
 export function taslakSayisi(t: Taslak): number {
-  const satir = Object.values(t.satirlar).reduce(
-    (n, s) => n + SATIR_ALANLARI.filter((a) => s[a] !== undefined).length,
-    0,
-  );
+  const satir = Object.values(t.satirlar).reduce((n, s) => n + SATIR_ALANLARI.filter((a) => s[a] !== undefined).length, 0);
   const hedef = Object.values(t.hedef).filter((v) => v !== undefined).length;
-  return Object.keys(t.urun).length + hedef + satir + Object.keys(t.parametreler).length + Object.keys(t.giderOranlari).length;
+  const elle = Object.values(t.giderElle).reduce((n, h) => n + Object.keys(h).length, 0);
+  return Object.keys(t.urun).length + hedef + satir + Object.keys(t.parametreler).length + Object.keys(t.giderOranlari).length + elle;
 }
 
 /** Sunucudaki (kayıtlı) değerler: taslakla karşılaştırma ve "eski" sütunu için. */
@@ -80,7 +87,13 @@ export interface SunucuDegerleri {
   giderOranlari?: Record<string, string>;
   /** Reçete sırası -> malzemenin para birimi (diyalogda elle fiyat satırlarında gösterilir). */
   dovizler?: Record<number, string>;
+  /** Kayıtlı elle gider hücreleri (taslaksız hesabın `elle_alanlar`ından). */
+  giderElle?: Record<string, Partial<Record<GiderElleAlani, string>>>;
 }
+
+/** Hesap satırındaki elle gider hücresinin değeri (elle değer hesabın o alanında aynen görünür). */
+const satirAlani = (s: HesapYaniti["satirlar"][number], a: GiderElleAlani): string | null =>
+  a === "miktar" ? s.miktar : a === "brut_miktar" ? s.brut_miktar : a === "birim_fiyat" ? s.birim_fiyat : s.tutar;
 
 const GIDER_SKALER: Record<string, string> = {
   dolum_iscilik: "dolum_iscilik_sn",
@@ -122,7 +135,11 @@ export function sunucuDegerleri(taban: HesapYaniti | null | undefined, recete: R
   if (o) {
     parametreler.enflasyon = o.enflasyon;
     parametreler.maliyet_sapma = o.maliyet_sapma;
-    for (const [onek, grup] of [["kur", o.kurlar], ["faiz", o.faiz], ["stok_ay", o.stok_ay]] as const) {
+    for (const [onek, grup] of [
+      ["kur", o.kurlar],
+      ["faiz", o.faiz],
+      ["stok_ay", o.stok_ay],
+    ] as const) {
       for (const [pb, v] of Object.entries(grup)) parametreler[`${onek}.${pb}`] = v;
     }
   }
@@ -132,8 +149,15 @@ export function sunucuDegerleri(taban: HesapYaniti | null | undefined, recete: R
   const giderOranlari: Record<string, string> = {};
   const dovizler: Record<number, string> = {};
   const satirlar = taban?.satirlar ?? [];
+  const giderElle: NonNullable<SunucuDegerleri["giderElle"]> = {};
   for (const s of satirlar) {
-    if (s.grup === MALZEME || s.grup === "finansman" || s.birim_fiyat == null) continue;
+    if (s.grup === MALZEME || s.grup === "finansman") continue;
+    const elle = (s.elle_alanlar ?? []) as GiderElleAlani[];
+    if (s.kod && elle.length > 0) {
+      giderElle[s.kod] = Object.fromEntries(elle.map((a) => [a, satirAlani(s, a) ?? "0"]));
+    }
+    // Birim fiyatı elle yazılmış satırda gösterilen değer senaryo oranı değildir.
+    if (s.birim_fiyat == null || elle.includes("birim_fiyat")) continue;
     const a = giderAnahtari(s.kod, taban?.uretim);
     if (a) giderOranlari[a] = s.birim_fiyat;
   }
@@ -141,7 +165,7 @@ export function sunucuDegerleri(taban: HesapYaniti | null | undefined, recete: R
     const d = satirlar[i].doviz;
     if (r && d) dovizler[r.sira] = d;
   });
-  return { recete, uretim: taban?.uretim ?? null, parametreler, giderOranlari, dovizler };
+  return { recete, uretim: taban?.uretim ?? null, parametreler, giderOranlari, dovizler, giderElle };
 }
 
 function ayni(a: unknown, b: unknown): boolean {
@@ -186,7 +210,20 @@ export function taslakYamasi(t: Taslak, yama: TaslakYamasi, sunucu: SunucuDegerl
     parametreler: alanBirlestir(t.parametreler, yama.parametreler, (a) => sunucu.parametreler?.[a]),
     giderOranlari: alanBirlestir(t.giderOranlari, yama.giderOranlari, (a) => sunucu.giderOranlari?.[a]),
     satirlar: { ...t.satirlar },
+    giderElle: { ...t.giderElle },
   };
+  for (const [kod, hy] of Object.entries(yama.giderElle ?? {})) {
+    const giris = { ...t.giderElle[kod] };
+    for (const a of GIDER_ELLE_ALANLARI) {
+      if (!(a in hy)) continue;
+      const v = hy[a];
+      // Kayıtlı değerle aynıysa (kayıtlı elle değer yokken formüle dönmek dahil) taslakta tutulmaz.
+      if (v === undefined || ayni(v ?? null, sunucu.giderElle?.[kod]?.[a] ?? null)) delete giris[a];
+      else giris[a] = v;
+    }
+    if (Object.keys(giris).length > 0) sonraki.giderElle[kod] = giris;
+    else delete sonraki.giderElle[kod];
+  }
   for (const [anahtar, sy] of Object.entries(yama.satirlar ?? {})) {
     const sira = Number(anahtar);
     const r = sunucu.recete.find((x) => x.sira === sira);
@@ -196,7 +233,8 @@ export function taslakYamasi(t: Taslak, yama: TaslakYamasi, sunucu: SunucuDegerl
       const v = sy[a];
       const sunucuDeger = a === "fire" ? r?.fire_override : r?.[a];
       const elle = a === "brut_miktar_elle" || a === "birim_fiyat_elle";
-      const dus = v === undefined || (r !== undefined && (elle ? ayni(v ?? null, sunucuDeger ?? null) : sunucuDeger != null && ayni(v, sunucuDeger)));
+      const dus =
+        v === undefined || (r !== undefined && (elle ? ayni(v ?? null, sunucuDeger ?? null) : sunucuDeger != null && ayni(v, sunucuDeger)));
       if (dus) delete giris[a];
       else (giris as Record<string, unknown>)[a] = v;
     }
@@ -205,7 +243,10 @@ export function taslakYamasi(t: Taslak, yama: TaslakYamasi, sunucu: SunucuDegerl
   }
   // Hat/sınıf değişince eski hat/sınıfa bağlı gider oranı girdileri yetim kalır: etkin değere uymayanlar düşer.
   if (yama.urun && ("hat" in yama.urun || "taze_tursu_sinifi" in yama.urun)) {
-    const kf = (v: unknown) => String(v ?? "").trim().toLowerCase();
+    const kf = (v: unknown) =>
+      String(v ?? "")
+        .trim()
+        .toLowerCase();
     const hat = kf(sonraki.urun.hat ?? u?.hat);
     const sinif = kf(sonraki.urun.taze_tursu_sinifi ?? u?.taze_tursu_sinifi);
     const gider = { ...sonraki.giderOranlari };
@@ -220,6 +261,21 @@ export function taslakYamasi(t: Taslak, yama: TaslakYamasi, sunucu: SunucuDegerl
   return sonraki;
 }
 
+/** Kayıtlı elle gider hücreleri + taslak (null = kaldır): sunucuya gidecek tam harita. */
+export function etkinGiderElle(t: Taslak, sunucu: SunucuDegerleri["giderElle"]): Record<string, Sema["GiderElleGiris"]> {
+  const out: Record<string, Sema["GiderElleGiris"]> = {};
+  for (const kod of new Set([...Object.keys(sunucu ?? {}), ...Object.keys(t.giderElle)])) {
+    const h: Sema["GiderElleGiris"] = {};
+    for (const a of GIDER_ELLE_ALANLARI) {
+      const taslakta = t.giderElle[kod] !== undefined && a in t.giderElle[kod];
+      const v = taslakta ? t.giderElle[kod][a] : sunucu?.[kod]?.[a];
+      if (v != null) h[a] = v;
+    }
+    if (Object.keys(h).length > 0) out[kod] = h;
+  }
+  return out;
+}
+
 const etkinElle = (r: ReceteSatiri | undefined, s: SatirTaslagi | undefined): string | null =>
   s && s.brut_miktar_elle !== undefined ? s.brut_miktar_elle : (r?.brut_miktar_elle ?? null);
 
@@ -229,7 +285,11 @@ export function dusenFireSatirlari(t: Taslak, recete: ReceteSatiri[]): ReceteSat
 }
 
 /** Hesaplama (hesapla/hesaplar) gövdesinin `override` alanı; taslak boşsa undefined. */
-export function taslaktanOverride(t: Taslak, recete: ReceteSatiri[]): Sema["HesaplaGiris"]["override"] | undefined {
+export function taslaktanOverride(
+  t: Taslak,
+  recete: ReceteSatiri[],
+  sunucuGiderElle?: SunucuDegerleri["giderElle"],
+): Sema["HesaplaGiris"]["override"] | undefined {
   if (taslakSayisi(t) === 0) return undefined;
   const fire: Record<string, string> = {};
   const satirlar: Record<string, Sema["SatirOverride"]> = {};
@@ -253,6 +313,8 @@ export function taslaktanOverride(t: Taslak, recete: ReceteSatiri[]): Sema["Hesa
   };
   if (Object.keys(t.hedef).length > 0) override.uretim = { ...t.hedef };
   if (Object.keys(t.urun).length > 0) override.urun = { ...t.urun } as Sema["UrunOverride"];
+  // Elle gider: sunucu kayıtlı haritanın TAMAMI yerine geçirir; bu yüzden kayıtlı + taslak birlikte gider.
+  if (Object.keys(t.giderElle).length > 0) override.gider_elle = etkinGiderElle(t, sunucuGiderElle);
   return override;
 }
 
@@ -283,6 +345,8 @@ export interface KaydetSecenekleri {
   kapsamSecimi?: Record<string, Kapsam>;
   /** Gider havuzları (GET /gider-havuzlari): havuz toplamı = oran x baz_miktar. */
   havuzlar?: HavuzBilgisi[];
+  /** Kayıtlı elle gider hücreleri (`SunucuDegerleri.giderElle`); elle gider taslağı varsa tam harita için. */
+  giderElle?: SunucuDegerleri["giderElle"];
 }
 
 export type HavuzBilgisi = Pick<Sema["GiderHavuzuCikis"], "kod" | "toplam_tutar" | "baz_miktar">;
@@ -339,6 +403,9 @@ export function taslaktanKaydetGovdesi(t: Taslak, s: KaydetSecenekleri): Sema["T
         birim_fiyat_elle: fiyat,
       };
       if (r.seviye != null) satir.seviye = r.seviye;
+      // Excel'den gelen elle Z/S ve para birimi yeni sürümde korunur.
+      if (r.zs_elle) satir.zs_elle = r.zs_elle as Sema["ReceteSatirGiris"]["zs_elle"];
+      if (r.para_birimi_elle) satir.para_birimi_elle = r.para_birimi_elle;
       return satir;
     });
   }
@@ -365,8 +432,10 @@ export function taslaktanKaydetGovdesi(t: Taslak, s: KaydetSecenekleri): Sema["T
     havuzlar.push({ kod, toplam_tutar: new Decimal(oran).times(h.baz_miktar).toFixed() });
   }
   if (havuzlar.length > 0) govde.gider_havuzlari = havuzlar;
+  if (Object.keys(t.giderElle).length > 0) govde.gider_elle = etkinGiderElle(t, s.giderElle);
   // Ruling 8: kalıcı yazılmayan gider oranları kaydedilen hesabın girdi anlık görüntüsüne override olarak girer.
-  if (s.hesabiKaydet && Object.keys(yalnizHesap).length > 0) govde.override = { parametreler: {}, fire: {}, satirlar: {}, gider_oranlari: yalnizHesap };
+  if (s.hesabiKaydet && Object.keys(yalnizHesap).length > 0)
+    govde.override = { parametreler: {}, fire: {}, satirlar: {}, gider_oranlari: yalnizHesap };
   return govde;
 }
 
@@ -403,6 +472,28 @@ const HEDEF_ADI: Record<HedefAlani | "pazarlama_yonetim_uygula", string> = {
   mal_kabul_miktar_kg: "Mal kabul miktarı (kg)",
   mal_kabul_fire: "Mal kabul fire",
   pazarlama_yonetim_uygula: "Pazarlama/yönetim payı",
+};
+
+/** Gider kalemi kodu -> kısa Türkçe ad (elle hücre listelerinde). */
+export const GIDER_KALEM_ADI: Record<string, string> = {
+  mal_kabul_iscilik: "Mal kabul işçilik",
+  dolum_iscilik: "Dolum işçilik",
+  etiket_iscilik: "Etiket işçilik",
+  endirekt_iscilik: "Endirekt işçilik",
+  mal_kabul_gug: "Mal kabul GÜG",
+  elektrik: "Elektrik",
+  dogalgaz: "Doğalgaz",
+  amortisman: "Amortisman",
+  diger_gug: "Diğer GÜG",
+  pazarlama: "Pazarlama",
+  yonetim: "Yönetim",
+};
+
+const GIDER_HUCRE_ADI: Record<GiderElleAlani, string> = {
+  miktar: "miktar",
+  brut_miktar: "brüt",
+  birim_fiyat: "birim fiyat",
+  tutar: "tutar",
 };
 
 /** Gider oranı anahtarı -> Türkçe etiket. */
@@ -444,6 +535,15 @@ export function kayitliOverrideListesi(override: unknown): { etiket: string; deg
   for (const [a, v] of Object.entries(kayit(o.gider_oranlari))) {
     liste.push({ etiket: giderEtiketi(a), deger: sayiGoster(String(v), 6) });
   }
+  for (const [kod, h] of Object.entries(kayit(o.gider_elle))) {
+    for (const [a, v] of Object.entries(kayit(h))) {
+      if (v == null) continue;
+      liste.push({
+        etiket: `${GIDER_KALEM_ADI[kod] ?? kod} · elle ${GIDER_HUCRE_ADI[a as GiderElleAlani] ?? a}`,
+        deger: sayiGoster(String(v), 6),
+      });
+    }
+  }
   return liste;
 }
 
@@ -479,7 +579,9 @@ export function degisiklikListesi(t: Taslak, s: SunucuDegerleri, havuzlar?: Havu
     liste.push({ alan: `hedef.${a}`, etiket: HEDEF_ADI[a], eski: bicim(eski), yeni: bicim(yeni), etki: "urun", kalici: true });
   }
 
-  for (const anahtar of Object.keys(t.satirlar).map(Number).sort((a, b) => a - b)) {
+  for (const anahtar of Object.keys(t.satirlar)
+    .map(Number)
+    .sort((a, b) => a - b)) {
     const x = t.satirlar[anahtar];
     const r = s.recete.find((y) => y.sira === anahtar);
     const on = `Satır ${anahtar}${r ? ` · ${r.ad}` : ""}`;
@@ -487,7 +589,13 @@ export function degisiklikListesi(t: Taslak, s: SunucuDegerleri, havuzlar?: Havu
       liste.push({ alan: `satir.${anahtar}.${alan}`, etiket: `${on} · ${ad}`, eski, yeni, etki: "urun", kalici: true });
     const doviz = s.dovizler?.[anahtar] ? ` ${s.dovizler[anahtar]}` : "";
     if (x.miktar !== undefined) ekle("miktar", "miktar", r ? sayiGoster(r.miktar) : "—", sayiGoster(x.miktar));
-    if (x.fire !== undefined) ekle("fire", "fire", r ? (r.fire_override != null ? yuzdeMetni(r.fire_override) : `${yuzdeMetni(r.fire_orani)} (kural)`) : "—", yuzdeMetni(x.fire));
+    if (x.fire !== undefined)
+      ekle(
+        "fire",
+        "fire",
+        r ? (r.fire_override != null ? yuzdeMetni(r.fire_override) : `${yuzdeMetni(r.fire_orani)} (kural)`) : "—",
+        yuzdeMetni(x.fire),
+      );
     if (x.brut_miktar_elle !== undefined)
       ekle(
         "brut_miktar_elle",
@@ -515,6 +623,22 @@ export function degisiklikListesi(t: Taslak, s: SunucuDegerleri, havuzlar?: Havu
       kalici: true,
       parametre: anahtar,
     });
+  }
+
+  for (const [kod, h] of Object.entries(t.giderElle)) {
+    for (const a of GIDER_ELLE_ALANLARI) {
+      if (!(a in h)) continue;
+      const eski = s.giderElle?.[kod]?.[a];
+      const yeni = h[a];
+      liste.push({
+        alan: `gider_elle.${kod}.${a}`,
+        etiket: `${GIDER_KALEM_ADI[kod] ?? kod} · elle ${GIDER_HUCRE_ADI[a]}`,
+        eski: eski != null ? sayiGoster(eski, 6) : "formül",
+        yeni: yeni != null ? sayiGoster(yeni, 6) : "formüle döner",
+        etki: "urun",
+        kalici: true,
+      });
+    }
   }
 
   for (const [anahtar, yeni] of Object.entries(t.giderOranlari)) {

@@ -34,12 +34,18 @@ const ESLEME: [string, string][] = [
     "Parametreler (okunur adlarıyla, tarihli geçmiş); ürün ekranındaki kutulardan da değişir",
   ],
   ["Ambalaj Özeti", 'Genel Bakış\'ta tablonun altındaki "Ambalaj ve kapak özeti" bölümü'],
-  ["Gerçekleşen Excel'i", 'Veri Aktar → Tüm çalışma kitabı → tür "Gerçekleşen" (aynı sezon); kıyas Bütçe vs Gerçekleşen sayfasında'],
-  ["(Excel'de yok)", "Bütçe vs Gerçekleşen, Satış Geçmişi, Karşılaştırma, Değişiklik Günlüğü, Arşiv"],
+  [
+    "Gerçekleşen Excel'i",
+    'Veri Aktar → Tüm çalışma kitabı → tür "Gerçekleşen" (aynı sezon); kıyas Kıyasla → Bütçe vs Gerçekleşen sekmesinde',
+  ],
+  ["(Excel'de yok)", "Kıyasla (Bütçe vs Gerçekleşen, Ürün aileleri, Geçmiş kayıtlar), Satış Geçmişi, Değişiklik Günlüğü"],
 ];
 
 const MENU: [string, string][] = [
-  ["Çalışma", "Günlük iş: Genel Bakış, Ürün Maliyeti, Teklifler, Karşılaştırma, Bütçe vs Gerçekleşen, Arşiv"],
+  [
+    "Çalışma",
+    "Günlük iş: Ana Sayfa (tüm bölümler kart olarak), Genel Bakış, Ürün Maliyeti, Teklifler, Kıyasla (üstteki sekmelerle: Bütçe vs Gerçekleşen, Ürün aileleri, Geçmiş kayıtlar)",
+  ],
   ["Veri girişi", "Veriyi nereden girerim: tek tek (Veri Girişi) ya da Excel'den toplu (Veri Aktar)"],
   [
     "Kayıtlar",
@@ -47,8 +53,9 @@ const MENU: [string, string][] = [
   ],
   [
     "Kontrol",
-    "Veri Kontrolü (veri sorunlarının özeti ve nereden düzeltileceği), Uyarılar (ürün bazında hesap uyarıları) ve Değişiklik Günlüğü (kim, ne zaman, neyi, neden)",
+    "Veri Kontrolü (sekmeler: Özet — veri sorunları ve nereden düzeltileceği; Ürün uyarıları — ürün bazında hesap uyarıları) ve Değişiklik Günlüğü (kim, ne zaman, neyi, neden)",
   ],
+  ["Yönetim", "Yalnız Genel Direktör: Kullanıcılar (kullanıcı ekle, rol ata, şifre sıfırla, pasifleştir)"],
 ];
 
 function Bolum({ kimlik, baslik, children }: { kimlik: string; baslik: string; children: ReactNode }) {
@@ -214,6 +221,12 @@ export default function Yardim() {
           </li>
           <li>Senaryo geneli parametreler (kur, enflasyon) tüm ürünleri etkiler; diyalogda "yalnız bu ürün için yaz" seçilebilir.</li>
           <li>
+            <b>Elle değer (Excel'deki gibi)</b>: gider kalemlerinde miktar, brüt, birim fiyat ya da tutara tıklayıp yazarsanız o hücre
+            yalnız bu ürün için formül yerine sizin değerinizle hesaplanır ve yanında <b>Elle</b> rozeti çıkar. Rozete basınca ya da hücreyi
+            boşaltınca formüle döner. Excel'de formül yerine elle yazılmış hücreler aktarımda da elle gelir; listesi Veri Kontrolü → "Elle
+            girilmiş hücre".
+          </li>
+          <li>
             Reçetede fiyatı olmayan malzemenin yanında küçük bir nokta vardır; fiyatı Malzeme Fiyatları'ndan ya da hücreye elle girin.
           </li>
           <li>Kaydedilen her hesap numaralı ve tarihlidir; teklif turları kayıtlı hesaba bağlanır.</li>
@@ -242,6 +255,9 @@ export default function Yardim() {
       <Bolum kimlik="y-gerceklesen" baslik="Bütçe vs Gerçekleşen">
         <ul className="list-disc space-y-1 pl-5 text-sm">
           <li>
+            Menüde <b>Kıyasla</b> → ilk sekme.
+          </li>
+          <li>
             Gerçekleşen Excel'i (fiyat çalışmasıyla aynı düzende, gerçekleşen değerlerle) Veri Aktar → Tüm çalışma kitabı →{" "}
             <b>Yeni senaryo oluştur</b>, tür <b>Gerçekleşen</b>, aynı sezon adıyla yükleyin. Gerçekleşen çalışmada enflasyon her zaman
             0'dır.
@@ -263,13 +279,32 @@ export default function Yardim() {
         </ul>
       </Bolum>
 
+      <Bolum kimlik="y-giris" baslik="Giriş ve roller">
+        <ul className="list-disc space-y-1 pl-5 text-sm">
+          <li>
+            Uygulama kullanıcı adı ve şifreyle açılır. Oturum <b>çıkış yapılana kadar</b> açık kalır (tarayıcı kapansa da). Çıkış: sağ
+            üstteki <b>Çıkış</b> simgesi ya da adınıza tıklayıp <b>Hesabım → Çıkış yap</b>. Şifre değiştirmek de Hesabım'dan.
+          </li>
+          <li>
+            Roller: <b>Genel Direktör</b> her şeyi yapar ve kullanıcıları yönetir; <b>Muhasebe</b> her şeyi görür ve değiştirir;{" "}
+            <b>Satın alma</b> malzeme kartı ve fiyatlarını girer, gerisini görür; <b>İzleyici</b> her şeyi görür, hiçbir şeyi değiştiremez.
+            Yetkisi olmayan işlemde "bu rolün izni yok" mesajı çıkar.
+          </li>
+          <li>
+            Yeni kullanıcı: Yönetim → <b>Kullanıcılar</b> → ad, kullanıcı adı, rol; geçici şifre önerilir. Geçici şifreyi kişiye iletin; ilk
+            girişte kendi şifresini belirler. Şifresini unutan için <b>Şifre sıfırla</b> (açık oturumları kapanır).
+          </li>
+          <li>Art arda 5 yanlış şifrede hesap 15 dakika kilitlenir. Değişiklik Günlüğü'ne giriş yapan kişinin kullanıcı adı yazılır.</li>
+        </ul>
+      </Bolum>
+
       <Bolum kimlik="y-diger" baslik="Diğer sayfalar">
         <ul className="list-disc space-y-1 pl-5 text-sm">
           <li>
-            <b>Karşılaştırma</b>: ürün ailesi seç → ambalaj büyüdükçe birim fiyat ve kg fiyatı. Geçen yıl satış fiyatı, enflasyon eşiği ve
-            hedef adetle maliyet Genel Bakış'ta "Sütunlar" → "Karşılaştırma" grubundadır (geçen yıl için Satış Geçmişi yüklü olmalı). Aile
-            adı ürün ekranındaki "Aile" rozetinden değiştirilir: yazdığınız ad olduğu gibi görünür, eşleştirmede büyük/küçük harf farkı
-            gözetilmez.
+            <b>Kıyasla → Ürün aileleri</b>: ürün ailesi seç → ambalaj büyüdükçe birim fiyat ve kg fiyatı. Geçen yıl satış fiyatı, enflasyon
+            eşiği ve hedef adetle maliyet Genel Bakış'ta "Sütunlar" → "Karşılaştırma" grubundadır (geçen yıl için Satış Geçmişi yüklü
+            olmalı). Aile adı ürün ekranındaki "Aile" rozetinden değiştirilir: yazdığınız ad olduğu gibi görünür, eşleştirmede büyük/küçük
+            harf farkı gözetilmez.
           </li>
           <li>
             <b>Satış Geçmişi</b>: "Şablonu indir" → doldur → yükle (ürün kodu, müşteri, tarih, fiyat, para birimi, adet). Geçen yıl kıyası
@@ -282,14 +317,16 @@ export default function Yardim() {
             doğrudan o kayda gidilir. Sorun varsa Genel Bakış'ta tek satırlık özet çıkar.
           </li>
           <li>
-            <b>Uyarılar</b>: türe göre gruplu; fiyatı olmayan malzemeler en altta malzeme başına toplanır (hangi ürünlerde kullanıldığıyla).
-            Alt satırları olan bir reçete kaleminin (maliyeti alt satırlardan gelen) fiyatsız olması uyarı sayılmaz.
+            <b>Veri Kontrolü → Ürün uyarıları</b>: türe göre gruplu; fiyatı olmayan malzemeler en altta malzeme başına toplanır (hangi
+            ürünlerde kullanıldığıyla). Alt satırları olan bir reçete kaleminin (maliyeti alt satırlardan gelen) fiyatsız olması uyarı
+            sayılmaz.
           </li>
           <li>
             <b>Değişiklik Günlüğü</b>: kim, ne zaman, neyi, neden; süzgeç; geri al; Excel'e aktar.
           </li>
           <li>
-            <b>Arşiv</b>: sezon → senaryo → tarihli kayıtlı hesaplar; iki kaydı kıyasla; <b>Kilitle</b> (kapanan sezon değiştirilemez).
+            <b>Kıyasla → Geçmiş kayıtlar</b> (Arşiv): sezon → senaryo → tarihli kayıtlı hesaplar; iki kaydı kıyasla; <b>Kilitle</b> (kapanan
+            sezon değiştirilemez).
           </li>
           <li>
             <b>Teklifler</b>: senaryo geneli teklif listesi, durum; <b>Teklif Kapak indir</b>. Teklif turu ürün ekranında, hesap

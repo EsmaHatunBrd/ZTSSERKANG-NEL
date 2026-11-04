@@ -1,5 +1,6 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import type { HesapSatiri, Toplamlar, UretimBilgisi } from "@/api/tipler";
+import { KaynakRozeti } from "@/bilesenler/KaynakRozeti";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/bilesenler/ui/table";
 import { YuzdeHucresi } from "@/bilesenler/YuzdeHucresi";
@@ -7,7 +8,15 @@ import { apiMetni, D } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
 import { GirdiHucresi } from "./GirdiHucresi";
 import { parametreDegerGoster, parametreEtiketi } from "./parametreEtiketleri";
-import { giderAnahtari, giderKaliciMi, GIDER_KALICI_DEGIL_NOTU, type TaslakYamasi } from "./Taslak";
+import {
+  giderAnahtari,
+  giderKaliciMi,
+  GIDER_KALICI_DEGIL_NOTU,
+  type GiderElle,
+  type GiderElleAlani,
+  type SunucuDegerleri,
+  type TaslakYamasi,
+} from "./Taslak";
 import { MALZEME, sayiGoster } from "./yardimci";
 
 const FINANSMAN = /^(faiz|stok_ay)\./;
@@ -52,7 +61,11 @@ interface Props {
   taslak?: Record<string, string>;
   /** Sunucudaki (kayıtlı) oranlar: değişen hücrenin eski değeri için. */
   sunucuOranlari?: Record<string, string>;
-  /** Verilirse birim fiyat hücreleri düzenlenebilir; verilmezse (kayıtlı hesap) salt okunur. */
+  /** `Taslak.giderElle` dilimi: bu ürüne özel elle gider hücreleri. */
+  taslakElle?: GiderElle;
+  /** Kayıtlı elle gider hücreleri. */
+  sunucuElle?: SunucuDegerleri["giderElle"];
+  /** Verilirse hücreler düzenlenebilir; verilmezse (kayıtlı hesap) salt okunur. */
   onTaslak?: (yama: TaslakYamasi) => void;
 }
 
@@ -61,10 +74,111 @@ interface SatirProps {
   anahtar: string | null;
   taslak?: Record<string, string>;
   sunucuOranlari?: Record<string, string>;
+  taslakElle?: GiderElle;
+  sunucuElle?: SunucuDegerleri["giderElle"];
   onTaslak?: (yama: TaslakYamasi) => void;
 }
 
-function BirimFiyat({ s, anahtar, taslak, sunucuOranlari, onTaslak }: SatirProps) {
+const HUCRE_ADI: Record<GiderElleAlani, string> = { miktar: "Miktar", brut_miktar: "Brüt", birim_fiyat: "Birim fiyat", tutar: "Tutar" };
+
+/** Hücrenin etkin elle değeri: taslakta varsa o (null = formüle dönülüyor), yoksa kayıtlı elle değer; elle değilse null. */
+function etkinElle(kod: string, a: GiderElleAlani, taslakElle?: GiderElle, sunucuElle?: SunucuDegerleri["giderElle"]): string | null {
+  const t = taslakElle?.[kod];
+  if (t && a in t) return t[a] ?? null;
+  return sunucuElle?.[kod]?.[a] ?? null;
+}
+
+/**
+ * Bu ürüne özel elle gider hücresi (Excel'de formül yerine yazılan değer). Formüllü hücre düz metin görünür; tıklanınca
+ * girdiye döner, yazılan değer elle olur. Boşaltınca ya da "Elle" rozetine basınca formüle döner. Salt okunur görünümde
+ * elle hücre rozetle işaretlenir.
+ */
+function ElleHucre({
+  s,
+  alan,
+  taslakElle,
+  sunucuElle,
+  onTaslak,
+  children,
+}: SatirProps & { alan: GiderElleAlani; children: React.ReactNode }) {
+  const [duzenle, setDuzenle] = useState(false);
+  const kod = s.kod ?? "";
+  // Düzenlenen ekranda taslak + kayıtlı değer; kayıtlı hesap görünümünde hesabın kendi işareti.
+  const elle = onTaslak && kod ? etkinElle(kod, alan, taslakElle, sunucuElle) : (s.elle_alanlar ?? []).includes(alan) ? "" : null;
+  const ad = `${HUCRE_ADI[alan]} — ${s.kalem}`;
+  const yaz = (v: string | null) => onTaslak?.({ giderElle: { [kod]: { [alan]: v } } });
+  const rozet =
+    elle === null ? null : onTaslak && kod ? (
+      <button
+        type="button"
+        onClick={() => yaz(null)}
+        aria-label={`${ad}: Elle. Formüle dön`}
+        title="Formüle dön"
+        className="rounded-4xl focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+      >
+        <KaynakRozeti tur="elle" />
+      </button>
+    ) : (
+      <KaynakRozeti tur="elle" />
+    );
+  if (!onTaslak || !kod) {
+    return (
+      <div className="flex items-center justify-end gap-1">
+        {rozet}
+        {children}
+      </div>
+    );
+  }
+  const taslakta = taslakElle?.[kod] !== undefined && alan in taslakElle[kod];
+  if (elle === null && !duzenle && !taslakta) {
+    return (
+      <button
+        type="button"
+        onClick={() => setDuzenle(true)}
+        aria-label={`${ad}: bu ürün için elle değer yaz`}
+        title="Bu ürün için elle değer yaz (formül yerine)"
+        className="w-full rounded-md text-right decoration-dotted underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+      >
+        {children}
+      </button>
+    );
+  }
+  const kayitli = sunucuElle?.[kod]?.[alan];
+  const deger = alan === "miktar" ? s.miktar : alan === "brut_miktar" ? s.brut_miktar : alan === "birim_fiyat" ? s.birim_fiyat : s.tutar;
+  return (
+    <div className="flex items-center justify-end gap-1">
+      {rozet}
+      <GirdiHucresi
+        etiket={ad}
+        deger={elle !== null ? sayiGoster(elle, 6) : sayiGoster(deger, 6)}
+        className={alan === "tutar" ? "w-24" : "w-20"}
+        degisti={taslakta}
+        eski={kayitli != null ? sayiGoster(kayitli, 6) : "formül"}
+        title={taslakta ? undefined : "Bu ürün için elle değer; boşaltırsanız formüle döner"}
+        otomatikOdak={duzenle}
+        onCik={() => setDuzenle(false)}
+        onMetin={(m) => {
+          if (m.trim() === "") return yaz(null);
+          const v = sayiApi(m);
+          if (v !== null) yaz(v);
+        }}
+      />
+    </div>
+  );
+}
+
+function BirimFiyat(p: SatirProps) {
+  const { s, anahtar, taslak, sunucuOranlari, onTaslak, taslakElle, sunucuElle } = p;
+  // Elle birim fiyatlı satır ya da senaryo oranı olmayan kalem: hücre bu ürüne özel elle değer yazar.
+  const elle =
+    onTaslak && s.kod ? etkinElle(s.kod, "birim_fiyat", taslakElle, sunucuElle) !== null : (s.elle_alanlar ?? []).includes("birim_fiyat");
+  if (elle || (onTaslak && !anahtar)) {
+    return (
+      <ElleHucre {...p} alan="birim_fiyat">
+        <ParaHucresi deger={s.birim_fiyat} paraBirimi={s.doviz ?? ""} basamak={4} />
+      </ElleHucre>
+    );
+  }
   if (!anahtar || !onTaslak) return <ParaHucresi deger={s.birim_fiyat} paraBirimi={s.doviz ?? ""} basamak={4} />;
   const yazildi = taslak?.[anahtar];
   const eski = sunucuOranlari?.[anahtar];
@@ -84,22 +198,33 @@ function BirimFiyat({ s, anahtar, taslak, sunucuOranlari, onTaslak }: SatirProps
   );
 }
 
-function Satir({ s, ...diger }: SatirProps) {
+function Satir(p: SatirProps) {
+  const { s } = p;
   return (
     <TableRow>
       <TableCell>{s.kalem}</TableCell>
-      <TableCell className="text-right tabular-nums">{sayiGoster(s.miktar)}</TableCell>
+      <TableCell className="text-right tabular-nums">
+        <ElleHucre {...p} alan="miktar">
+          {sayiGoster(s.miktar)}
+        </ElleHucre>
+      </TableCell>
       <TableCell>
         <YuzdeHucresi deger={s.fire_orani} />
       </TableCell>
-      <TableCell className="text-right tabular-nums">{sayiGoster(s.brut_miktar)}</TableCell>
+      <TableCell className="text-right tabular-nums">
+        <ElleHucre {...p} alan="brut_miktar">
+          {sayiGoster(s.brut_miktar)}
+        </ElleHucre>
+      </TableCell>
       <TableCell className="text-muted-foreground">{s.birim ?? "—"}</TableCell>
       <TableCell className="text-right">
-        <BirimFiyat s={s} {...diger} />
+        <BirimFiyat {...p} />
       </TableCell>
       <TableCell className="text-muted-foreground">{s.doviz ?? "—"}</TableCell>
       <TableCell>
-        <ParaHucresi deger={s.tutar} />
+        <ElleHucre {...p} alan="tutar">
+          <ParaHucresi deger={s.tutar} />
+        </ElleHucre>
       </TableCell>
       <TableCell>
         <YuzdeHucresi deger={s.maliyet_yuzdesi} />
@@ -126,7 +251,17 @@ function ToplamSatiri({ etiket, deger, vurgulu = false }: { etiket: string; dege
 }
 
 /** Malzeme dışı kalemler Excel'deki gibi üç grupta: ara toplamlar, gider toplamı, toplam birim maliyet. */
-export function GiderKalemleri({ satirlar, toplamlar, parametreler, uretim, taslak, sunucuOranlari, onTaslak }: Props) {
+export function GiderKalemleri({
+  satirlar,
+  toplamlar,
+  parametreler,
+  uretim,
+  taslak,
+  sunucuOranlari,
+  taslakElle,
+  sunucuElle,
+  onTaslak,
+}: Props) {
   // Finansman satırı Toplamlar kartında ve finansman tablosunda gösterilir; gider gruplarına girmez.
   const giderler = satirlar.filter((s) => s.grup !== MALZEME && s.grup !== "finansman");
   const bilinen = new Set(GRUPLAR.flatMap((g) => g.gruplar));
@@ -158,6 +293,8 @@ export function GiderKalemleri({ satirlar, toplamlar, parametreler, uretim, tasl
               anahtar={giderAnahtari(s.kod, uretim)}
               taslak={taslak}
               sunucuOranlari={sunucuOranlari}
+              taslakElle={taslakElle}
+              sunucuElle={sunucuElle}
               onTaslak={onTaslak}
             />
           ))

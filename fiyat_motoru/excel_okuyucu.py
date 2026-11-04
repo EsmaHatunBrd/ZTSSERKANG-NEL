@@ -4,7 +4,8 @@ import re
 from decimal import Decimal
 from pathlib import Path
 import openpyxl
-from .modeller import AmbalajSinifi, GiderHavuzlari, Malzeme, Parametreler, ReceteSatiri, UretimBilgisi, UrunGirdisi
+from .modeller import (GIDER_ELLE_ALANLARI, GIDER_KALEMLERI, AmbalajSinifi, GiderElle, GiderHavuzlari, Malzeme, Parametreler,
+                       ReceteSatiri, UretimBilgisi, UrunGirdisi)
 from .fire import brut_miktar
 from .para import D, SIFIR
 
@@ -143,6 +144,44 @@ def _m_elle(m_deger, m_formul, kod: str, malzemeler) -> bool:
     return m_sayisal_elle_mi(m_deger, malzemeler.get(kod))
 
 
+def zs_elle_oku(n_formul) -> str | None:
+    """Reçete N hücresi (Z/S) formül yerine elle yazılmışsa o değer ('Z'/'S'); formülse ya da boşsa None."""
+    if n_formul is None or formul_mu(n_formul):
+        return None
+    zs = str(n_formul).strip().upper()
+    return zs if zs in ("Z", "S") else None
+
+
+def para_birimi_elle_oku(o_formul) -> str | None:
+    """Reçete O hücresi (para birimi) formül yerine elle yazılmışsa o değer; formülse ya da boşsa None."""
+    if o_formul is None or formul_mu(o_formul) or not str(o_formul).strip():
+        return None
+    return str(o_formul).strip().upper()
+
+
+# Gider satırında formül yerine yazılmış sabit Excel'in normal düzeni olan hücreler (elle sayılmaz):
+# I104 mal kabul miktarı üretim bilgisi olarak zaten okunur; K118/K119 her sayfada sabit 1; P118/P119 = 0
+# pazarlama_yonetim_uygula anahtarıyla taşınır.
+_GIDER_ELLE_DISI = {("mal_kabul_iscilik", "miktar"), ("pazarlama", "brut_miktar"), ("yonetim", "brut_miktar"),
+                    ("pazarlama", "tutar"), ("yonetim", "tutar")}
+
+
+def gider_elle_oku(ws_f, ws_v) -> dict[str, GiderElle]:
+    """Gider satırlarında (104-113, 118-119) formül yerine sabit yazılmış I/K/M/P hücreleri: kalem -> GiderElle."""
+    out = {}
+    for kalem, etiket in GIDER_KALEMLERI.items():
+        r = _etiket_satiri(ws_v, etiket)
+        degerler = {}
+        for alan, sutun in GIDER_ELLE_ALANLARI.items():
+            h = ws_f[f"{sutun}{r}"].value
+            if (kalem, alan) in _GIDER_ELLE_DISI or h is None or formul_mu(h):
+                continue
+            degerler[alan] = D(h)
+        if degerler:
+            out[kalem] = GiderElle(**degerler)
+    return out
+
+
 def urun_oku(ws_f, ws_v, malzemeler: dict[str, Malzeme] | None = None) -> tuple[UrunGirdisi, Parametreler, dict[str, Decimal | None]]:
     E = lambda r: _etiket_satiri(ws_v, r)
     Et = lambda r: _etiket_satiri(ws_v, r, tam=True)
@@ -156,7 +195,8 @@ def urun_oku(ws_f, ws_v, malzemeler: dict[str, Malzeme] | None = None) -> tuple[
                      miktar=d(f"I{r}"), fire_orani=d(f"J{r}"), birim=val(f"L{r}"),
                      dugum_tipi="ara_mamul" if urun_kodu and str(val(f"D{r}")).strip() == urun_kodu else "yaprak",
                      brut_miktar_elle=d(f"K{r}") if k_sayisal_elle_mi(val(f"K{r}"), val(f"I{r}"), val(f"J{r}")) else None,
-                     birim_fiyat_elle=d(f"M{r}") if _m_elle(val(f"M{r}"), ws_f[f"M{r}"].value, str(val(f"D{r}")).strip(), malzemeler) else None)
+                     birim_fiyat_elle=d(f"M{r}") if _m_elle(val(f"M{r}"), ws_f[f"M{r}"].value, str(val(f"D{r}")).strip(), malzemeler) else None,
+                     zs_elle=zs_elle_oku(ws_f[f"N{r}"].value), para_birimi_elle=para_birimi_elle_oku(ws_f[f"O{r}"].value))
         for r in range(6, r100) if val(f"D{r}")
     )
     r103, r104, r105, r106 = E("DİREKT İŞÇİLİK GİDERLERİ"), E("Mal Kabul ve Fermantasyon Giderleri"), \
@@ -189,7 +229,8 @@ def urun_oku(ws_f, ws_v, malzemeler: dict[str, Malzeme] | None = None) -> tuple[
         mal_kabul_miktar_kg=d(f"I{r104}"), mal_kabul_fire=d(f"J{r104}"),
         pazarlama_yonetim_uygula=not (_sabit_sifir(ws_f, f"P{r118}") and _sabit_sifir(ws_f, f"P{r119}")),
     )
-    girdi = UrunGirdisi(kod=urun_kodu, ad=str(val("E6") or "").strip(), recete=recete, uretim=uretim)
+    girdi = UrunGirdisi(kod=urun_kodu, ad=str(val("E6") or "").strip(), recete=recete, uretim=uretim,
+                        gider_elle=gider_elle_oku(ws_f, ws_v))
 
     bek = {}
     for ad, r in [("P100", r100), ("P103", r103), ("P104", r104), ("P105", r105), ("P106", r106), ("P107", r107),

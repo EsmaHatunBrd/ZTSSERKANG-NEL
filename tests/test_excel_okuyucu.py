@@ -123,3 +123,19 @@ def test_zar_rub_kurlari_ve_ek_parametreler(wb):
     assert list(p.kurlar) == ["USD", "EUR", "GBP", "CHF", "RUB", "ZAR"] and p.kurlar["ZAR"] > 0 and p.kurlar["RUB"] > 0
     ek = ek_parametreleri_oku(wb[1]["001"])
     assert ek["maliyet_sapma"] == Decimal(0) and ek["satis_fiyati_notu"] and "SATIŞ FİYATI" in ek["satis_fiyati_notu"]
+
+
+def test_gider_ve_recete_elle_hucreleri_okunur(excel_yolu):
+    """Formül yerine sabit yazılmış gider hücreleri (022: P105=20, P113=10) ve reçete N/O (040 satır 10) elle olarak gelir;
+    Excel'in normal sabitleri (K118/K119 = 1) elle sayılmaz."""
+    from fiyat_motoru.excel_okuyucu import excel_ac, malzemeleri_oku, urun_oku
+    wb_f, wb_v = excel_ac(excel_yolu)
+    mz = malzemeleri_oku(wb_v)
+    g, _, _ = urun_oku(wb_f["022"], wb_v["022"], mz)
+    assert {k: v.dolu_alanlar() for k, v in g.gider_elle.items()} == {"dolum_iscilik": ("tutar",), "diger_gug": ("tutar",)}
+    assert g.gider_elle["dolum_iscilik"].tutar == Decimal(20) and g.gider_elle["diger_gug"].tutar == Decimal(10)
+    g, _, _ = urun_oku(wb_f["001"], wb_v["001"], mz)
+    assert g.gider_elle == {}
+    g, _, _ = urun_oku(wb_f["040"], wb_v["040"], mz)
+    r = next(x for x in g.recete if x.malzeme_kodu == "02.034.016.002.00001")
+    assert (r.zs_elle, r.para_birimi_elle) == ("S", "USD")

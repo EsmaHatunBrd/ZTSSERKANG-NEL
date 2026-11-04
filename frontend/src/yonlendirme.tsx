@@ -5,6 +5,7 @@ import { Kabuk } from "@/bilesenler/Kabuk";
 import { SayfaBulunamadi } from "@/bilesenler/SayfaBulunamadi";
 
 // Sayfa başına kod bölme: ilk yüklemede yalnızca Kabuk gelir, sayfa kodu rota açılınca indirilir (Kabuk'ta Suspense).
+const AnaSayfa = lazy(() => import("@/sayfalar/AnaSayfa"));
 const Arsiv = lazy(() => import("@/sayfalar/Arsiv"));
 const ButceGerceklesen = lazy(() => import("@/sayfalar/ButceGerceklesen"));
 const KiyasUrun = lazy(() => import("@/sayfalar/KiyasUrun"));
@@ -12,6 +13,7 @@ const Dashboard = lazy(() => import("@/sayfalar/Dashboard"));
 const GiderDagitim = lazy(() => import("@/sayfalar/GiderDagitim"));
 const Gunluk = lazy(() => import("@/sayfalar/Gunluk"));
 const HesapGoruntule = lazy(() => import("@/sayfalar/HesapGoruntule"));
+const Kullanicilar = lazy(() => import("@/sayfalar/Kullanicilar"));
 const MalzemeFiyatlari = lazy(() => import("@/sayfalar/MalzemeFiyatlari"));
 const Karsilastirma = lazy(() => import("@/sayfalar/Karsilastirma"));
 const Parametreler = lazy(() => import("@/sayfalar/Parametreler"));
@@ -32,7 +34,9 @@ export const rotalar = [
     element: <Kabuk />,
     errorElement: <HataSayfasi />,
     children: [
-      { index: true, element: <Dashboard /> },
+      // Açılış: menüdeki bölümler kart olarak; ürün tablosu (Genel Bakış) kendi adresinde.
+      { index: true, element: <AnaSayfa /> },
+      { path: "genel-bakis", element: <Dashboard /> },
       { path: "urunler", element: <Urunler /> },
       { path: "urunler/:kod", element: <UrunMaliyeti /> },
       { path: "hesaplar/:id", element: <HesapGoruntule /> },
@@ -52,6 +56,7 @@ export const rotalar = [
       { path: "yardim", element: <Yardim /> },
       { path: "gunluk", element: <Gunluk /> },
       { path: "arsiv", element: <Arsiv /> },
+      { path: "kullanicilar", element: <Kullanicilar /> },
       { path: "*", element: <SayfaBulunamadi /> },
     ],
   },

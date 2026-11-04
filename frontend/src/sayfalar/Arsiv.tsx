@@ -2,18 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FileSpreadsheet, Lock, LockOpen } from "lucide-react";
 import { hataMetniVarsa } from "@/api/istemci";
-import {
-  useArsiv,
-  useArsivKayitlari,
-  useArsivKiyas,
-  useSenaryoKilidi,
-  type ArsivKiyasi,
-  type ArsivSenaryosu,
-} from "@/api/sorgular/arsiv";
+import { useArsiv, useArsivKayitlari, useArsivKiyas, useSenaryoKilidi, type ArsivKiyasi, type ArsivSenaryosu } from "@/api/sorgular/arsiv";
 import { KILIT_KAPSAM_NOTU } from "@/bilesenler/KilitSeridi";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { KIYAS_SEKMELERI, SayfaSekmeleri } from "@/bilesenler/SayfaSekmeleri";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Badge } from "@/bilesenler/ui/badge";
 import { Button } from "@/bilesenler/ui/button";
@@ -85,12 +79,20 @@ function KiyasKarti({ a, b, onKapat }: { a: number; b: number; onKapat: () => vo
       {k && (
         <>
           {k.uyari && (
-            <p role="status" className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+            <p
+              role="status"
+              className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+            >
               {k.uyari}
             </p>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            {([["A", k.a], ["B", k.b]] as const).map(([e, h]) => (
+            {(
+              [
+                ["A", k.a],
+                ["B", k.b],
+              ] as const
+            ).map(([e, h]) => (
               <div key={e} className="rounded-md border p-3 text-sm">
                 <div className="font-medium">
                   {e}: {h.urun_kodu} · {h.urun_ad}
@@ -183,7 +185,7 @@ export default function Arsiv() {
   const { senaryoId, sec } = useSenaryo();
   const arsiv = useArsiv();
   const [sayfa, setSayfa] = useState({ senaryo: senaryoId, no: 1 });
-  const sayfaNo = sayfa.senaryo === senaryoId ? sayfa.no : 1;   // senaryo değişince 1. sayfa
+  const sayfaNo = sayfa.senaryo === senaryoId ? sayfa.no : 1; // senaryo değişince 1. sayfa
   const [urunGirdi, setUrunGirdi] = useState("");
   const kayitlar = useArsivKayitlari(senaryoId, sayfaNo, BOYUT, urunGirdi.trim());
   const [secili, setSecili] = useState<{ senaryo: number | null; idler: number[] }>({ senaryo: senaryoId, idler: [] });
@@ -203,7 +205,8 @@ export default function Arsiv() {
   };
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-4 p-4">
+      <SayfaSekmeleri etiket="Kıyas türü" sekmeler={KIYAS_SEKMELERI} />
       <SayfaBasligi baslik="Arşiv" altBaslik="Sezon, senaryo ve tarihli kayıtlı hesaplar. Her yeni kayıt kendi tarihiyle ayrı tutulur." />
       {arsiv.error && (
         <p role="alert" className="text-sm text-destructive">
@@ -220,7 +223,10 @@ export default function Arsiv() {
           {sezonlar.map((z) => (
             <div key={z.id} role="group" aria-label={`Sezon ${z.ad}`} className="flex flex-col gap-1">
               <div className="px-1 text-sm font-semibold">
-                {z.ad} <span className="text-xs font-normal text-muted-foreground">{goster(z.baslangic)} – {goster(z.bitis)}</span>
+                {z.ad}{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {goster(z.baslangic)} – {goster(z.bitis)}
+                </span>
               </div>
               {z.senaryolar.length === 0 && <p className="px-1 text-xs text-muted-foreground">Senaryo yok</p>}
               {z.senaryolar.map((s) => (
@@ -373,13 +379,23 @@ export default function Arsiv() {
 
               <nav aria-label="Sayfalama" className="flex items-center justify-end gap-2 text-sm">
                 <span className="mr-auto text-muted-foreground">{toplam} kayıt</span>
-                <Button variant="outline" size="sm" disabled={sayfaNo <= 1} onClick={() => setSayfa({ senaryo: senaryoId, no: sayfaNo - 1 })}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={sayfaNo <= 1}
+                  onClick={() => setSayfa({ senaryo: senaryoId, no: sayfaNo - 1 })}
+                >
                   Önceki
                 </Button>
                 <span>
                   Sayfa {sayfaNo} / {sayfaSayisi}
                 </span>
-                <Button variant="outline" size="sm" disabled={sayfaNo >= sayfaSayisi} onClick={() => setSayfa({ senaryo: senaryoId, no: sayfaNo + 1 })}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={sayfaNo >= sayfaSayisi}
+                  onClick={() => setSayfa({ senaryo: senaryoId, no: sayfaNo + 1 })}
+                >
                   Sonraki
                 </Button>
               </nav>

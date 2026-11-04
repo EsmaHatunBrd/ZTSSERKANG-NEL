@@ -25,7 +25,7 @@ class TutarlilikKontrolu(BaseModel):
     kod: str
     baslik: str
     aciklama: str
-    durum: Literal["tamam", "dikkat", "hata"]
+    durum: Literal["tamam", "bilgi", "dikkat", "hata"]   # bilgi: sorun değil, bilinmesi gereken (ör. elle girilmiş hücreler)
     sayi: int
     cozum: TutarlilikCozumu
     ogeler: list[TutarlilikOgesi]
@@ -35,6 +35,7 @@ class TutarlilikOzeti(BaseModel):
     hata: int
     dikkat: int
     tamam: int
+    bilgi: int | None = None
 
 
 class TutarlilikCikis(BaseModel):

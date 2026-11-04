@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ArrowRight, ChevronDown, CircleAlert, CircleCheck, TriangleAlert } from "lucide-react";
+import { ArrowRight, ChevronDown, CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
 import { useTutarlilik } from "@/api/sorgular/tutarlilik";
 import type { TutarlilikKontrolu } from "@/api/tipler";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { KONTROL_SEKMELERI, SayfaSekmeleri } from "@/bilesenler/SayfaSekmeleri";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Button } from "@/bilesenler/ui/button";
 import { cn } from "@/lib/utils";
@@ -12,9 +13,10 @@ import { cn } from "@/lib/utils";
 const DURUM = {
   hata: { etiket: "Hata", simge: CircleAlert, sinif: "bg-destructive/10 text-destructive" },
   dikkat: { etiket: "Dikkat", simge: TriangleAlert, sinif: "bg-sari text-foreground" },
+  bilgi: { etiket: "Bilgi", simge: Info, sinif: "bg-accent text-accent-foreground" },
   tamam: { etiket: "Tamam", simge: CircleCheck, sinif: "bg-muted text-muted-foreground" },
 } as const;
-const SIRA = { hata: 0, dikkat: 1, tamam: 2 } as const;
+const SIRA = { hata: 0, dikkat: 1, bilgi: 2, tamam: 3 } as const;
 
 /** Arayüz yoluna seçili senaryoyu ekler (`/fiyatlar?fiyatsiz=1` -> `/fiyatlar?fiyatsiz=1&senaryo=5`). */
 export function senaryoluYol(yol: string, senaryoId: number | null): string {
@@ -86,6 +88,7 @@ export default function VeriKontrolu() {
 
   return (
     <section className="flex flex-col gap-4 p-4">
+      <SayfaSekmeleri etiket="Kontrol türü" sekmeler={KONTROL_SEKMELERI} />
       <SayfaBasligi baslik="Veri Kontrolü" altBaslik="Çalışmadaki veri sorunları tek yerde; her birinin yanında nereden düzeltileceği." />
       {q.error ? (
         <div role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">

@@ -24,7 +24,7 @@ test("veri kontrolü: kontroller ve çözüm bağlantıları; fiyatsız malzemey
   await expect(page).toHaveURL(/\/fiyatlar\?fiyatsiz=1&arama=/);
   await expect(page.getByRole("table")).toContainText(kod, { timeout: DASHBOARD_BEKLEME_MS });
 
-  await page.goto("/?senaryo=1");
+  await page.goto("/genel-bakis?senaryo=1");
   const serit = page.getByRole("status", { name: "Veri Kontrolü" });
   await expect(serit).toContainText("konu ilgi bekliyor", { timeout: DASHBOARD_BEKLEME_MS });
   await serit.getByRole("link").click();

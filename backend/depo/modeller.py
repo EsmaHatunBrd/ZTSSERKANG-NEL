@@ -130,6 +130,8 @@ class UretimHedefi(Base, Ortak):
     mal_kabul_miktar_kg: Mapped[Decimal] = mapped_column(ParaTipi)
     mal_kabul_fire: Mapped[Decimal] = mapped_column(ParaTipi)
     pazarlama_yonetim_uygula: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Gider satırlarında formül yerine elle yazılmış hücreler: {"dolum_iscilik": {"tutar": "20"}, ...}; değerler Decimal metni.
+    gider_elle: Mapped[dict | None] = mapped_column(JSON)
 
 
 class Recete(Base, Ortak):
@@ -156,6 +158,8 @@ class ReceteSatiri(Base, Ortak):
     brut_miktar_elle: Mapped[Decimal | None] = mapped_column(ParaTipi)   # elle girilen brüt miktar; varsa fire kuralı atlanır
     birim_fiyat_elle: Mapped[Decimal | None] = mapped_column(ParaTipi)   # elle girilen birim fiyat; varsa fiyat listesi atlanır
     seviye: Mapped[int | None] = mapped_column(Integer)                  # Excel A sütunu (0-3); yalnız gösterim/hiyerarşi, hesaba girmez
+    zs_elle: Mapped[str | None] = mapped_column(String(1))               # elle Z/S (Excel N); varsa malzeme kartınınkinin yerine
+    para_birimi_elle: Mapped[str | None] = mapped_column(String(8))      # elle para birimi (Excel O); varsa kartınkinin yerine
 
 
 class FireKurali(Base, Ortak):
@@ -248,3 +252,27 @@ class UretimKapasitesi(Base, Ortak):
     toplam_sure: Mapped[Decimal] = mapped_column(ParaTipi)
     hedef_uretim: Mapped[Decimal] = mapped_column(ParaTipi)
     ortalama_isci: Mapped[Decimal] = mapped_column(ParaTipi)
+
+
+class Kullanici(Base, Ortak):
+    """Uygulamaya giriş yapan kişi. Şifre yalnız karma olarak (servisler/kimlik_servisi.sifre_karma) saklanır."""
+    __tablename__ = "kullanici"
+    kullanici_adi: Mapped[str] = mapped_column(String(64), unique=True)   # giriş adı; küçük harf; değişiklik kayıtlarına bu yazılır
+    ad: Mapped[str] = mapped_column(String(120))                           # görünen ad
+    sifre_karma: Mapped[str] = mapped_column(String(300))
+    rol: Mapped[str] = mapped_column(String(20))                           # genel_direktor | muhasebe | satin_alma | izleyici
+    aktif: Mapped[bool] = mapped_column(Boolean, default=True)
+    sifre_degismeli: Mapped[bool] = mapped_column(Boolean, default=True)   # geçici şifre: ilk girişte kendi şifresini belirler
+    hatali_deneme: Mapped[int] = mapped_column(Integer, default=0)
+    kilit_bitis: Mapped[datetime | None] = mapped_column(DateTime)         # art arda hatalı denemeden sonra (UTC)
+    son_giris: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class GirisOturumu(Base, Ortak):
+    """Açık oturum: tarayıcıdaki çerez belirtecinin karması. Çıkışta, pasifleştirmede ya da şifre sıfırlamada kapanır."""
+    __tablename__ = "giris_oturumu"
+    belirtec_karma: Mapped[str] = mapped_column(String(64), unique=True)
+    kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"))
+    acik: Mapped[bool] = mapped_column(Boolean, default=True)
+    son_kullanim: Mapped[datetime | None] = mapped_column(DateTime)
+    kullanici: Mapped[Kullanici] = relationship()

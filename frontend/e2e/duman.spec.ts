@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 // Gerçek backend + gerçek Excel verisi: ürün/malzeme adları sabit yazılmaz; sayım, yapı ve değişim doğrulanır.
 test("duman: dashboard -> ürün -> birim fiyat değişimi -> Kaydet -> yenile -> teklif turu -> teklifler sayfası", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/genel-bakis");
 
   // Senaryo otomatik seçilir (URL ?senaryo= ile eşitlenir).
   await expect(page.getByLabel("Senaryo", { exact: true })).toBeVisible();
@@ -93,7 +93,7 @@ test("duman: dashboard -> ürün -> birim fiyat değişimi -> Kaydet -> yenile -
 });
 
 test("reçete girintisi: seviye > 0 satırlarda data-seviye ve soldan boşluk (8 + seviye x 14 px)", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/genel-bakis");
   await expect(page).toHaveURL(/senaryo=\d+/);
   const ilkSatir = page.locator("tr[data-satir]").first();
   await expect(ilkSatir).toBeVisible({ timeout: DASHBOARD_BEKLEME_MS });

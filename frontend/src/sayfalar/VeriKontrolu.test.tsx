@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
@@ -106,5 +106,51 @@ describe("Genel Bakış Veri Kontrolü şeridi", () => {
     kur("/", false);
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByRole("status", { name: "Veri Kontrolü" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Kontrol sekmeleri", () => {
+  it("Özet seçili; Ürün uyarıları sekmesi senaryoyla /uyarilar'a gider", async () => {
+    const u = userEvent.setup();
+    kur();
+    const sekmeler = await screen.findByRole("navigation", { name: "Kontrol türü" });
+    expect(within(sekmeler).getByRole("link", { name: "Özet" })).toHaveAttribute("aria-current", "page");
+    const uyari = within(sekmeler).getByRole("link", { name: "Ürün uyarıları" });
+    await waitFor(() => expect(uyari).toHaveAttribute("href", "/uyarilar?senaryo=1"));
+    await u.click(uyari);
+    expect(yon.state.location.pathname).toBe("/uyarilar");
+  });
+});
+
+describe("Bilgi durumu", () => {
+  it("elle hücre kontrolü 'Bilgi' etiketiyle dikkat ile tamam arasında; özet sayısına girmez", async () => {
+    const bilgi = {
+      kod: "elle_hucre",
+      baslik: "Elle girilmiş hücre",
+      aciklama: "Formül yerine elle yazılmış değerler",
+      durum: "bilgi" as const,
+      sayi: 1,
+      cozum: { etiket: "Ürün Maliyeti", yol: "/urunler" },
+      ogeler: [{ etiket: "03.022 · Ürün", aciklama: "Dolum işçilik: tutar (P) 20", yol: "/urunler/03.022" }],
+    };
+    sunucu.use(
+      http.get("*/api/v1/tutarlilik", () =>
+        HttpResponse.json({
+          ...tutarlilikSorunlu,
+          kontroller: [bilgi, ...tutarlilikSorunlu.kontroller],
+          ozet: { ...tutarlilikSorunlu.ozet, bilgi: 1 },
+        }),
+      ),
+    );
+    kur("/veri-kontrolu?senaryo=1", false);
+    const basliklar = await screen.findAllByRole("heading", { level: 2 });
+    expect(basliklar.map((h) => h.textContent)).toEqual([
+      "Hesaplanamayan ürün",
+      "Fiyatı olmayan malzeme",
+      "Elle girilmiş hücre",
+      "Gider payı %100 değil",
+    ]);
+    expect(within(screen.getByRole("region", { name: "Elle girilmiş hücre" })).getByText(/Bilgi · 1 kayıt/)).toBeInTheDocument();
+    expect(screen.getByText("2 konu", { exact: false })).toBeInTheDocument();
   });
 });

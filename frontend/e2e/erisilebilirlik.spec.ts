@@ -7,6 +7,8 @@ test.beforeEach(async ({ page }) => {
 
 const YOLLAR = [
   "/",
+  "/genel-bakis",
+  "/kullanicilar",
   "/urunler",
   "/fiyatlar",
   "/parametreler",
@@ -39,7 +41,9 @@ for (const b of BOYUTLAR) {
       await page.setViewportSize({ width: b.width, height: b.height });
       const hatalar = hataDinle(page);
       await page.goto(yol);
-      await expect(page.getByRole("navigation", { name: "Ana menü" })).toBeVisible();
+      // Ana Sayfa bölüm seçme ekranıdır: sol panel yalnız diğer sayfalarda.
+      if (yol === "/") await expect(page.getByRole("heading", { name: /Hoş geldiniz/ })).toBeVisible();
+      else await expect(page.getByRole("navigation", { name: "Ana menü" })).toBeVisible();
       await expect(page.locator("#senaryo-secici")).toBeVisible();
       await page.waitForLoadState("networkidle");
       // Yatay taşma: sayfa gövdesi görünüm alanından geniş olmamalı (tablolar kendi içinde kayabilir).
@@ -82,7 +86,7 @@ test("koyu tema anahtarı body arka planını koyulaştırır", async ({ page })
 });
 
 test("klavye odağı görünür halka gösterir", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/genel-bakis");
   await expect(page.getByRole("navigation", { name: "Ana menü" })).toBeVisible();
   for (const tema of ["light", "dark"] as const) {
     await page.evaluate((t) => document.documentElement.classList.toggle("dark", t === "dark"), tema);

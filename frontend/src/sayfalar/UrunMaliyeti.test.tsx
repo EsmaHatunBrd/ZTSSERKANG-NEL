@@ -349,7 +349,11 @@ describe("UrunMaliyeti", () => {
       http.post("*/api/v1/urunler/:kod/hesapla", async ({ request }) => {
         const g = (await request.json()) as { override?: { parametreler?: Record<string, string> } };
         const e = g.override?.parametreler?.enflasyon;
-        return HttpResponse.json(e ? { ...urunHesapYaniti, kullanilan_parametreler: { ...urunHesapYaniti.kullanilan_parametreler, enflasyon: e } } : urunHesapYaniti);
+        return HttpResponse.json(
+          e
+            ? { ...urunHesapYaniti, kullanilan_parametreler: { ...urunHesapYaniti.kullanilan_parametreler, enflasyon: e } }
+            : urunHesapYaniti,
+        );
       }),
     );
     await tabloHazir();
@@ -363,8 +367,7 @@ describe("UrunMaliyeti", () => {
 
   it("Kaydet: sunucu hatası diyalogda gösterilir, taslak ve diyalog korunur", async () => {
     kur({
-      kaydetHatasi: () =>
-        HttpResponse.json({ hata: "dogrulama", mesaj: "Parametre değeri geçersiz", alanlar: {} }, { status: 422 }),
+      kaydetHatasi: () => HttpResponse.json({ hata: "dogrulama", mesaj: "Parametre değeri geçersiz", alanlar: {} }, { status: 422 }),
     });
     await tabloHazir();
     const user = userEvent.setup();
@@ -629,7 +632,9 @@ describe("UrunMaliyeti düzeltme turu 1", () => {
     kur({ yanit: { ...urunHesapYaniti, satirlar } });
     const tablo = await tabloHazir();
     expect(within(tablo).getByRole("columnheader", { name: "Döviz" })).toBeInTheDocument();
-    const basliklar = within(tablo).getAllByRole("columnheader").map((h) => h.textContent);
+    const basliklar = within(tablo)
+      .getAllByRole("columnheader")
+      .map((h) => h.textContent);
     const k = basliklar.indexOf("Döviz");
     expect(within(satir(tablo, "Pet Şişe 500 ml")).getAllByRole("cell")[k]).toHaveTextContent("USD");
     expect(within(satir(tablo, "Salamura Karışımı")).getAllByRole("cell")[k]).toHaveTextContent("—");
@@ -665,7 +670,6 @@ describe("UrunMaliyeti son tur — F2 döviz etiketleri", () => {
       expect(g.override.satirlar["1"].birim_fiyat_elle).toBe("6");
     });
   });
-
 });
 
 describe("UrunMaliyeti son tur", () => {
@@ -692,10 +696,7 @@ describe("UrunMaliyeti son tur", () => {
     kur({
       hesaplaHatasi: (g) =>
         (g.override as { fire?: Record<string, string> } | undefined)?.fire?.["1"]
-          ? HttpResponse.json(
-              { hata: "dogrulama", mesaj: "İstek geçersiz", alanlar: { "override.fire": "çok büyük" } },
-              { status: 422 },
-            )
+          ? HttpResponse.json({ hata: "dogrulama", mesaj: "İstek geçersiz", alanlar: { "override.fire": "çok büyük" } }, { status: 422 })
           : null,
     });
     const tablo = await tabloHazir();
@@ -741,7 +742,10 @@ describe("UrunMaliyeti son tur", () => {
 });
 
 const excelKur = () => kur({ yanit: urunExcelHesapYaniti });
-const basliklar = (tablo: HTMLElement) => within(tablo).getAllByRole("columnheader").map((h) => (h.textContent ?? "").trim());
+const basliklar = (tablo: HTMLElement) =>
+  within(tablo)
+    .getAllByRole("columnheader")
+    .map((h) => (h.textContent ?? "").trim());
 
 describe("U5 reçete tablosu: Excel sütun sırası ve ağaç", () => {
   it("sütunlar Satır, Kod, Cinsi, Miktar, Fire %, Brüt, Birim, Birim fiyat, Kaynak (Z/S), Döviz, Tutar, Maliyet %, Satış % sırasındadır", async () => {
@@ -773,7 +777,10 @@ describe("U5 reçete tablosu: Excel sütun sırası ve ağaç", () => {
     expect(hucre("Salamura Karışımı", "Birim")).toHaveTextContent("kg");
     expect(hucre("Salamura Karışımı", "Kaynak")).toHaveTextContent("Satın alma");
     expect(hucre("Kapak", "Kaynak")).toHaveTextContent("Ziraat");
-    expect(within(tablo).getAllByRole("columnheader")[k.indexOf("Kaynak")]).toHaveAttribute("title", expect.stringContaining("Ziraat: enflasyon uygulanmaz"));
+    expect(within(tablo).getAllByRole("columnheader")[k.indexOf("Kaynak")]).toHaveAttribute(
+      "title",
+      expect.stringContaining("Ziraat: enflasyon uygulanmaz"),
+    );
     expect(within(satir(tablo, "Pet Şişe 500 ml")).getByText("Ürün")).toBeInTheDocument();
     expect(satir(tablo, "Pet Şişe 500 ml")).toHaveAttribute("data-girinti", "0");
     // Ürünün kendi satırından sonra girinti yok.
@@ -857,15 +864,15 @@ describe("U6 toplamlar kartı: Excel sırası", () => {
     const bolum = screen.getByRole("region", { name: "Satış fiyatı" });
     expect(within(bolum).getByRole("heading", { name: "Satış fiyatı (%20)" })).toBeInTheDocument();
     const tablo = within(bolum).getByRole("table", { name: "Satış fiyatı tablosu" });
-    expect(within(tablo).getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
-      "Para birimi",
-      "Kur",
-      "Fiyat (fireli)",
-      "Fiyat (firesiz)",
-    ]);
+    expect(
+      within(tablo)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual(["Para birimi", "Kur", "Fiyat (fireli)", "Fiyat (firesiz)"]);
     const satirlar = within(tablo).getAllByRole("row").slice(1);
     expect(satirlar.map((r) => within(r).getAllByRole("cell")[0].textContent)).toEqual(["TL", "USD", "EUR", "GBP", "ZAR"]);
-    const hucre = (pb: string, i: number) => within(satirlar.find((r) => within(r).getAllByRole("cell")[0].textContent === pb) as HTMLElement).getAllByRole("cell")[i].textContent;
+    const hucre = (pb: string, i: number) =>
+      within(satirlar.find((r) => within(r).getAllByRole("cell")[0].textContent === pb) as HTMLElement).getAllByRole("cell")[i].textContent;
     expect(hucre("TL", 1)).toBe("—");
     expect(hucre("TL", 2)).toBe("45,76 TL");
     expect(hucre("USD", 1)).toBe("50,00");
@@ -876,12 +883,11 @@ describe("U6 toplamlar kartı: Excel sırası", () => {
     expect(within(bolum).getByLabelText("Hesap notları")).toHaveTextContent("Fiyatlara KDV dahil değildir");
     expect(within(bolum).getByText("Süzme kg birim fiyatı")).toBeInTheDocument();
     const teklifler = within(bolum).getByRole("table", { name: "Teklifler tablosu" });
-    expect(within(teklifler).getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
-      "",
-      "1. teklif %20",
-      "2. teklif %17",
-      "3. teklif %14",
-    ]);
+    expect(
+      within(teklifler)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual(["", "1. teklif %20", "2. teklif %17", "3. teklif %14"]);
     expect(within(teklifler).getAllByText("0,785 USD").length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -895,7 +901,14 @@ describe("U2 kurlar ve enflasyon bloğu", () => {
     const blok = parametreBolgesi("Kurlar ve enflasyon");
     expect(within(blok).getByLabelText("Enflasyon (%)")).toHaveValue("25");
     expect(within(blok).getByLabelText("Maliyet sapma (%)")).toHaveValue("3");
-    for (const [pb, v] of [["USD", "50"], ["EUR", "55"], ["GBP", "65"], ["CHF", "58"], ["RUB", "0.6"], ["ZAR", "2.7"]]) {
+    for (const [pb, v] of [
+      ["USD", "50"],
+      ["EUR", "55"],
+      ["GBP", "65"],
+      ["CHF", "58"],
+      ["RUB", "0.6"],
+      ["ZAR", "2.7"],
+    ]) {
       expect(within(blok).getByLabelText(`Kur ${pb}`)).toHaveValue(v);
     }
     const user = userEvent.setup();
@@ -909,10 +922,7 @@ describe("U2 kurlar ve enflasyon bloğu", () => {
       const g = son(istekler.hesapla) as { override: { parametreler: Record<string, string> } };
       expect(g.override.parametreler).toEqual({ "kur.USD": "52", enflasyon: "0.3" });
     });
-    expect(within(blok).getByRole("link", { name: "Parametrelerde kalıcı değiştir" })).toHaveAttribute(
-      "href",
-      "/parametreler?senaryo=1",
-    );
+    expect(within(blok).getByRole("link", { name: "Parametrelerde kalıcı değiştir" })).toHaveAttribute("href", "/parametreler?senaryo=1");
   });
 });
 
@@ -1065,7 +1075,6 @@ describe("U1 üretim bilgileri bloğu", () => {
     // Taslak sıfırlandı: hesap taslaksız yeniden koşar.
     await waitFor(() => expect(son(istekler.hesapla)).not.toHaveProperty("override"));
   });
-
 });
 
 describe("Fix round 1", () => {
@@ -1090,7 +1099,6 @@ describe("Fix round 1", () => {
     expect(within(diyalog).getByText("Faiz TL (%)")).toBeInTheDocument();
     expect(within(diyalog).queryByText(/faiz\.TL/)).not.toBeInTheDocument();
   });
-
 });
 
 describe("Faz 4b-ek: Net miktar ve kur sırası", () => {
@@ -1154,9 +1162,7 @@ describe("Faz 4c U2: hücreye yaz", () => {
     await user.clear(brut);
     const fiyat = within(tablo).getByLabelText(/Birim fiyat — Salamura/);
     await user.clear(fiyat);
-    await waitFor(() =>
-      expect(sonG(istekler).override.satirlar).toEqual({ "2": { elle_brut_kaldir: true, elle_fiyat_kaldir: true } }),
-    );
+    await waitFor(() => expect(sonG(istekler).override.satirlar).toEqual({ "2": { elle_brut_kaldir: true, elle_fiyat_kaldir: true } }));
     expect(brut).toHaveAttribute("title", "Eski değer: 0,38");
     expect(fiyat).toHaveAttribute("title", "Eski değer: 12,4");
     await kaydetAkisi(user);
@@ -1237,12 +1243,28 @@ describe("Faz 4c U2: hücreye yaz", () => {
     expect(elektrik).toHaveAttribute("title", expect.stringContaining("kalıcı yazım Gider Dağıtım sayfasından"));
     await user.clear(elektrik);
     await user.type(elektrik, "0,002");
-    await waitFor(() =>
-      expect(sonG(istekler).override.gider_oranlari).toEqual({ dolum_iscilik_sn: "1000", "elektrik_sn.niko": "0.002" }),
-    );
+    await waitFor(() => expect(sonG(istekler).override.gider_oranlari).toEqual({ dolum_iscilik_sn: "1000", "elektrik_sn.niko": "0.002" }));
     expect(dolum).toHaveAttribute("title", expect.stringContaining("Eski değer: 925"));
-    // Pazarlama (diğer giderler) düzenlenmez
+    // Pazarlama (diğer giderler) senaryo oranı olarak düzenlenmez; yalnız bu ürün için elle değer yazılabilir
     expect(within(gider).queryByLabelText("Birim fiyat — Pazarlama Satış Giderleri")).not.toBeInTheDocument();
+  });
+
+  it("gider tutarına tıklayınca bu ürün için elle değer yazılır; Elle rozetiyle formüle dönülür", async () => {
+    const istekler = excelKur();
+    await tabloHazir();
+    const gider = screen.getByRole("region", { name: "Gider kalemleri" });
+    const user = userEvent.setup();
+    expect(within(gider).queryByLabelText("Tutar — Elektrik Giderleri")).not.toBeInTheDocument(); // formüllü hücre düz metin
+    await user.click(within(gider).getByRole("button", { name: "Tutar — Elektrik Giderleri: bu ürün için elle değer yaz" }));
+    const tutar = within(gider).getByLabelText("Tutar — Elektrik Giderleri");
+    expect(tutar).toHaveFocus();
+    await user.clear(tutar);
+    await user.type(tutar, "0");
+    await waitFor(() =>
+      expect((son(istekler.hesapla) as { override: { gider_elle?: unknown } }).override.gider_elle).toEqual({ elektrik: { tutar: "0" } }),
+    );
+    await user.click(within(gider).getByRole("button", { name: "Tutar — Elektrik Giderleri: Elle. Formüle dön" }));
+    await waitFor(() => expect(son(istekler.hesapla)).not.toHaveProperty("override"));
   });
 
   it("Kaydet: dolum oranı havuz toplamı olarak yazılır, elektrik yalnız hesap override ında kalır; diyalog oran ve havuz toplamını gösterir", async () => {
@@ -1475,7 +1497,10 @@ describe("UrunMaliyeti — reçetesiz ürün (Faz 5c)", () => {
   it("hesap 'zorunlu parametre eksik' derse Parametreler bağlantılı not görünür", async () => {
     kur({
       hesaplaHatasi: () =>
-        HttpResponse.json({ hata: "dogrulama", mesaj: "zorunlu parametre eksik", alanlar: { eksik: ["enflasyon"] }, kod: "parametre_eksik" }, { status: 422 }),
+        HttpResponse.json(
+          { hata: "dogrulama", mesaj: "zorunlu parametre eksik", alanlar: { eksik: ["enflasyon"] }, kod: "parametre_eksik" },
+          { status: 422 },
+        ),
     });
     const not = await screen.findByRole("note");
     expect(not).toHaveTextContent("Hesap için parametre değerleri gerekli");

@@ -24,9 +24,9 @@ def urun_maliyeti(girdi: UrunGirdisi, malzemeler: dict[str, Malzeme], oranlar: G
             uyarilar.append(u)
     if girdi.uretim.pazar == "Yurtdışı":
         uyarilar.append("Yurtdışı yüzde kuralı Excel'de doğrulanmadı (ihracat sayfası yok)")
-    di, u1 = direkt_iscilik(girdi.uretim, oranlar, p)
-    gug, u2 = genel_uretim(girdi.uretim, oranlar, p)
-    diger, u3 = diger_giderler(girdi.uretim, oranlar)
+    di, u1 = direkt_iscilik(girdi.uretim, oranlar, p, girdi.gider_elle)
+    gug, u2 = genel_uretim(girdi.uretim, oranlar, p, girdi.gider_elle)
+    diger, u3 = diger_giderler(girdi.uretim, oranlar, girdi.gider_elle)
     uyarilar += u1 + u2 + u3
 
     malzeme_top = malzeme_toplami(malz_satirlari)

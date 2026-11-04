@@ -19,7 +19,7 @@ test("yeni çalışma: boş çalışma aç → Veri Girişi'nden yeni ürün →
   const malzeme = kayitlar.find((m) => !m.fiyatsiz && !m.kart_yok);
   expect(malzeme, "fiyatı olan bir malzeme bulunmalı").toBeTruthy();
 
-  await page.goto("/");
+  await page.goto("/genel-bakis");
   await expect(page).toHaveURL(/senaryo=\d+/);
   const eskiUrl = page.url();
 

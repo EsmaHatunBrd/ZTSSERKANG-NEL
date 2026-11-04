@@ -40,8 +40,25 @@ const YAZMA_DEGIL = [/\/hesapla$/, /\/import\/fiyat-listesi$/];
 
 export const KULLANICI_YOK_MESAJI = "Önce üst bardan adınızı girin";
 
+/**
+ * Giriş modu (sunucu girişi zorunlu tutuyorsa GirisKapisi açar): yazan kişi oturum çerezinden gelir, ad başlığı ve yerel ad
+ * denetimi yapılmaz. Bir istek 401 dönerse (oturum kapanmış) `oturumDustu` çağrılır: kapı giriş ekranına döner.
+ */
+let girisModu = false;
+let oturumDustu: (() => void) | null = null;
+
+export function girisModunuAyarla(acik: boolean, dustu: (() => void) | null = null): void {
+  girisModu = acik;
+  oturumDustu = dustu;
+}
+
 api.use({
+  onResponse({ request, response }) {
+    if (girisModu && response.status === 401 && !new URL(request.url).pathname.startsWith("/api/v1/kimlik/")) oturumDustu?.();
+    return response;
+  },
   onRequest({ request }) {
+    if (girisModu) return request;
     const ad = kullanici.al();
     const yazma = request.method !== "GET" && request.method !== "HEAD";
     if (yazma && !kullanici.adGecerli(ad) && !YAZMA_DEGIL.some((r) => r.test(new URL(request.url).pathname))) {

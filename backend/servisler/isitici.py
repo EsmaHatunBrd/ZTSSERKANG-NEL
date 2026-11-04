@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 import threading
 import time
 from collections.abc import Callable
@@ -20,11 +21,18 @@ log = logging.getLogger("fiyat.isitici")
 GECIKME_SN = float(os.environ.get("ONBELLEK_ISITMA_GECIKME_SN", "0.8"))
 ACIK = os.environ.get("ONBELLEK_ISITMA", "1") not in ("0", "false", "hayir")
 UCLAR = ("/api/v1/urunler?senaryo={id}&boyut=1", "/api/v1/uyarilar?senaryo={id}")
+# Süreç başına rastgele iç anahtar: giriş zorunluyken ısıtıcı kendi GET isteklerini bununla yapar (dışarıya hiç verilmez).
+IC_ANAHTAR = secrets.token_urlsafe(32)
+
+
+def _istek(url: str):
+    import urllib.request
+    return urllib.request.Request(url, headers={"X-Ic-Anahtar": IC_ANAHTAR})
 
 
 def _varsayilan_getir(url: str) -> None:
     import urllib.request
-    with urllib.request.urlopen(url, timeout=120) as y:   # noqa: S310 — yalnız kendi sunucumuzun adresi
+    with urllib.request.urlopen(_istek(url), timeout=120) as y:   # noqa: S310 — yalnız kendi sunucumuzun adresi
         y.read(1)
 
 
@@ -37,7 +45,7 @@ def _varsayilan_senaryolar(taban: str, getir_json: Callable[[str], object]) -> l
 def _varsayilan_getir_json(url: str) -> object:
     import json
     import urllib.request
-    with urllib.request.urlopen(url, timeout=30) as y:   # noqa: S310
+    with urllib.request.urlopen(_istek(url), timeout=30) as y:   # noqa: S310
         return json.load(y)
 
 

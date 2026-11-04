@@ -35,7 +35,7 @@ ALANLAR = {
 SAPMA_ALANI = "maliyet_tl"
 
 AYRISTIRMA_ETIKETLERI = {
-    "fiyat": "Malzeme fiyatları", "recete": "Reçete (miktar, fire, elle fiyat)", "uretim": "Üretim bilgileri", "gider": "Gider oranları",
+    "fiyat": "Malzeme fiyatları", "recete": "Reçete (miktar, fire, elle fiyat)", "uretim": "Üretim bilgileri", "gider": "Giderler (oran ve elle)",
     "kur": "Döviz kurları", "enflasyon": "Enflasyon", "diger": "Diğer parametreler (faiz, stok, kâr)",
 }
 URETIM_ETIKETLERI = {
@@ -162,7 +162,7 @@ def ayristir(ca: hs.HesapCiktisi, cb: hs.HesapCiktisi, malz_a: dict, malz_b: dic
     adimlar = [
         ("fiyat", ga, malz_b, oa, pa),
         ("recete", replace(ga, recete=gb.recete), malz_b, oa, pa),
-        ("uretim", gb, malz_b, oa, pa),
+        ("uretim", replace(gb, gider_elle=ga.gider_elle), malz_b, oa, pa),   # elle gider hücreleri gider adımında sayılır
         ("gider", gb, malz_b, ob, pa),
         ("kur", gb, malz_b, ob, replace(pa, kurlar=pb.kurlar)),
         ("enflasyon", gb, malz_b, ob, replace(pa, kurlar=pb.kurlar, enflasyon=pb.enflasyon)),

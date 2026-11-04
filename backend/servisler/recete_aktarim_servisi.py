@@ -21,8 +21,9 @@ from .import_servisi import recete_seviyeleri_oku
 
 OKUMA_HATALARI = (KeyError, ValueError, TypeError, ArithmeticError, StopIteration, IndexError, AttributeError)
 SATIN_ALMA = "S.ALMA BF"
-KARSILASTIRILAN = ("miktar", "fire_override", "brut_miktar_elle", "birim_fiyat_elle")
-ALAN_ADI = {"miktar": "miktar", "fire_override": "fire", "brut_miktar_elle": "elle brüt", "birim_fiyat_elle": "elle fiyat"}
+KARSILASTIRILAN = ("miktar", "fire_override", "brut_miktar_elle", "birim_fiyat_elle", "zs_elle", "para_birimi_elle")
+ALAN_ADI = {"miktar": "miktar", "fire_override": "fire", "brut_miktar_elle": "elle brüt", "birim_fiyat_elle": "elle fiyat",
+            "zs_elle": "elle Z/S", "para_birimi_elle": "elle para birimi"}
 
 
 def _kitaplar(dosya_yolu: Path):
@@ -44,7 +45,8 @@ def _urun_sayfalari(wb_v) -> list[str]:
 
 def _satir_sozlukleri(girdi, seviyeler) -> list[dict]:
     return [{"malzeme_kodu": r.malzeme_kodu, "ad": r.ad, "miktar": r.miktar, "birim": r.birim, "fire_override": r.fire_orani,
-             "dugum_tipi": r.dugum_tipi, "brut_miktar_elle": r.brut_miktar_elle, "birim_fiyat_elle": r.birim_fiyat_elle, "seviye": sv}
+             "dugum_tipi": r.dugum_tipi, "brut_miktar_elle": r.brut_miktar_elle, "birim_fiyat_elle": r.birim_fiyat_elle, "seviye": sv,
+             "zs_elle": r.zs_elle, "para_birimi_elle": r.para_birimi_elle}
             for r, sv in zip(girdi.recete, seviyeler)]
 
 
@@ -71,7 +73,8 @@ def _mevcut_satirlar(r: m.Recete | None) -> list[dict] | None:
     if r is None:
         return None
     return [{"malzeme_kodu": x.malzeme_kodu, "ad": x.ad, "miktar": x.miktar, "fire_override": x.fire_override,
-             "brut_miktar_elle": x.brut_miktar_elle, "birim_fiyat_elle": x.birim_fiyat_elle} for x in r.satirlar]
+             "brut_miktar_elle": x.brut_miktar_elle, "birim_fiyat_elle": x.birim_fiyat_elle, "zs_elle": x.zs_elle,
+             "para_birimi_elle": x.para_birimi_elle} for x in r.satirlar]
 
 
 def recete_onizle(s: Session, senaryo_id: int, dosya_yolu: Path) -> dict:
@@ -158,7 +161,8 @@ def recete_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, sayfalar: list[
             hesap_servisi.uretim_hedefi_kaydet(s, u.id, senaryo_id, kullanici, neden=neden, vardiya_uretim_adedi=ub.vardiya_uretim_adedi,
                                                dolum_personel=ub.dolum_personel, etiketleme_adedi=ub.etiketleme_adedi,
                                                etiket_personel=ub.etiket_personel, mal_kabul_miktar_kg=ub.mal_kabul_miktar_kg,
-                                               mal_kabul_fire=ub.mal_kabul_fire, pazarlama_yonetim_uygula=ub.pazarlama_yonetim_uygula)
+                                               mal_kabul_fire=ub.mal_kabul_fire, pazarlama_yonetim_uygula=ub.pazarlama_yonetim_uygula,
+                                               gider_elle=girdi.gider_elle)
             if kod.startswith("SAYFA-"):
                 u.gecici_kod = True
             yeni_urun += 1

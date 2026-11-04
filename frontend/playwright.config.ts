@@ -12,8 +12,11 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   reporter: [["list"]],
+  // Giriş zorunlu: sunucular kalkınca bir kez giriş yapılır, testler o oturumla başlar (giriş ekranı testi kendi oturumsuz bağlamını kurar).
+  globalSetup: "./e2e/giris-kurulumu.ts",
   use: {
     baseURL: "http://127.0.0.1:5190",
+    storageState: "e2e/.oturum.json",
     trace: "on-first-retry",
     ...devices["Desktop Chrome"],
     viewport: { width: 1280, height: 800 },

@@ -6,6 +6,7 @@ import { useKarsiSenaryo, useKiyasListesi } from "@/api/sorgular/kiyas";
 import type { BgDeger, BgSatir, Senaryo } from "@/api/tipler";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { KIYAS_SEKMELERI, SayfaSekmeleri } from "@/bilesenler/SayfaSekmeleri";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { buttonVariants } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
@@ -136,6 +137,7 @@ export default function ButceGerceklesen() {
 
   return (
     <section className="flex flex-col gap-4 p-4">
+      <SayfaSekmeleri etiket="Kıyas türü" sekmeler={KIYAS_SEKMELERI} />
       <SayfaBasligi baslik="Bütçe vs Gerçekleşen" altBaslik="Fiyat çalışması ile gerçekleşenin ürün bazında farkı ve sapmanın kaynağı" />
 
       {yukleniyor ? (

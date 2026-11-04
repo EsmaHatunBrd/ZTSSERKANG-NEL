@@ -81,7 +81,7 @@ export const kiyasUrun: BgUrun = {
     { kaynak: "fiyat", etiket: "Malzeme fiyatları", fark: "4" },
     { kaynak: "recete", etiket: "Reçete (miktar, fire, elle fiyat)", fark: "0.5" },
     { kaynak: "uretim", etiket: "Üretim bilgileri", fark: "0.3" },
-    { kaynak: "gider", etiket: "Gider oranları", fark: "0.2" },
+    { kaynak: "gider", etiket: "Giderler (oran ve elle)", fark: "0.2" },
     { kaynak: "kur", etiket: "Döviz kurları", fark: "0" },
     { kaynak: "enflasyon", etiket: "Enflasyon", fark: "-2" },
     { kaynak: "diger", etiket: "Diğer parametreler (faiz, stok, kâr)", fark: "0" },

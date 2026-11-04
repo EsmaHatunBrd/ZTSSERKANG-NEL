@@ -7,7 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from fiyat_motoru.gider_dagitim import anahtar
 from fiyat_motoru.hesapla import urun_maliyeti
-from fiyat_motoru.modeller import GiderOranlari, MaliyetSonucu, Malzeme as MotorMalzeme, Parametreler, UretimBilgisi, UrunGirdisi
+from fiyat_motoru.modeller import (GIDER_ELLE_ALANLARI, GIDER_KALEMLERI, GiderElle, GiderOranlari, MaliyetSonucu, Malzeme as MotorMalzeme,
+                                   Parametreler, UretimBilgisi, UrunGirdisi)
 from fiyat_motoru.para import SIFIR
 from ..depo import modeller as m
 from . import aile, fiyat_servisi, gider_servisi, parametre_servisi, recete_servisi
@@ -145,16 +146,57 @@ def urun_kod_degistir(s: Session, eski_kod: str, yeni_kod: str, kullanici: str =
     return u
 
 
-def uretim_hedefi_kaydet(s: Session, urun_id: int, senaryo_id: int, kullanici: str = "sistem", neden: str | None = None, **alanlar) -> m.UretimHedefi:
+def gider_elle_normalle(veri) -> dict | None:
+    """Elle gider hücreleri: {kalem: {alan: değer}} -> saklanan biçim (Decimal metni; boş alan/kalem atılır; hiç yoksa None).
+    Girdi motor nesnesi (GiderElle) ya da sözlük olabilir. Bilinmeyen kalem/alan ve sonlu olmayan değer 422."""
+    out = {}
+    for kalem, alanlar in (veri or {}).items():
+        if kalem not in GIDER_KALEMLERI:
+            raise DogrulamaHatasi(f"bilinmeyen gider kalemi: {kalem}", {"kalem": kalem})
+        if isinstance(alanlar, GiderElle):
+            alanlar = {a: getattr(alanlar, a) for a in GIDER_ELLE_ALANLARI}
+        elif not isinstance(alanlar, dict):
+            alanlar = alanlar.model_dump()   # API şeması (GiderElleGiris)
+        bilinmeyen = sorted(set(alanlar) - set(GIDER_ELLE_ALANLARI))
+        if bilinmeyen:
+            raise DogrulamaHatasi("bilinmeyen elle gider alanı", {"kalem": kalem, "alanlar": bilinmeyen})
+        d = {}
+        for a, v in alanlar.items():
+            if v is None or v == "":
+                continue
+            v = Decimal(str(v))
+            if not v.is_finite():
+                raise DogrulamaHatasi("elle gider değeri sonlu olmalı", {"kalem": kalem, "alan": a})
+            d[a] = str(v)
+        if d:
+            out[kalem] = d
+    return out or None
+
+
+def gider_elle_motor(saklanan: dict | None) -> dict[str, GiderElle]:
+    """Saklanan elle gider hücreleri -> motor girdisi."""
+    return {k: GiderElle(**{a: Decimal(v) for a, v in d.items()}) for k, d in (saklanan or {}).items()}
+
+
+_DEGISMEZ = object()
+
+
+def uretim_hedefi_kaydet(s: Session, urun_id: int, senaryo_id: int, kullanici: str = "sistem", neden: str | None = None,
+                         gider_elle=_DEGISMEZ, **alanlar) -> m.UretimHedefi:
+    """gider_elle verilmezse mevcut elle gider hücrelerine dokunulmaz; verilirse (None dahil) tamamı bununla değişir."""
     eksik = [a for a in URETIM_ALANLARI if a not in alanlar]
     if eksik:
         raise DogrulamaHatasi("üretim hedefi alanı eksik", {"eksik": eksik})
     h = s.scalar(select(m.UretimHedefi).where(m.UretimHedefi.urun_id == urun_id, m.UretimHedefi.senaryo_id == senaryo_id))
+    elle = None if gider_elle is _DEGISMEZ else gider_elle_normalle(gider_elle)
     if h is None:
-        h = m.UretimHedefi(urun_id=urun_id, senaryo_id=senaryo_id, olusturan=kullanici, **{a: alanlar[a] for a in URETIM_ALANLARI}); s.add(h); s.flush()
+        h = m.UretimHedefi(urun_id=urun_id, senaryo_id=senaryo_id, olusturan=kullanici, gider_elle=elle,
+                           **{a: alanlar[a] for a in URETIM_ALANLARI}); s.add(h); s.flush()
         return h
     eski = {a: getattr(h, a) for a in URETIM_ALANLARI}
     yeni = {a: alanlar[a] for a in URETIM_ALANLARI}
+    if gider_elle is not _DEGISMEZ:
+        eski["gider_elle"], yeni["gider_elle"] = h.gider_elle, elle
     if eski != yeni:
         for a, v in yeni.items():
             setattr(h, a, v)
@@ -309,7 +351,9 @@ def hesapla(s: Session, urun_kodu: str, senaryo_id: int, tarih: date | None = No
                            etiketleme_adedi=Decimal(ub["etiketleme_adedi"]), etiket_personel=Decimal(ub["etiket_personel"]),
                            mal_kabul_miktar_kg=Decimal(ub["mal_kabul_miktar_kg"]), mal_kabul_fire=Decimal(ub["mal_kabul_fire"]),
                            pazarlama_yonetim_uygula=bool(ub["pazarlama_yonetim_uygula"]))
-    girdi = UrunGirdisi(kod=u.kod, ad=u.ad, recete=tuple(satirlar), uretim=uretim)
+    # Elle gider hücreleri: override'da "gider_elle" varsa kayıtlının TAMAMI yerine geçer (ekrandaki taslak tam haritayı yollar).
+    gider_elle = gider_elle_motor(gider_elle_normalle(override["gider_elle"]) if "gider_elle" in override else hedef.gider_elle)
+    girdi = UrunGirdisi(kod=u.kod, ad=u.ad, recete=tuple(satirlar), uretim=uretim, gider_elle=gider_elle)
     sonuc = urun_maliyeti(girdi, malzemeler, oranlar, p)
     return HesapCiktisi(girdi=girdi, parametreler=p, oranlar=oranlar, sonuc=sonuc, fire_kaynaklari=kaynaklar, kullanilan_parametreler=kullanilan,
                         recete_id=recete.id, recete_versiyon=recete.versiyon,
@@ -404,8 +448,11 @@ def toplu_kaydet(s: Session, kod: str, g, kullanici: str = "sistem") -> dict:
     if g.urun is not None:
         u = urun_kaydet(s, kod, g.urun.ad, g.urun.ambalaj_hacmi, g.urun.hat, g.urun.taze_tursu_sinifi, g.urun.suzme_kg, g.urun.pazar, kullanici, g.neden)
         yazilan["urun"] = 1
-    if g.uretim_hedefi is not None:
-        uretim_hedefi_kaydet(s, u.id, sen.id, kullanici, g.neden, **g.uretim_hedefi.model_dump())
+    elle_var = "gider_elle" in g.model_fields_set
+    if g.uretim_hedefi is not None or elle_var:
+        alanlar = (g.uretim_hedefi.model_dump() if g.uretim_hedefi is not None
+                   else {a: getattr(uretim_hedefi_getir(s, u.id, sen.id), a) for a in URETIM_ALANLARI})
+        uretim_hedefi_kaydet(s, u.id, sen.id, kullanici, g.neden, **({"gider_elle": g.gider_elle} if elle_var else {}), **alanlar)
         yazilan["hedef"] = 1
     if g.recete is not None:
         r = recete_servisi.yeni_versiyon(s, u.id, sen.id, [x.model_dump() for x in g.recete], "ekran", kullanici)

@@ -109,3 +109,18 @@ def test_alt_satiri_olan_fiyatsiz_uyarmaz_elle_fiyat_yine_uygulanir():
     yaprak = ReceteSatiri(malzeme_kodu="16.x", ad="turşu", miktar=Decimal(1), fire_orani=SIFIR, birim="KG")
     _, uyari = malzeme_tutari(yaprak, None, P)
     assert uyari == "16.x (turşu): fiyat listesinde yok, 0 TL alındı"
+
+
+def test_elle_zs_kartin_zs_yerine_gecer():
+    """Excel N elle 'Z': TL fiyata enflasyon uygulanmaz (kart 'S' dese de)."""
+    from dataclasses import replace
+    s, _ = malzeme_tutari(replace(satir(1), zs_elle="Z"), malz("10", "TL", "S"), P)
+    assert s.tutar == Decimal(10)
+
+
+def test_kartsiz_satirda_elle_fiyat_zs_ve_para_birimi_ile_kur_uygulanir():
+    """040!P10: malzeme listede yok; M=1,55 N=S O=USD elle -> 1,55 x 50."""
+    from dataclasses import replace
+    r = replace(satir(1), birim_fiyat_elle=Decimal("1.55"), zs_elle="S", para_birimi_elle="USD")
+    s, uyari = malzeme_tutari(r, None, P)
+    assert yakin(s.tutar, Decimal("77.5")) and uyari is None

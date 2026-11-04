@@ -19,12 +19,16 @@ for ek in ("", "-wal", "-shm"):
     Path(str(DB) + ek).unlink(missing_ok=True)
 
 from backend.depo.veritabani import Base, motor_olustur, oturum_fabrikasi  # noqa: E402
-from backend.servisler import import_servisi  # noqa: E402
+from backend.servisler import import_servisi, kimlik_servisi  # noqa: E402
+
+# Giriş zorunlu: testler bu Genel Direktör hesabıyla oturum açar (e2e/giris-kurulumu.ts). Şifre yalnız boş e2e.db içindir.
+E2E_KULLANICI, E2E_SIFRE = "e2e.yonetici", "e2e-sifre-1"
 
 motor = motor_olustur()
 Base.metadata.create_all(motor)
 with oturum_fabrikasi(motor)() as s:
     ozet = import_servisi.excel_tam_yukle(s, EXCEL, "2026-2027", "E2E", "fiyat_calismasi")
+    kimlik_servisi.kullanici_olustur(s, E2E_KULLANICI, "E2E Yönetici", "genel_direktor", E2E_SIFRE, olusturan="e2e", sifre_degismeli=False)
     s.commit()
 print("E2E import tamam:", {k: v for k, v in ozet.items() if isinstance(v, (int, str))}, flush=True)
 motor.dispose()

@@ -1,5 +1,5 @@
 """Veri Kontrolü (D7): seçili çalışmadaki veri sorunlarını tek listede toplar. Yeni hesap kuralı yoktur; mevcut toplu hesabın
-hata/uyarılarından ve tablolardan okunur. Her kontrol: durum (tamam | dikkat | hata), sayı, kısa açıklama, çözüm bağlantısı ve
+hata/uyarılarından ve tablolardan okunur. Her kontrol: durum (tamam | bilgi | dikkat | hata), sayı, kısa açıklama, çözüm bağlantısı ve
 ilgili kayıtlar (en çok OGE_SINIRI). Bağlantılar arayüz yollarıdır (?senaryo= eki istemcide)."""
 import re
 from datetime import date
@@ -8,6 +8,7 @@ from urllib.parse import quote
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from ..depo import modeller as m
+from fiyat_motoru.modeller import GIDER_ELLE_ALANLARI
 from . import gider_servisi, hesap_servisi as hs, senaryo_servisi
 from .hatalar import HEDEF_YOK, PARAMETRE_EKSIK
 
@@ -22,8 +23,33 @@ def _urun_yolu(kod: str) -> str:
     return f"/urunler/{quote(kod, safe='')}"
 
 
-def _kontrol(kod: str, baslik: str, aciklama: str, cozum: tuple[str, str], ogeler: list[dict], agir: bool = False) -> dict:
-    return {"kod": kod, "baslik": baslik, "aciklama": aciklama, "durum": ("hata" if agir else "dikkat") if ogeler else "tamam",
+# Elle hücre açıklamaları: gider kalemi -> kısa ad, hücre -> Excel sütunu ile ad.
+_GIDER_KISA = {"mal_kabul_iscilik": "Mal kabul işçilik", "dolum_iscilik": "Dolum işçilik", "etiket_iscilik": "Etiket işçilik",
+               "endirekt_iscilik": "Endirekt işçilik", "mal_kabul_gug": "Mal kabul GÜG", "elektrik": "Elektrik", "dogalgaz": "Doğalgaz",
+               "amortisman": "Amortisman", "diger_gug": "Diğer GÜG", "pazarlama": "Pazarlama", "yonetim": "Yönetim"}
+_HUCRE_ADI = {"miktar": "miktar", "brut_miktar": "brüt miktar", "birim_fiyat": "birim fiyat", "tutar": "tutar"}
+
+
+def _elle_hucreler(girdi) -> str | None:
+    """Ürünün formül yerine elle yazılmış hücrelerinin kısa özeti (gider I/K/M/P, reçete brüt/fiyat/Z-S/para birimi); yoksa None."""
+    parcalar = []
+    for kalem, e in girdi.gider_elle.items():
+        hucreler = ", ".join(f"{_HUCRE_ADI[a]} ({GIDER_ELLE_ALANLARI[a]}) {getattr(e, a).normalize():f}".replace(".", ",") for a in e.dolu_alanlar())
+        parcalar.append(f"{_GIDER_KISA.get(kalem, kalem)}: {hucreler}")
+    sayac = {"brüt miktar": sum(1 for r in girdi.recete if r.brut_miktar_elle is not None),
+             "birim fiyat": sum(1 for r in girdi.recete if r.birim_fiyat_elle is not None),
+             "Z/S": sum(1 for r in girdi.recete if r.zs_elle), "para birimi": sum(1 for r in girdi.recete if r.para_birimi_elle)}
+    recete = ", ".join(f"{n} satırda {ad}" for ad, n in sayac.items() if n)
+    if recete:
+        parcalar.append(f"reçete: {recete}")
+    return "; ".join(parcalar) or None
+
+
+def _kontrol(kod: str, baslik: str, aciklama: str, cozum: tuple[str, str], ogeler: list[dict], agir: bool = False,
+             bilgi: bool = False) -> dict:
+    """bilgi=True: kayıt varsa durum 'bilgi' (sorun değil, bilinmesi gereken); yoksa 'tamam'."""
+    durum = ("bilgi" if bilgi else "hata" if agir else "dikkat") if ogeler else "tamam"
+    return {"kod": kod, "baslik": baslik, "aciklama": aciklama, "durum": durum,
             "sayi": len(ogeler), "cozum": {"etiket": cozum[0], "yol": cozum[1]}, "ogeler": ogeler[:OGE_SINIRI]}
 
 
@@ -33,7 +59,7 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
     uyeler = senaryo_servisi.uye_urun_kodlari(s, sen.id)
     sonuclar = hs.toplu_hesapla(s, sen.id, tarih)
 
-    hesaplanamayan, parametre_eksik, fiyatsiz, hat, param_uyari, kart = [], [], {}, [], [], {}
+    hesaplanamayan, parametre_eksik, fiyatsiz, hat, param_uyari, kart, elle = [], [], {}, [], [], {}, []
     for kod, c in sonuclar:
         u = urunler[kod]
         if isinstance(c, Exception):
@@ -53,6 +79,8 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
                 hat.append({"etiket": f"{kod} · {u.ad}", "aciklama": w, "yol": _urun_yolu(kod)})
             elif any(x in w for x in _PARAMETRE):
                 param_uyari.append({"etiket": f"{kod} · {u.ad}", "aciklama": w, "yol": "/parametreler"})
+        if (ozet := _elle_hucreler(c.girdi)):
+            elle.append({"etiket": f"{kod} · {u.ad}", "aciklama": ozet, "yol": _urun_yolu(kod)})
         if c.girdi.uretim.vardiya_uretim_adedi == 0:
             hat.append({"etiket": f"{kod} · {u.ad}", "aciklama": "vardiya üretim adedi 0: saniye bazlı giderler 0 alınıyor", "yol": _urun_yolu(kod)})
 
@@ -96,6 +124,9 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
                  ("Ürün ekranında kodu değiştir", "/urunler"), gecici),
         _kontrol("uretim_adetleri", "Üretim Adetleri'nde eşleşmeyen kod", "Üretim Adetleri kaydındaki kod hiçbir ürünle eşleşmiyor; "
                  "hedef adetle maliyet hesaplanamaz.", ("Üretim Adetleri", "/uretim-adetleri"), eslesmeyen),
+        _kontrol("elle_hucre", "Elle girilmiş hücre", "Formül yerine elle yazılmış değerler (Excel'den geldiği gibi ya da ürün ekranında "
+                 "girilmiş). Hata değildir; formüle dönmek için ürün ekranında hücredeki ↺ düğmesi.", ("Ürün Maliyeti", "/urunler"), elle,
+                 bilgi=True),
     ]
     return {"senaryo_id": sen.id, "kontroller": liste,
-            "ozet": {d: sum(1 for k in liste if k["durum"] == d) for d in ("hata", "dikkat", "tamam")}}
+            "ozet": {d: sum(1 for k in liste if k["durum"] == d) for d in ("hata", "dikkat", "tamam", "bilgi")}}

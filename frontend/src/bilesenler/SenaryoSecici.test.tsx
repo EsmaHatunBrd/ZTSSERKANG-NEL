@@ -177,7 +177,8 @@ describe("SenaryoSecici — Faz 5c: yeni çalışma, düzenle, sil", () => {
     await u.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Sil" }));
     await waitFor(() => expect(silinen).toEqual(["1"]));
     await waitFor(() => expect(screen.getByTestId("id")).toHaveTextContent("2"));
-    expect(screen.getByTestId("arama")).toHaveTextContent("?senaryo=2");
+    // Adres çubuğu senaryo durumundan bir render sonra güncellenir; yük altında ayrı beklenir.
+    await waitFor(() => expect(screen.getByTestId("arama")).toHaveTextContent("?senaryo=2"));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 

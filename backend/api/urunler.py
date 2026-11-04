@@ -128,13 +128,23 @@ def _gorunum(urun_kodu: str, senaryo_id: int, tarih: date, sonuc: dict, recete: 
         if malzeme_satiri(s_):
             return elle(i, "birim")
         return GIDER_BIRIMI.get(s_.get("kod"))
-    satirlar = [dict(s_, sira=(i + 1) if malzeme_satiri(s_) else None,
-                     doviz=para_birimleri.get(s_.get("kod")) if para_birimleri is not None and malzeme_satiri(s_) else None,
+    def doviz(i: int, s_: dict):
+        if not malzeme_satiri(s_):
+            return None
+        return elle(i, "para_birimi_elle") or (para_birimleri.get(s_.get("kod")) if para_birimleri is not None else None)
+
+    def zs(i: int, s_: dict):
+        if not malzeme_satiri(s_):
+            return None
+        return elle(i, "zs_elle") or (zs_haritasi.get(s_.get("kod")) if zs_haritasi is not None else None)
+    satirlar = [dict(s_, sira=(i + 1) if malzeme_satiri(s_) else None, doviz=doviz(i, s_),
                      fire_orani=recete[i]["fire_orani"] if i < len(recete) else None,
                      fire_kaynagi=fire_kaynaklari[i] if i < len(fire_kaynaklari) else None,
                      tutar_firesiz=s_.get("tutar_firesiz"), miktar_kaynagi=s_.get("miktar_kaynagi"), fiyat_kaynagi=s_.get("fiyat_kaynagi"),
                      brut_miktar_elle=elle(i, "brut_miktar_elle"), birim_fiyat_elle=elle(i, "birim_fiyat_elle"),
-                     birim=birim(i, s_), zs=zs_haritasi.get(s_.get("kod")) if zs_haritasi is not None and malzeme_satiri(s_) else None,
+                     birim=birim(i, s_), zs=zs(i, s_),
+                     zs_elle=bool(malzeme_satiri(s_) and elle(i, "zs_elle")), doviz_elle=bool(malzeme_satiri(s_) and elle(i, "para_birimi_elle")),
+                     elle_alanlar=list(s_.get("elle_alanlar") or []),
                      dugum_tipi=elle(i, "dugum_tipi") if malzeme_satiri(s_) else None,
                      seviye=seviyeler[i] if seviyeler is not None and malzeme_satiri(s_) and i < len(seviyeler) else None)
                for i, s_ in enumerate(sonuc["satirlar"])]
@@ -154,7 +164,7 @@ def _hesap_yaniti(c, urun_kodu, senaryo_id, tarih):
 
 
 def _hedef_dict(h) -> dict:
-    return {"id": h.id, **decimal_str({a: getattr(h, a) for a in hs.URETIM_ALANLARI})}
+    return {"id": h.id, **decimal_str({a: getattr(h, a) for a in hs.URETIM_ALANLARI}), "gider_elle": h.gider_elle}
 
 
 def _urun_dict(u) -> dict:
@@ -261,6 +271,7 @@ def recete_getir(s: OturumDep, kod: str, sen: SenaryoDep, tarih: date | None = N
                           "fire_override": None if x.fire_override is None else str(x.fire_override),
                           "brut_miktar_elle": None if x.brut_miktar_elle is None else str(x.brut_miktar_elle),
                           "birim_fiyat_elle": None if x.birim_fiyat_elle is None else str(x.birim_fiyat_elle), "seviye": x.seviye,
+                          "zs_elle": x.zs_elle, "para_birimi_elle": x.para_birimi_elle,
                           "fire_orani": str(ms.fire_orani), "fire_kaynagi": kaynak} for x, ms, kaynak in zip(r.satirlar, satirlar, kaynaklar)]}
 
 
@@ -294,7 +305,7 @@ def recete_satirlari(s: OturumDep, recete_id: int):
                           "fire_override": None if x.fire_override is None else str(x.fire_override),
                           "brut_miktar_elle": None if x.brut_miktar_elle is None else str(x.brut_miktar_elle),
                           "birim_fiyat_elle": None if x.birim_fiyat_elle is None else str(x.birim_fiyat_elle),
-                          "seviye": x.seviye} for x in r.satirlar]}
+                          "seviye": x.seviye, "zs_elle": x.zs_elle, "para_birimi_elle": x.para_birimi_elle} for x in r.satirlar]}
 
 
 @router.post("/urunler/{kod}/hesapla", response_model=HesapYaniti, responses=HATA_404_422)
