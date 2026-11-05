@@ -178,6 +178,28 @@ describe("Teklifler", () => {
     expect(screen.queryByTestId("yer")).not.toBeInTheDocument();
   });
 
+  it("satırdaki Sil onay sorar; onaylanınca DELETE gider, satır gezinmesi tetiklenmez", async () => {
+    const silinen: string[] = [];
+    sunucu.use(
+      http.delete("*/api/v1/teklifler/:id", ({ params }) => {
+        silinen.push(params.id as string);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    kur();
+    await within(await listeHazir()).findByText("Başka Müşteri");
+    await userEvent.click(within(tablo()).getByRole("button", { name: "Sil — URUN-002 Tur 1" }));
+    const onay = await screen.findByRole("dialog");
+    expect(onay).toHaveTextContent("URUN-002 Tur 1 silinecek");
+    await userEvent.click(within(onay).getByRole("button", { name: "Vazgeç" }));
+    expect(silinen).toHaveLength(0);
+    await userEvent.click(within(tablo()).getByRole("button", { name: "Sil — URUN-002 Tur 1" }));
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Sil" }));
+    await waitFor(() => expect(silinen).toEqual(["3"]));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.queryByTestId("yer")).not.toBeInTheDocument();
+  });
+
   it("I6: kabul/red için onay ister; vazgeçilirse PATCH gitmez; diğer durumlar onaysız değişir", async () => {
     kur();
     await within(await listeHazir()).findByText("Başka Müşteri");

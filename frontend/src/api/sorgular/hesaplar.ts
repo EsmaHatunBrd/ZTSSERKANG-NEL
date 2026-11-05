@@ -22,23 +22,12 @@ export function useHesapKaydet() {
     mutationFn: ({ kod, govde }: HesaplaDegiskenleri) =>
       cagir(api.POST("/api/v1/urunler/{kod}/hesaplar", { params: { path: { kod } }, body: govde })),
     onSuccess: (_v, { kod }) =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: ["hesaplar", kod] }),
-        qc.invalidateQueries({ queryKey: ["urunler"] }),
-      ]),
+      Promise.all([qc.invalidateQueries({ queryKey: ["hesaplar", kod] }), qc.invalidateQueries({ queryKey: ["urunler"] })]),
   });
 }
 
 /** Faz 4c "Kaydet": ürün kartı, hedef, reçete, parametre ve gider tek atomik istekte yazılır. */
-export const TOPLU_KAYIT_SORGULARI = [
-  "urun",
-  "urunler",
-  "hesaplar",
-  "uyarilar",
-  "recete",
-  "parametreler",
-  "gider-havuzlari",
-] as const;
+export const TOPLU_KAYIT_SORGULARI = ["urun", "urunler", "hesaplar", "uyarilar", "recete", "parametreler", "gider-havuzlari"] as const;
 
 export function useTopluKaydet() {
   const qc = useQueryClient();
@@ -53,10 +42,7 @@ export function useHesaplar(kod: string, senaryo: number | null | undefined) {
   return useQuery({
     queryKey: anahtar.hesaplar(kod, senaryo),
     enabled: !!kod && senaryo != null,
-    queryFn: () =>
-      cagir(
-        api.GET("/api/v1/urunler/{kod}/hesaplar", { params: { path: { kod }, query: { senaryo: senaryo as number } } }),
-      ),
+    queryFn: () => cagir(api.GET("/api/v1/urunler/{kod}/hesaplar", { params: { path: { kod }, query: { senaryo: senaryo as number } } })),
   });
 }
 
@@ -64,8 +50,7 @@ export function useHesap(id: number | null | undefined) {
   return useQuery({
     queryKey: anahtar.hesap(id),
     enabled: id != null,
-    queryFn: () =>
-      cagir(api.GET("/api/v1/hesaplar/{hesap_id}", { params: { path: { hesap_id: id as number } } })),
+    queryFn: () => cagir(api.GET("/api/v1/hesaplar/{hesap_id}", { params: { path: { hesap_id: id as number } } })),
   });
 }
 
@@ -73,10 +58,7 @@ export function useTeklifler(hesapId: number | null | undefined) {
   return useQuery({
     queryKey: anahtar.teklifler(hesapId),
     enabled: hesapId != null,
-    queryFn: () =>
-      cagir(
-        api.GET("/api/v1/hesaplar/{hesap_id}/teklifler", { params: { path: { hesap_id: hesapId as number } } }),
-      ),
+    queryFn: () => cagir(api.GET("/api/v1/hesaplar/{hesap_id}/teklifler", { params: { path: { hesap_id: hesapId as number } } })),
   });
 }
 
@@ -115,12 +97,9 @@ export function useTeklifEkle() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ hesapId, govde }: { hesapId: number; govde: Sema["TeklifGiris"] }) =>
-      cagir(
-        api.POST("/api/v1/hesaplar/{hesap_id}/teklifler", { params: { path: { hesap_id: hesapId } }, body: govde }),
-      ),
+      cagir(api.POST("/api/v1/hesaplar/{hesap_id}/teklifler", { params: { path: { hesap_id: hesapId } }, body: govde })),
     // ["teklifler"] öneki hesap bazlı ve senaryo geneli listeleri; ["hesaplar"] kayıtlı hesabın son tur özetini yeniler.
-    onSuccess: () =>
-      Promise.all([qc.invalidateQueries({ queryKey: ["teklifler"] }), qc.invalidateQueries({ queryKey: ["hesaplar"] })]),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ["teklifler"] }), qc.invalidateQueries({ queryKey: ["hesaplar"] })]),
   });
 }
 
@@ -128,10 +107,16 @@ export function useTeklifDurum() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ teklifId, durum }: { teklifId: number; durum: string }) =>
-      cagir(
-        api.PATCH("/api/v1/teklifler/{teklif_id}/durum", { params: { path: { teklif_id: teklifId } }, body: { durum } }),
-      ),
-    onSuccess: () =>
-      Promise.all([qc.invalidateQueries({ queryKey: ["teklifler"] }), qc.invalidateQueries({ queryKey: ["hesaplar"] })]),
+      cagir(api.PATCH("/api/v1/teklifler/{teklif_id}/durum", { params: { path: { teklif_id: teklifId } }, body: { durum } })),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ["teklifler"] }), qc.invalidateQueries({ queryKey: ["hesaplar"] })]),
+  });
+}
+
+/** Teklif turunu kalıcı siler (içeriği Değişiklik Günlüğünde kalır); listeler ve son tur özeti yenilenir. */
+export function useTeklifSil() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (teklifId: number) => cagir(api.DELETE("/api/v1/teklifler/{teklif_id}", { params: { path: { teklif_id: teklifId } } })),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ["teklifler"] }), qc.invalidateQueries({ queryKey: ["hesaplar"] })]),
   });
 }

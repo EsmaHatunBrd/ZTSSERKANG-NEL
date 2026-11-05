@@ -506,6 +506,13 @@ def test_senaryo_teklifleri_ve_son_tur(istemci, oturum):
     o = {x["id"]: x for x in istemci.get(f"{A}/urunler/TEST/hesaplar?senaryo={sid}").json()["kayitlar"]}
     assert (o[h1]["son_tur_no"], o[h1]["son_kar_orani"], o[h1]["son_musteri"], o[h1]["son_durum"]) == (2, "0.3", "BIM", "taslak")
     assert o[h2]["son_tur_no"] == 1 and o[h2]["son_musteri"] == "migros b"
+    # silme: 204, liste ve son tur özeti güncellenir; olmayan teklif 404
+    t3 = istemci.get(f"{A}/teklifler?senaryo={sid}").json()["kayitlar"][1]["teklif_id"]   # h1 tur 2
+    assert istemci.delete(f"{A}/teklifler/{t3}").status_code == 204
+    assert istemci.get(f"{A}/teklifler?senaryo={sid}").json()["toplam"] == 2
+    o = {x["id"]: x for x in istemci.get(f"{A}/urunler/TEST/hesaplar?senaryo={sid}").json()["kayitlar"]}
+    assert o[h1]["son_tur_no"] == 1
+    assert istemci.delete(f"{A}/teklifler/{t3}").status_code == 404
 
 
 def test_malzeme_aramasi_sayfalamadan_once_ve_turkce_harf(istemci, oturum):

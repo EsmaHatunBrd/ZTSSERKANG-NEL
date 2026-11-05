@@ -135,7 +135,7 @@ function Menu({ kapat }: { kapat: () => void }) {
     <nav className="flex flex-col gap-4 px-3" aria-label="Ana menü">
       {gruplar.map((g) => (
         <div key={g.grup} role="group" aria-label={g.grup} className="flex flex-col gap-0.5">
-          <div className="px-3 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{g.grup}</div>
+          <div className="px-3 pb-1 text-[11px] font-semibold tracking-wider text-sidebar-foreground/55 uppercase">{g.grup}</div>
           {g.ogeler.map((m) => {
             const Simge = m.simge;
             return (
@@ -146,9 +146,9 @@ function Menu({ kapat }: { kapat: () => void }) {
                 onClick={kapat}
                 className={({ isActive }) =>
                   cn(
-                    "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+                    "flex items-center gap-2.5 rounded-full px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     (isActive || ekte(m)) &&
-                      "bg-sidebar-accent font-semibold text-sidebar-accent-foreground before:absolute before:inset-y-1.5 before:left-0 before:w-1 before:rounded-full before:bg-marka",
+                      "bg-sidebar-primary font-semibold text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
                   )
                 }
               >
@@ -189,20 +189,20 @@ export function Kabuk() {
         {!anaSayfa && (
           <aside
             className={cn(
-              "z-40 w-60 shrink-0 flex-col gap-5 border-r bg-sidebar py-4 text-sidebar-foreground md:flex",
+              "z-40 w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar py-5 text-sidebar-foreground md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto",
               acik ? "fixed inset-y-0 left-0 flex shadow-xl md:static md:shadow-none" : "hidden",
             )}
           >
             <div className="flex flex-col gap-1.5 px-5">
-              <Logo />
-              <div className="text-xs font-medium text-muted-foreground">Fiyat Çalışması · Berrak</div>
+              <Logo className="self-start bg-white px-2.5 py-1.5 shadow-sm" />
+              <div className="px-0.5 text-xs font-medium text-sidebar-foreground/65">Fiyat Çalışması · Berrak</div>
             </div>
             <Menu kapat={() => setAcik(false)} />
           </aside>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Dar görünümde başlık satırı sarar; kullanıcı adı kısaltılır, yatay taşma olmaz. */}
-          <header className="sticky top-0 z-20 flex min-h-14 flex-wrap items-center justify-between gap-3 border-b bg-background/90 px-4 py-2 backdrop-blur lg:px-8">
+          <header className="sticky top-0 z-20 flex min-h-14 flex-wrap items-center justify-between gap-3 border-b bg-background/85 px-4 py-2 backdrop-blur-md lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               {anaSayfa ? (
                 <Logo />
@@ -226,7 +226,7 @@ export function Kabuk() {
               <TemaAnahtari />
             </div>
           </header>
-          <main className="flex-1 px-4 py-6 lg:px-8">
+          <main className="sayfa-belir flex-1 px-4 py-6 lg:px-8">
             <Suspense
               fallback={
                 <div role="status" className="text-sm text-muted-foreground">

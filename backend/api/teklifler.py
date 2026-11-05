@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from ..servisler import hesap_servisi as hs, teklif_servisi as ts
@@ -50,3 +50,12 @@ def durum(s: OturumDep, teklif_id: int, g: DurumGiris):
     if t is not None:   # yoksa servis 404 verir
         hs.kilit_denetle(hs.senaryo_getir(s, hs.getir(s, t.maliyet_hesabi_id).senaryo_id))
     return _teklif(ts.durum_guncelle(s, teklif_id, g.durum))
+
+
+@router.delete("/teklifler/{teklif_id}", status_code=204, response_class=Response, responses=HATA_404_409_422)
+def sil(s: OturumDep, teklif_id: int, k: str = Depends(kullanici_ver)):
+    t = s.get(m.Teklif, teklif_id)
+    if t is not None:   # yoksa servis 404 verir
+        hs.kilit_denetle(hs.senaryo_getir(s, hs.getir(s, t.maliyet_hesabi_id).senaryo_id))
+    ts.sil(s, teklif_id, k)
+    return Response(status_code=204)

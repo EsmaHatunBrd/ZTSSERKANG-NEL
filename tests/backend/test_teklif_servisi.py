@@ -35,3 +35,23 @@ def test_senaryo_teklifleri_ve_son_turlar(oturum, ortam):
     assert [t.id for t, _h, _u in ts.senaryo_teklifleri(oturum, sen.id, musteri="migr")] == [t1.id]
     assert ts.senaryo_teklifleri(oturum, sen.id + 99) == []
     assert ts.son_turlar(oturum, [h.id])[h.id].id == t2.id and ts.son_turlar(oturum, []) == {}
+
+
+def test_sil_gunluge_yazar_ve_tur_numarasi_yeniden_verilmez(oturum, ortam):
+    from backend.depo import modeller as m
+    from backend.servisler import gunluk_servisi as gs
+    from backend.servisler.hatalar import BulunamadiHatasi
+    sen, _ = ortam
+    h = hs.kaydet(oturum, hs.hesapla(oturum, "TEST", sen.id, date(2026, 10, 21)), "TEST", sen.id, date(2026, 10, 21))
+    t1 = ts.tur_ekle(oturum, h.id, D_("0.2"), musteri="Migros")
+    t2 = ts.tur_ekle(oturum, h.id, D_("0.15"))
+    ts.sil(oturum, t2.id, "esma")
+    assert [t.tur_no for t in ts.turlar(oturum, h.id)] == [1]
+    kayit = oturum.query(m.DegisiklikKaydi).filter_by(tablo="teklif", islem="sil").one()
+    assert kayit.kullanici == "esma" and kayit.eski["tur_no"] == 2 and kayit.eski["urun_kodu"] == "TEST" and kayit.eski["senaryo_id"] == sen.id
+    # silinen 2. turun numarası tekrar kullanılmaz; ilk turun numarası değişmez
+    assert ts.tur_ekle(oturum, h.id, D_("0.1")).tur_no == 3 and t1.tur_no == 1
+    satir = next(r for r in gs.liste(oturum, gs.Suzgec(senaryo=sen.id))[0] if r["tur"] == "teklif" and "silindi" in r["baslik"])
+    assert satir["urun_kodu"] == "TEST" and satir["baslik"] == "Teklif turu silindi"
+    with pytest.raises(BulunamadiHatasi):
+        ts.sil(oturum, 999999)

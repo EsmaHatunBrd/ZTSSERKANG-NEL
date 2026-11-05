@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
 import { useHesaplar, useTeklifEkle, useTeklifler } from "@/api/sorgular/hesaplar";
 import { TeklifDurumSecici } from "@/bilesenler/TeklifDurumSecici";
+import { TeklifSilDugmesi } from "@/bilesenler/TeklifSilDugmesi";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { Button } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
@@ -130,12 +131,15 @@ export function TeklifPaneli({ kod, senaryoId, sonKayitId }: Props) {
             <TableHead className="text-right">Fiyat USD</TableHead>
             <TableHead>Müşteri</TableHead>
             <TableHead>Durum</TableHead>
+            <TableHead className="w-10">
+              <span className="sr-only">İşlem</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {(teklifler.data?.kayitlar ?? []).length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="text-center text-muted-foreground">
                 Henüz teklif turu yok
               </TableCell>
             </TableRow>
@@ -153,6 +157,9 @@ export function TeklifPaneli({ kod, senaryoId, sonKayitId }: Props) {
                 <TableCell>{t.musteri ?? "—"}</TableCell>
                 <TableCell>
                   <TeklifDurumSecici teklifId={t.id} durum={t.durum} etiket={`Durum — Tur ${t.tur_no}`} />
+                </TableCell>
+                <TableCell>
+                  <TeklifSilDugmesi teklifId={t.id} etiket={`Tur ${t.tur_no}`} />
                 </TableCell>
               </TableRow>
             ))

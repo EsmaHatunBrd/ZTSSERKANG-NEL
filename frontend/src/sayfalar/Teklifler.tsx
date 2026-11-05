@@ -8,6 +8,7 @@ import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { TeklifDurumSecici } from "@/bilesenler/TeklifDurumSecici";
+import { TeklifSilDugmesi } from "@/bilesenler/TeklifSilDugmesi";
 import { Button, buttonVariants } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
@@ -126,6 +127,19 @@ export default function Teklifler() {
         },
       },
       { id: "olusturan", header: "Oluşturan", accessorFn: (s: SenaryoTeklifSatiri) => s.olusturan },
+      {
+        id: "sil",
+        header: () => <span className="sr-only">İşlem</span>,
+        enableSorting: false,
+        cell: ({ row }: { row: { original: SenaryoTeklifSatiri } }) => {
+          const s = row.original;
+          return (
+            <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+              <TeklifSilDugmesi teklifId={s.teklif_id} etiket={`${s.urun_kodu} Tur ${s.tur_no}`} />
+            </span>
+          );
+        },
+      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
