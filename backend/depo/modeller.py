@@ -218,6 +218,18 @@ class SatisGecmisi(Base, Ortak):
     adet: Mapped[Decimal] = mapped_column(ParaTipi)
 
 
+class ListeFiyati(Base, Ortak):
+    """Ürünün bir yıldaki liste fiyatı (TL, KDV hariç) ve isteğe bağlı o yılki birim maliyeti. ornek=True: gerçek veri gelene kadar
+    üretilmiş tahmini satır (ekranda etiketlenir, tek tıkla silinir)."""
+    __tablename__ = "liste_fiyati"
+    __table_args__ = (UniqueConstraint("urun_id", "yil"),)
+    urun_id: Mapped[int] = mapped_column(ForeignKey("urun.id"))
+    yil: Mapped[int] = mapped_column(Integer)
+    liste_fiyati: Mapped[Decimal] = mapped_column(ParaTipi)
+    birim_maliyet: Mapped[Decimal | None] = mapped_column(ParaTipi)
+    ornek: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
+
 class DegisiklikKaydi(Base, Ortak):
     __tablename__ = "degisiklik_kaydi"
     tablo: Mapped[str] = mapped_column(String(64))
@@ -276,3 +288,152 @@ class GirisOturumu(Base, Ortak):
     acik: Mapped[bool] = mapped_column(Boolean, default=True)
     son_kullanim: Mapped[datetime | None] = mapped_column(DateTime)
     kullanici: Mapped[Kullanici] = relationship()
+
+
+# ---------------------------------------------------------------- Maliyet muhasebesi (SMM)
+class SmmDonem(Base, Ortak):
+    """Bir aylık SMM çalışması (ör. Eylül 2026). Veriler SMM Excel'inden yüklenir; yeniden yükleme dönemin kalemlerini baştan yazar.
+    `finansman`: alımlara dağıtılacak finansman tutarı (Excel TABLO!J1). `excel_kontrol`: yüklenen Excel'in kendi hesabıyla karşılaştırma."""
+    __tablename__ = "smm_donem"
+    __table_args__ = (UniqueConstraint("yil", "ay"),)
+    yil: Mapped[int] = mapped_column(Integer)
+    ay: Mapped[int] = mapped_column(Integer)
+    kaynak_dosya: Mapped[str | None] = mapped_column(String(200))
+    finansman: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    excel_kontrol: Mapped[dict | None] = mapped_column(JSON)
+    # Aşama maliyeti (20/40/50): dağıtılacak işçilik/GÜG havuzları (Excel aşama sayfalarının 1. satırı; ekrandan değiştirilebilir),
+    # Excel'deki ilk değerleri, gider mizanı (720/730 bakiyesi) ve Excel'in kendi hesapladığı aşama birim maliyetleri (karşılaştırma için).
+    dagitim: Mapped[dict | None] = mapped_column(JSON)
+    dagitim_excel: Mapped[dict | None] = mapped_column(JSON)
+    gider_mizan: Mapped[dict | None] = mapped_column(JSON)
+    excel_asama: Mapped[dict | None] = mapped_column(JSON)
+    # Aşama sayfalarında ürün satırına elle yazılmış değerler: {"40": {kod: {"gug_sn": "0"}}, "50": {kod: {"sure": "123"}}}
+    asama_elle: Mapped[dict | None] = mapped_column(JSON)
+    # SMM özeti için Excel'den: {"dss": {kod: tutar}, "stok_mizan": [{hesap, ad, bakiye}], "gider_mizan": {hesap: bakiye}, "mizan_tarihi": "…"}
+    excel_ozet: Mapped[dict | None] = mapped_column(JSON)
+    # Aşama hesabının reçete kaynağı: 'excel' (dönemle yüklenen SMM Excel'inin 20/40/50 sayfaları) ya da 'ana' (kalıcı Canias reçeteleri)
+    recete_kaynagi: Mapped[str] = mapped_column(String(10), default="excel", server_default="excel")
+    # Dönem başı stok önceki dönemden devredildiyse o dönemin id'si
+    devir_donem_id: Mapped[int | None] = mapped_column(Integer)
+    # Aylık veri kaynaklarının son yüklemesi: {"alim": {"dosya", "zaman", "kullanici", "satir"}, "sayim": {...}, ...}
+    veri_kaynaklari: Mapped[dict | None] = mapped_column(JSON)
+    # Kapanış: kilitli dönemde hiçbir veri ve hesap ayarı değiştirilemez
+    kilitli: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    kilitleyen: Mapped[str | None] = mapped_column(String(64))
+
+
+class SmmKalem(Base, Ortak):
+    """Dönemde bir stok kartının hareketleri: dönem başı (DBS), dönem içi alım (HM-YM ALIŞ SATIŞ), iade, üretim ve sayım (DSS)."""
+    __tablename__ = "smm_kalem"
+    __table_args__ = (UniqueConstraint("donem_id", "kod"),)
+    donem_id: Mapped[int] = mapped_column(ForeignKey("smm_donem.id"))
+    kod: Mapped[str] = mapped_column(String(40))
+    ad: Mapped[str | None] = mapped_column(String(200))
+    birim: Mapped[str | None] = mapped_column(String(16))
+    tur: Mapped[str | None] = mapped_column(String(60))          # mizan adı: 0001-Hammadde, 0002-Üretim Yarı Mamul…
+    mizan_kodu: Mapped[str | None] = mapped_column(String(30))   # 150.01.001, 151.04.002…
+    dbs_miktar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    dbs_tutar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    alim_miktar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    alim_tutar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    iade_miktar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    iade_tutar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    uretim_miktar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    sayim_miktar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    envanterde: Mapped[bool] = mapped_column(Boolean, default=True)   # ENVANTER sayfasında kartı var mı (aşama fiyatı yalnız oradan okunur)
+    # ENVANTER!P (üretim birim fiyatı) hangi aşama sayfasından okunuyor: 20 / 40 / 50 (kartın türüne göre Excel'de satır satır yazılmış)
+    uretim_asamasi: Mapped[int | None] = mapped_column(Integer)
+    satis_miktar: Mapped[Decimal | None] = mapped_column(ParaTipi)   # dönem içi HM/YM satışı (HM-YM ALIŞ SATIŞ, tür 'Satış' satırları)
+    sahit_miktar: Mapped[Decimal | None] = mapped_column(ParaTipi)   # şahit numune (ŞAHİT!J; sayıma dahil değil)
+
+
+class SmmReceteSatiri(Base, Ortak):
+    """Aşama reçetesi satırı (20 sebze kabul / 40 üretim hattı / 50 etiketleme): ana ürün başına malzeme miktarı ve fire oranı."""
+    __tablename__ = "smm_recete_satiri"
+    donem_id: Mapped[int] = mapped_column(ForeignKey("smm_donem.id"))
+    asama: Mapped[int] = mapped_column(Integer)
+    ana_kod: Mapped[str] = mapped_column(String(40))
+    ana_ad: Mapped[str | None] = mapped_column(String(200))
+    ana_miktar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(1))
+    ana_birim: Mapped[str | None] = mapped_column(String(16))
+    malzeme_kod: Mapped[str] = mapped_column(String(40))
+    malzeme_ad: Mapped[str | None] = mapped_column(String(200))
+    miktar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    birim: Mapped[str | None] = mapped_column(String(16))
+    fire_orani: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    # Excel'de bu satırın formülü sayfanın standart formülünden farklıysa: {"carpan": "1"} (elle çarpan), {"hm": "0"} / {"ym": "0"}
+    # (elle ya da standart dışı formüllü fiyat; Excel'in hesapladığı değer), {"hm_bolen": "800"} (standart fiyat / 800, ör. rulodan metreye).
+    ozel: Mapped[dict | None] = mapped_column(JSON)
+
+
+class SmmIscilik(Base, Ortak):
+    """Üretim süreleri (Excel '51' sayfası): vardiya üretimi ve adet başına dolum/etiket saniyesi; işçilik ve GÜG dağıtımında kullanılır."""
+    __tablename__ = "smm_iscilik"
+    donem_id: Mapped[int] = mapped_column(ForeignKey("smm_donem.id"))
+    kod: Mapped[str] = mapped_column(String(40))
+    mamul_kod: Mapped[str | None] = mapped_column(String(40))        # 51!B: 50 aşaması (etiketleme) bununla arar
+    yari_mamul_kod: Mapped[str | None] = mapped_column(String(40))   # 51!C: 40 aşaması (üretim hattı) bununla arar
+    ad: Mapped[str | None] = mapped_column(String(200))
+    vardiya_uretim: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    dolum_isci: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    etiket_isci: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    dolum_sn: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    dolum_adam_sn: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    etiket_sn: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    etiket_adam_sn: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+
+
+class SmmAnaRecete(Base, Ortak):
+    """Kalıcı üretim reçetesi (Canias ürün ağacı dökümü; dönemden bağımsız). Bir ürünün birden çok alternatifi olabilir ('00' ana).
+    `asama` koddan: 02 -> 40, 03 -> 50, diğerleri (01, 11-19) -> 20. `fire_orani` oran (Canias'taki %33,33 -> 0,3333)."""
+    __tablename__ = "smm_ana_recete"
+    ana_kod: Mapped[str] = mapped_column(String(40), index=True)
+    ana_ad: Mapped[str | None] = mapped_column(String(200))
+    alternatif: Mapped[str] = mapped_column(String(8), default="00")
+    satir_no: Mapped[int] = mapped_column(Integer, default=0)
+    kalem_tipi: Mapped[int | None] = mapped_column(Integer)
+    asama: Mapped[int] = mapped_column(Integer)
+    malzeme_kod: Mapped[str] = mapped_column(String(40))
+    malzeme_ad: Mapped[str | None] = mapped_column(String(200))
+    miktar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    birim: Mapped[str | None] = mapped_column(String(16))
+    fire_orani: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+
+
+class SmmCaniasRecete(Base, Ortak):
+    """Son yüklenen Canias dökümünün değiştirilmemiş kopyası (SmmAnaRecete ile aynı alanlar). Elle değiştirilmiş bir ürünü
+    'Canias'a döndürmek' ve yeniden yüklemede farkı göstermek için."""
+    __tablename__ = "smm_canias_recete"
+    ana_kod: Mapped[str] = mapped_column(String(40), index=True)
+    ana_ad: Mapped[str | None] = mapped_column(String(200))
+    alternatif: Mapped[str] = mapped_column(String(8), default="00")
+    satir_no: Mapped[int] = mapped_column(Integer, default=0)
+    kalem_tipi: Mapped[int | None] = mapped_column(Integer)
+    asama: Mapped[int] = mapped_column(Integer)
+    malzeme_kod: Mapped[str] = mapped_column(String(40))
+    malzeme_ad: Mapped[str | None] = mapped_column(String(200))
+    miktar: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+    birim: Mapped[str | None] = mapped_column(String(16))
+    fire_orani: Mapped[Decimal] = mapped_column(ParaTipi, default=Decimal(0))
+
+
+class SmmReceteElle(Base, Ortak):
+    """Reçetesi uygulamada elle değiştirilmiş (ya da elle açılmış) ürün. Canias dökümü yeniden yüklenince bu ürünlerin reçetesi korunur."""
+    __tablename__ = "smm_recete_elle"
+    ana_kod: Mapped[str] = mapped_column(String(40), unique=True)
+    son_degistiren: Mapped[str] = mapped_column(String(64), default="sistem")
+
+
+class SmmReceteYukleme(Base, Ortak):
+    """Kalıcı reçetelerin son yüklemesi (kaynak dosya, satır ve ürün sayısı); yükleme tüm reçeteleri baştan yazar."""
+    __tablename__ = "smm_recete_yukleme"
+    kaynak_dosya: Mapped[str | None] = mapped_column(String(200))
+    satir_sayisi: Mapped[int] = mapped_column(Integer, default=0)
+    urun_sayisi: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class SmmAlternatifSecimi(Base, Ortak):
+    """Ürün için hesapta kullanılacak reçete alternatifi (yoksa '00')."""
+    __tablename__ = "smm_alternatif_secimi"
+    ana_kod: Mapped[str] = mapped_column(String(40), unique=True)
+    alternatif: Mapped[str] = mapped_column(String(8))

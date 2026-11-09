@@ -168,7 +168,7 @@ def test_malzeme_listesi_ilk_fiyat_ve_revize_suzgeci(istemci, oturum):
     r = c.get(f"/api/v1/malzemeler?senaryo={sid}&revize=1").json()
     assert [x["kod"] for x in r["kayitlar"]] == ["KAV-1"] and r["toplam"] == 1
     # elle zam da "revize" sayılır (geçerli ≠ ilk)
-    c.post(f"/api/v1/malzemeler/TUZ-1/fiyatlar?senaryo={sid}", json={"fiyat": "3", "gecerlilik_basi": "2026-09-01", "neden": "zam"}, headers=H)
+    c.post(f"/api/v1/malzemeler/TUZ-1/fiyatlar?senaryo={sid}", json={"onay": True, "fiyat": "3", "gecerlilik_basi": "2026-09-01", "neden": "zam"}, headers=H)
     r = c.get(f"/api/v1/malzemeler?senaryo={sid}&revize=true").json()
     assert sorted(x["kod"] for x in r["kayitlar"]) == ["KAV-1", "TUZ-1"]
     # fiyat kaydı olmayan kartta ilk_fiyat null

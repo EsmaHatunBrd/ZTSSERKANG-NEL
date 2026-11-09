@@ -1,25 +1,10 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { sunucu } from "@/test/msw/sunucu";
-import {
-  ayarlarIsleyicileri,
-  yeniKayit,
-  type YazimKaydi,
-} from "@/test/msw/isleyiciler-ayarlar";
-import {
-  urunExcelIsleyicileri,
-  type UrunExcelIstekleri,
-} from "@/test/msw/isleyiciler-urun-excel";
+import { ayarlarIsleyicileri, yeniKayit, type YazimKaydi } from "@/test/msw/isleyiciler-ayarlar";
+import { urunExcelIsleyicileri, type UrunExcelIstekleri } from "@/test/msw/isleyiciler-urun-excel";
 import { senaryolar } from "@/test/fikstur/urunler";
 import { kurSayfa } from "@/test/kur-ayarlar";
 import { MENU, MENU_GRUPLARI } from "@/bilesenler/Kabuk";
@@ -46,19 +31,9 @@ const kart = (ad: string) => screen.getByRole("region", { name: ad });
 describe("VeriGirisi", () => {
   it("beş giriş kartı çizilir", async () => {
     kurSayfa(<VeriGirisi />);
-    expect(
-      await screen.findByRole("heading", { name: "Veri Girişi" }),
-    ).toBeInTheDocument();
-    for (const ad of [
-      "Gider havuzu",
-      "Malzeme fiyatı",
-      "Parametre",
-      "Üretim bilgileri (ürün)",
-      "Hat kapasitesi (Üretim Adetleri)",
-    ]) {
-      expect(
-        await screen.findByRole("region", { name: ad }),
-      ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Veri Girişi" })).toBeInTheDocument();
+    for (const ad of ["Gider havuzu", "Malzeme fiyatı", "Parametre", "Üretim bilgileri (ürün)", "Hat kapasitesi (Üretim Adetleri)"]) {
+      expect(await screen.findByRole("region", { name: ad })).toBeInTheDocument();
     }
   });
 
@@ -86,13 +61,9 @@ describe("VeriGirisi", () => {
         kapsam_tipi: "genel",
       },
     });
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "kur.USD değeri kaydedildi.",
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("kur.USD değeri kaydedildi.");
     // Salt okunur dağıtım çarpanları seçenek olarak sunulmaz.
-    expect(
-      within(secim).queryByRole("option", { name: /dagitim_carpani/ }),
-    ).not.toBeInTheDocument();
+    expect(within(secim).queryByRole("option", { name: /dagitim_carpani/ })).not.toBeInTheDocument();
   });
 
   it("gider havuzu kartı: havuz seç → aynı diyalog açılır, tutarla kaydedilir", async () => {
@@ -122,9 +93,7 @@ describe("VeriGirisi", () => {
         { alt_kalem: "Etiketleme", tutar: "70000", baz_miktar: "1" },
       ],
     });
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Üretim Giderleri kaydedildi.",
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Üretim Giderleri kaydedildi.");
   });
 
   it("malzeme fiyatı kartı: kod ara → yeni fiyat + tarih + neden", async () => {
@@ -132,9 +101,7 @@ describe("VeriGirisi", () => {
     kurSayfa(<VeriGirisi />);
     const k = await screen.findByRole("region", { name: "Malzeme fiyatı" });
     await u.type(within(k).getByLabelText("Malzeme ara"), "M-00");
-    expect(
-      await within(k).findByRole("button", { name: "Fiyat gir M-001" }),
-    ).toBeInTheDocument();
+    expect(await within(k).findByRole("button", { name: "Fiyat gir M-001" })).toBeInTheDocument();
     expect(within(k).queryByText("M-099")).not.toBeInTheDocument(); // kartı olmayan malzeme listelenmez
     await u.click(within(k).getByRole("button", { name: "Fiyat gir M-001" }));
     const d = await screen.findByRole("dialog", {
@@ -154,11 +121,10 @@ describe("VeriGirisi", () => {
         gecerlilik_basi: bugunIso(),
         neden: "Tedarikçi zammı",
         para_birimi: "TL",
+        onay: false,
       },
     });
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "M-001 fiyatı kaydedildi.",
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("M-001 fiyatı kaydedildi.");
   });
 
   it("üretim bilgileri kartı: ürün seç → sunucu değerleri dolu → vardiya üretim adedi + neden → PUT uretim-hedefi", async () => {
@@ -192,9 +158,7 @@ describe("VeriGirisi", () => {
       pazarlama_yonetim_uygula: true,
       neden: "Hat planı",
     });
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "URUN-001 için üretim bilgileri kaydedildi.",
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("URUN-001 için üretim bilgileri kaydedildi.");
   });
 
   it("hat kapasitesi kartı: kayıt seç → mevcut form → kayıt", async () => {
@@ -217,20 +181,12 @@ describe("VeriGirisi", () => {
       hedef_uretim: "11500",
       neden: "Sezon planı",
     });
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "URUN-001 için üretim adetleri kaydedildi.",
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("URUN-001 için üretim adetleri kaydedildi.");
   });
 
   it("kilitli senaryoda şerit görünür ve girişler pasiftir", async () => {
-    const kilitli = senaryolar.map((s) =>
-      s.id === 1 ? { ...s, kilitli: true } : s,
-    );
-    sunucu.use(
-      http.get("*/api/v1/senaryolar", () =>
-        HttpResponse.json({ kayitlar: kilitli, toplam: kilitli.length }),
-      ),
-    );
+    const kilitli = senaryolar.map((s) => (s.id === 1 ? { ...s, kilitli: true } : s));
+    sunucu.use(http.get("*/api/v1/senaryolar", () => HttpResponse.json({ kayitlar: kilitli, toplam: kilitli.length })));
     kurSayfa(<VeriGirisi />);
     expect(await screen.findByTestId("kilit-seridi")).toBeInTheDocument();
     await screen.findByRole("region", { name: "Gider havuzu" });
@@ -246,15 +202,9 @@ describe("VeriGirisi", () => {
         name: "Değeri değiştir",
       }),
     ).toBeDisabled();
-    expect(
-      within(kart("Malzeme fiyatı")).getByLabelText("Malzeme ara"),
-    ).toBeDisabled();
-    expect(
-      within(kart("Üretim bilgileri (ürün)")).getByLabelText("Ürün"),
-    ).toBeDisabled();
-    expect(
-      within(kart("Hat kapasitesi (Üretim Adetleri)")).getByLabelText("Kayıt"),
-    ).toBeDisabled();
+    expect(within(kart("Malzeme fiyatı")).getByLabelText("Malzeme ara")).toBeDisabled();
+    expect(within(kart("Üretim bilgileri (ürün)")).getByLabelText("Ürün")).toBeDisabled();
+    expect(within(kart("Hat kapasitesi (Üretim Adetleri)")).getByLabelText("Kayıt")).toBeDisabled();
   });
 
   it("menüde VERİ grubunun başında ve rota ağacında /veri-girisi vardır", () => {
@@ -263,12 +213,8 @@ describe("VeriGirisi", () => {
       yol: "/veri-girisi",
       etiket: "Veri Girişi",
     });
-    expect(MENU.find((m) => m.etiket === "Veri Girişi")?.yol).toBe(
-      "/veri-girisi",
-    );
-    expect(
-      rotalar[0].children.some((c) => "path" in c && c.path === "veri-girisi"),
-    ).toBe(true);
+    expect(MENU.find((m) => m.etiket === "Veri Girişi")?.yol).toBe("/veri-girisi");
+    expect(rotalar[0].children.some((c) => "path" in c && c.path === "veri-girisi")).toBe(true);
   });
 });
 

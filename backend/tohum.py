@@ -8,7 +8,11 @@ from .depo import modeller as m
 from .servisler import recete_servisi
 
 PARAMETRELER = [("enflasyon", "Enflasyon öngörüsü (yalnız fiyat çalışması)", "oran"), ("satis_kar", "Satış fiyatı kâr oranı", "oran"), ("vardiya_saati", "Vardiya süresi", "saat"),
-                ("maliyet_sapma", "Maliyet sapma oranı (yalnız gösterim; motor kullanmaz)", "oran")]
+                ("maliyet_sapma", "Maliyet sapma oranı (yalnız gösterim; motor kullanmaz)", "oran"),
+                ("liste_bolen", "Liste fiyatı böleni (liste = satış fiyatı ÷ bölen; girilmezse 0,63)", "oran"),
+                ("marj_esigi", "Hedef kâr oranı eşiği: altındaki ürünler uyarılır (girilmezse %10)", "oran"),
+                ("fiyat_uyari_esigi.TL", "TL malzeme fiyatı tek seferde bundan fazla değişirse onay sorulur (girilmezse %15)", "oran"),
+                ("fiyat_uyari_esigi.doviz", "Dövizli malzeme fiyatı tek seferde bundan fazla değişirse onay sorulur (girilmezse %10)", "oran")]
 PARAMETRELER += [(f"kur.{pb}", f"{pb} kuru", "TL") for pb in ("USD", "EUR", "GBP", "CHF", "RUB", "ZAR")]
 METIN_PARAMETRELER = [("satis_fiyati_notu", "Satış fiyatı notu (Excel G137)")]   # değerleri /metin-parametreler ile girilir
 PARAMETRELER += [(f"faiz.{pb}", f"{pb} yıllık faiz", "oran") for pb in ("TL", "USD", "EUR", "GBP", "ZAR")]

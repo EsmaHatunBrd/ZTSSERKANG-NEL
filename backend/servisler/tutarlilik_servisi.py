@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from fiyat_motoru.modeller import GIDER_ELLE_ALANLARI
-from . import gider_servisi, hesap_servisi as hs, senaryo_servisi
+from . import analiz_servisi, gider_servisi, hesap_servisi as hs, senaryo_servisi
 from .hatalar import HEDEF_YOK, PARAMETRE_EKSIK
 
 OGE_SINIRI = 200
@@ -60,6 +60,7 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
     sonuclar = hs.toplu_hesapla(s, sen.id, tarih)
 
     hesaplanamayan, parametre_eksik, fiyatsiz, hat, param_uyari, kart, elle = [], [], {}, [], [], {}, []
+    urun_fiyatsiz: list[tuple[str, object, set[str]]] = []
     for kod, c in sonuclar:
         u = urunler[kod]
         if isinstance(c, Exception):
@@ -68,17 +69,21 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
             oge = {"etiket": f"{kod} · {u.ad}", "aciklama": mesaj, "yol": _urun_yolu(kod)}
             (parametre_eksik if hata_kodu == PARAMETRE_EKSIK else hesaplanamayan).append(oge)
             continue
+        bu_urun: set[str] = set()
         for w in c.sonuc.uyarilar:
             e = _FIYATSIZ.match(w)
             if e:
                 f = fiyatsiz.setdefault(e["kod"], {"ad": e["ad"], "urunler": []})
                 f["urunler"].append(kod)
+                bu_urun.add(e["kod"])
             elif (e := _KART.match(w)):
                 kart.setdefault(e["kod"], {"ad": e["ad"], "mesaj": e["mesaj"], "urunler": set()})["urunler"].add(kod)
             elif any(x in w for x in _HAT):
                 hat.append({"etiket": f"{kod} · {u.ad}", "aciklama": w, "yol": _urun_yolu(kod)})
             elif any(x in w for x in _PARAMETRE):
                 param_uyari.append({"etiket": f"{kod} · {u.ad}", "aciklama": w, "yol": "/parametreler"})
+        if bu_urun:
+            urun_fiyatsiz.append((kod, c, bu_urun))
         if (ozet := _elle_hucreler(c.girdi)):
             elle.append({"etiket": f"{kod} · {u.ad}", "aciklama": ozet, "yol": _urun_yolu(kod)})
         if c.girdi.uretim.vardiya_uretim_adedi == 0:
@@ -103,6 +108,19 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
     eslesmeyen = [{"etiket": f"{k.urun_kodu} · {k.urun_ad or ''}".rstrip(" ·"), "aciklama": "bu kodla ürün kartı yok",
                    "yol": "/uretim-adetleri"} for k in kapasite if k.urun_kodu not in urunler]
 
+    def _tl(x: Decimal) -> str:
+        return f"{x.quantize(Decimal('0.01')):,}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    etki = [{"etiket": f"{x['kod']} · {urunler[x['kod']].ad}",
+             "aciklama": f"{x['satir']} reçete satırının fiyatı yok ({', '.join(x['malzemeler'][:4])}{' …' if len(x['malzemeler']) > 4 else ''}); "
+                         + (f"maliyet en az {_tl(x['tahmini_eksik_tl'])} TL eksik (başka çalışmadaki fiyatla tahmin)" if x["tahmini_eksik_tl"] is not None
+                            else f"bugünkü maliyet {_tl(x['maliyet_tl'])} TL bu satırlar olmadan hesaplandı"),
+             "yol": _urun_yolu(x["kod"])} for x in analiz_servisi.eksik_fiyat_etkisi(s, sen.id, urun_fiyatsiz)]
+    esik, alti = analiz_servisi.hedef_alti(s, sen.id, tarih)
+    esik_metni = f"%{(esik * 100).normalize():f}".replace(".", ",")
+    hedef = [{"etiket": f"{x['kod']} · {x['ad']}", "aciklama": f"kâr oranı %{(x['kar_orani'] * 100).normalize():f}".replace(".", ",") + f" (eşik {esik_metni})",
+              "yol": _urun_yolu(x["kod"])} for x in alti]
+
     liste = [
         _kontrol("hesaplanamayan", "Hesaplanamayan ürün", "Bu ürünlerin maliyeti hiç hesaplanamıyor; Genel Bakış'ta boş görünürler.",
                  ("Ürün Maliyeti", "/urunler"), hesaplanamayan, agir=True),
@@ -110,6 +128,10 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
                  ("Parametreler", "/parametreler"), parametre_eksik, agir=True),
         _kontrol("fiyatsiz", "Fiyatı olmayan malzeme", "Reçetede kullanılan ama fiyatı olmayan malzemeler 0 TL sayılıyor; maliyet eksik çıkar.",
                  ("Malzeme Fiyatları (yalnız fiyatsızlar)", "/fiyatlar?fiyatsiz=1"), fiyatsiz_ogeler),
+        _kontrol("eksik_fiyat_etkisi", "Eksik fiyattan etkilenen ürün", "Fiyatı olmayan malzemeler bu ürünlerin maliyetini eksik gösteriyor; "
+                 "en çok etkilenen üstte.", ("Malzeme Fiyatları (yalnız fiyatsızlar)", "/fiyatlar?fiyatsiz=1"), etki),
+        _kontrol("hedef_alti", "Hedef marjın altındaki ürün", f"Kâr oranı {esik_metni} eşiğinin altında girilmiş ürünler. Eşik Parametreler'de "
+                 "(marj_esigi) değiştirilebilir; satış geçmişi yüklenince gerçek satış fiyatıyla da kıyaslanacak.", ("Parametreler", "/parametreler"), hedef),
         _kontrol("malzeme_karti", "Eksik malzeme kartı bilgisi", "Para birimi ya da Ziraat/Satın alma bayrağı eksik veya çelişkili; "
                  "fiyat 0 ya da yanlış kurla alınabilir.", ("Malzeme Fiyatları", "/fiyatlar"), kart_ogeler),
         _kontrol("pay", "Gider payı %100 değil", "Bir gider havuzunun alt kalem payları toplamı %100 değil; dağıtılan gider eksik ya da fazla.",

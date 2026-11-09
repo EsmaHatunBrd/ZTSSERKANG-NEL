@@ -29,7 +29,7 @@ def _kur(c, sid, oturum):
         assert c.post(f"/api/v1/parametreler/{a}/degerler?senaryo={sid}", json={"deger": v, "gecerlilik_basi": "2026-06-01", "neden": "tohum"}).status_code == 201
     gider_tohumla(oturum, sid)
     c.post("/api/v1/malzemeler", json={"kod": "KAV", "ad": "Kavanoz", "tip": "0008-Ambalaj Malzeme", "birim": "AD", "para_birimi": "TL", "zs": "S"})
-    assert c.post("/api/v1/malzemeler/KAV/fiyatlar?senaryo=%d" % sid, json={"fiyat": "5.9", "gecerlilik_basi": "2026-06-01", "neden": "bütçe"}).status_code == 201
+    assert c.post("/api/v1/malzemeler/KAV/fiyatlar?senaryo=%d" % sid, json={"onay": True, "fiyat": "5.9", "gecerlilik_basi": "2026-06-01", "neden": "bütçe"}).status_code == 201
     assert c.put("/api/v1/urunler/TEST", json={"ad": "Test", "ambalaj_hacmi": "370", "hat": "Niko", "taze_tursu_sinifi": "Turşu/Turşu", "suzme_kg": "0.18"}).status_code == 200
     assert c.put(f"/api/v1/urunler/TEST/uretim-hedefi?senaryo={sid}", json={"vardiya_uretim_adedi": "65000", "dolum_personel": "13", "etiketleme_adedi": "35000",
                  "etiket_personel": "7", "mal_kabul_miktar_kg": "0.19"}).status_code == 200
@@ -101,7 +101,7 @@ def test_fiyat_listesi_import(istemci, oturum, tmp_path):
     from openpyxl import Workbook
     sid = _senaryo(istemci)
     istemci.post("/api/v1/malzemeler", json={"kod": "A1", "ad": "A", "tip": "t", "birim": "KG", "para_birimi": "TL", "zs": "S"})
-    assert istemci.post(f"/api/v1/malzemeler/A1/fiyatlar?senaryo={sid}", json={"fiyat": "5", "gecerlilik_basi": "2026-06-01", "neden": "x"}).status_code == 201
+    assert istemci.post(f"/api/v1/malzemeler/A1/fiyatlar?senaryo={sid}", json={"onay": True, "fiyat": "5", "gecerlilik_basi": "2026-06-01", "neden": "x"}).status_code == 201
     wb = Workbook(); ws = wb.active
     ws.append(["kod", "ad", "c", "d", "e", "fiyat"]); ws.append(["A1", "A", None, None, None, 6])
     yol = tmp_path / "fiyat.xlsx"; wb.save(yol)
@@ -165,7 +165,7 @@ def test_kurallara_birak_api(istemci, oturum):
 
 def test_senaryo_dogrulamasi_tekduze(istemci, oturum):
     sid = _senaryo(istemci); _kur(istemci, sid, oturum)
-    r = istemci.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo=999", json={"fiyat": "1", "gecerlilik_basi": "2026-06-01", "neden": "x"})
+    r = istemci.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo=999", json={"onay": True, "fiyat": "1", "gecerlilik_basi": "2026-06-01", "neden": "x"})
     assert r.status_code == 404 and set(r.json()) == HATA_ANAHTARLARI and r.json()["hata"] == "bulunamadi"
     for yol in ("/malzemeler", "/malzemeler/KAV/fiyatlar", "/parametreler", "/parametreler/kur.USD/gecmis", "/gider-havuzlari", "/ambalaj-siniflari",
                 "/fire-kurallari", "/urunler", "/urunler/TEST", "/urunler/TEST/recete", "/urunler/TEST/recete/versiyonlar", "/urunler/TEST/hesaplar",
@@ -227,8 +227,8 @@ def test_fiyat_listesi_onizle_uygula_api(istemci, oturum, tmp_path):
     from openpyxl import Workbook
     sid = _senaryo(istemci)
     istemci.post(f"{A}/malzemeler", json={"kod": "A1", "ad": "A", "tip": "t", "birim": "KG", "para_birimi": "TL", "zs": "S"})
-    istemci.post(f"{A}/malzemeler/A1/fiyatlar?senaryo={sid}", json={"fiyat": "5", "gecerlilik_basi": "2026-06-01", "neden": "x"})
-    istemci.post(f"{A}/malzemeler/A1/fiyatlar?senaryo={sid}", json={"fiyat": "6", "gecerlilik_basi": "2026-09-01", "neden": "x"})
+    istemci.post(f"{A}/malzemeler/A1/fiyatlar?senaryo={sid}", json={"onay": True, "fiyat": "5", "gecerlilik_basi": "2026-06-01", "neden": "x"})
+    istemci.post(f"{A}/malzemeler/A1/fiyatlar?senaryo={sid}", json={"onay": True, "fiyat": "6", "gecerlilik_basi": "2026-09-01", "neden": "x"})
     wb = Workbook(); ws = wb.active
     ws.append(["kod", "ad", "c", "d", "e", "fiyat"]); ws.append(["A1", "A", None, None, None, 6])
     yol = tmp_path / "f.xlsx"; wb.save(yol)
@@ -271,7 +271,7 @@ def test_sema_sinirlari(istemci, oturum):
         assert istemci.get(f"{A}{yol}?senaryo={sid}&boyut=0").status_code == 422
         assert istemci.get(f"{A}{yol}?senaryo={sid}&boyut=501").status_code == 422
     fg = {"gecerlilik_basi": "2026-06-01", "neden": "x"}
-    assert istemci.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={"fiyat": "-1", **fg}).status_code == 422
+    assert istemci.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={"onay": True, "fiyat": "-1", **fg}).status_code == 422
     fk = {"kapsam_tipi": "tip", "kapsam_deger": "x", "gecerlilik_basi": "2026-06-01", "neden": "x"}
     for oran in ("1", "-0.1"):
         assert istemci.post(f"{A}/fire-kurallari?senaryo={sid}", json={**fk, "oran": oran}).status_code == 422
@@ -434,7 +434,7 @@ def test_gercek_oturum_commit_ve_rollback(tmp_path, monkeypatch):
 def test_hesap_satiri_sira_ve_doviz(istemci, oturum):
     sid = _senaryo(istemci); _kur(istemci, sid, oturum)
     istemci.post(f"{A}/malzemeler", json={"kod": "KAP", "ad": "Kapak", "tip": "0008-Ambalaj Malzeme", "birim": "AD", "para_birimi": "USD", "zs": "S"})
-    istemci.post(f"{A}/malzemeler/KAP/fiyatlar?senaryo={sid}", json={"fiyat": "0.1", "gecerlilik_basi": "2026-06-01", "neden": "bütçe"})
+    istemci.post(f"{A}/malzemeler/KAP/fiyatlar?senaryo={sid}", json={"onay": True, "fiyat": "0.1", "gecerlilik_basi": "2026-06-01", "neden": "bütçe"})
     assert istemci.post(f"{A}/urunler/TEST/recete?senaryo={sid}", json=[{"malzeme_kodu": "KAV", "ad": "Kavanoz", "miktar": "1"},
                                                                        {"malzeme_kodu": "KAP", "ad": "Kapak", "miktar": "1"}]).status_code == 201
     g = istemci.post(f"{A}/urunler/TEST/hesapla", json={"senaryo_id": sid, "tarih": "2026-10-21"}).json()

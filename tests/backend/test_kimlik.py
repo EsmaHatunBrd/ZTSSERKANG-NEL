@@ -93,7 +93,7 @@ def test_roller_satin_alma_yalniz_fiyat_izleyici_salt_okunur(uygulama, oturum):
         ks.kullanici_olustur(oturum, ad, ad, rol, "sifre-1234", sifre_degismeli=False)
     oturum.commit()
     satin, izle = _istemci(uygulama, "satin", "sifre-1234"), _istemci(uygulama, "izle", "sifre-1234")
-    fiyat = {"fiyat": "7", "para_birimi": "TL", "gecerlilik_basi": "2026-10-22", "neden": "zam"}
+    fiyat = {"onay": True, "fiyat": "7", "para_birimi": "TL", "gecerlilik_basi": "2026-10-22", "neden": "zam"}
     assert satin.post(f"{API}/malzemeler/KAV/fiyatlar?senaryo={sid}", json=fiyat).status_code == 201
     r = satin.post(f"{API}/parametreler/kur.USD/degerler?senaryo={sid}",
                    json={"deger": "51", "gecerlilik_basi": "2026-10-22", "neden": "x"})
@@ -103,7 +103,7 @@ def test_roller_satin_alma_yalniz_fiyat_izleyici_salt_okunur(uygulama, oturum):
     assert izle.post(f"{API}/urunler/TEST/hesapla", json={"senaryo_id": sid, "tarih": "2026-10-22"}).status_code == 200
     assert izle.get(f"{API}/urunler?senaryo={sid}").status_code == 200
     # değişikliği yapan: oturumdaki kullanıcı (X-Kullanici başlığı yok sayılır)
-    satin.post(f"{API}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={**fiyat, "fiyat": "8"}, headers={"X-Kullanici": "sahte"})
+    satin.post(f"{API}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={"onay": True, **fiyat, "fiyat": "8"}, headers={"X-Kullanici": "sahte"})
     son = oturum.query(m.MalzemeFiyati).order_by(m.MalzemeFiyati.id.desc()).first()
     assert son.olusturan == "satin"
 

@@ -21,6 +21,8 @@ import { useSenaryoSayfasi } from "@/yardimcilar/sayfalama";
 import { AmbalajOzeti } from "./dashboard/AmbalajOzeti";
 import { GerceklesenSeridi } from "./dashboard/GerceklesenSeridi";
 import { VeriKontroluSeridi } from "./dashboard/VeriKontroluSeridi";
+import { GenelGrafikler } from "./dashboard/GenelGrafikler";
+import { OneCikanlar } from "./dashboard/OneCikanlar";
 import { UstKartlar } from "./dashboard/UstKartlar";
 import { UyariHucresi } from "./dashboard/UyariHucresi";
 import { EnflasyonRozeti } from "./karsilastirma/EnflasyonRozeti";
@@ -400,6 +402,7 @@ export default function Dashboard() {
   return (
     <section className="flex flex-col gap-5">
       <SayfaBasligi
+        bant
         baslik="Genel Bakış"
         altBaslik={senaryo ? `${senaryo.sezon_ad} · ${senaryo.ad} — ürünlerin maliyet ve satış özeti` : "Ürünlerin maliyet ve satış özeti"}
         eylemler={
@@ -410,18 +413,22 @@ export default function Dashboard() {
         }
       />
 
-      <UstKartlar
-        urunSayisi={toplam}
-        hataSayisi={hataSayisi}
-        uyariliUrun={uyarilar.data ? uyariHaritasi.size : null}
-        enflasyonAltinda={enflasyonAltinda}
-        fiyatsizMalzeme={tutarlilik.data ? (tutarlilik.data.kontroller.find((k) => k.kod === "fiyatsiz")?.sayi ?? 0) : null}
-        senaryoId={senaryoId}
-        onEnflasyonSuz={() => setEnflasyon("altinda")}
-        onHataSuz={() => setYalnizHatali(true)}
-      />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+        <UstKartlar
+          urunSayisi={toplam}
+          hataSayisi={hataSayisi}
+          uyariliUrun={uyarilar.data ? uyariHaritasi.size : null}
+          enflasyonAltinda={enflasyonAltinda}
+          fiyatsizMalzeme={tutarlilik.data ? (tutarlilik.data.kontroller.find((k) => k.kod === "fiyatsiz")?.sayi ?? 0) : null}
+          senaryoId={senaryoId}
+          onEnflasyonSuz={() => setEnflasyon("altinda")}
+          onHataSuz={() => setYalnizHatali(true)}
+        />
+        <OneCikanlar satirlar={satirlar} uyarilar={uyariHaritasi} />
+      </div>
       <VeriKontroluSeridi senaryoId={senaryoId} />
       <GerceklesenSeridi />
+      <GenelGrafikler satirlar={satirlar} />
 
       <div className="flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-xs sm:p-4">
         <div className="flex flex-wrap items-center gap-2">

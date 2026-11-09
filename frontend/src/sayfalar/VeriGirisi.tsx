@@ -3,13 +3,10 @@ import { Coins, Factory, Settings2, Wallet } from "lucide-react";
 import { hataMetni, hataMetniVarsa } from "@/api/istemci";
 import { useGiderHavuzlari, useHavuzKaydet } from "@/api/sorgular/gider";
 import { useKapasite } from "@/api/sorgular/kapasite";
-import { useFiyatEkle, useMalzemeler } from "@/api/sorgular/malzemeler";
-import {
-  useParametreEkle,
-  useParametreler,
-  useParametreTanimlari,
-} from "@/api/sorgular/parametreler";
+import { useMalzemeler } from "@/api/sorgular/malzemeler";
+import { useParametreEkle, useParametreler, useParametreTanimlari } from "@/api/sorgular/parametreler";
 import type { GiderHavuzu, Malzeme, ParametreTanimi } from "@/api/tipler";
+import { useOnayliFiyatEkle } from "@/bilesenler/FiyatSapmaOnayi";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
@@ -20,11 +17,7 @@ import { paraBicimle, type ParaBirimi } from "@/yardimcilar/para";
 import { goster } from "@/yardimcilar/tarih";
 import { DegerDiyalogu } from "./ayarlar/DegerDiyalogu";
 import { HavuzDiyalogu, havuzGovdesi } from "./ayarlar/HavuzDiyalogu";
-import {
-  KAPASITE_ALANLARI,
-  kapasiteSayisi,
-  useKapasiteDuzenleme,
-} from "./ayarlar/kapasiteDuzenleme";
+import { KAPASITE_ALANLARI, kapasiteSayisi, useKapasiteDuzenleme } from "./ayarlar/kapasiteDuzenleme";
 import { degerMetni, ParametreDiyalogu } from "./ayarlar/ParametreDiyalogu";
 import { Alan, Kart, SELECT } from "./girdi/ortak";
 import { UretimBilgileriKarti } from "./girdi/UretimBilgileriKarti";
@@ -39,15 +32,7 @@ const malzemeBirimi = (m: Malzeme): ParaBirimi => m.para_birimi?.trim() || "TL";
 
 /* ------------------------------------------------------------------ Gider havuzu */
 
-function HavuzGirisKarti({
-  senaryoId,
-  kilitli,
-  onMesaj,
-}: {
-  senaryoId: number;
-  kilitli: boolean;
-  onMesaj: (m: string) => void;
-}) {
+function HavuzGirisKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; kilitli: boolean; onMesaj: (m: string) => void }) {
   const id = useId();
   const havuzlar = useGiderHavuzlari(senaryoId);
   const kaydet = useHavuzKaydet();
@@ -93,18 +78,14 @@ function HavuzGirisKarti({
             {secili.taban_tutar && secili.carpanlar.length > 0 && (
               <span className="block text-xs text-muted-foreground">
                 {paraBicimle(secili.taban_tutar, "", 2)}
-                {secili.carpanlar
-                  .map((c) => ` × ${c.deger.replace(".", ",")}`)
-                  .join("")}
+                {secili.carpanlar.map((c) => ` × ${c.deger.replace(".", ",")}`).join("")}
               </span>
             )}
           </dd>
           <dt className="text-muted-foreground">Baz</dt>
           <dd>
             {secili.baz_tipi}
-            {secili.baz_miktar
-              ? ` · ${paraBicimle(secili.baz_miktar, "", 0)}`
-              : ""}
+            {secili.baz_miktar ? ` · ${paraBicimle(secili.baz_miktar, "", 0)}` : ""}
           </dd>
           <dt className="text-muted-foreground">Alt kalem</dt>
           <dd>
@@ -159,18 +140,10 @@ function HavuzGirisKarti({
 
 /* ------------------------------------------------------------------ Malzeme fiyatı */
 
-function FiyatKarti({
-  senaryoId,
-  kilitli,
-  onMesaj,
-}: {
-  senaryoId: number;
-  kilitli: boolean;
-  onMesaj: (m: string) => void;
-}) {
+function FiyatKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; kilitli: boolean; onMesaj: (m: string) => void }) {
   const id = useId();
   const sorgu = useMalzemeler(senaryoId, { boyut: LISTE_BOYUTU });
-  const ekle = useFiyatEkle();
+  const ekle = useOnayliFiyatEkle();
   const [arama, setArama] = useState("");
   const [duzenlenen, setDuzenlenen] = useState<Malzeme | null>(null);
   const eslesen = useMemo(() => {
@@ -178,11 +151,7 @@ function FiyatKarti({
     if (!q) return [];
     return (sorgu.data?.kayitlar ?? [])
       .filter((m) => !m.kart_yok) // kartı olmayan malzemeye fiyat yazılamaz (Malzeme Fiyatları da engeller)
-      .filter(
-        (m) =>
-          m.kod.toLocaleLowerCase("tr").includes(q) ||
-          (m.ad ?? "").toLocaleLowerCase("tr").includes(q),
-      )
+      .filter((m) => m.kod.toLocaleLowerCase("tr").includes(q) || (m.ad ?? "").toLocaleLowerCase("tr").includes(q))
       .slice(0, 8);
   }, [sorgu.data, arama]);
   const eksik = (sorgu.data?.toplam ?? 0) > (sorgu.data?.kayitlar.length ?? 0);
@@ -211,27 +180,19 @@ function FiyatKarti({
       )}
       {eksik && (
         <p className="text-xs text-muted-foreground">
-          Arama ilk {LISTE_BOYUTU} malzemede yapılır; bulamazsanız Malzeme
-          Fiyatları sayfasını kullanın.
+          Arama ilk {LISTE_BOYUTU} malzemede yapılır; bulamazsanız Malzeme Fiyatları sayfasını kullanın.
         </p>
       )}
-      {arama.trim() && eslesen.length === 0 && !sorgu.isLoading && (
-        <p className="text-sm text-muted-foreground">Eşleşen malzeme yok.</p>
-      )}
+      {arama.trim() && eslesen.length === 0 && !sorgu.isLoading && <p className="text-sm text-muted-foreground">Eşleşen malzeme yok.</p>}
       {eslesen.length > 0 && (
         <ul className="divide-y rounded-md border text-sm">
           {eslesen.map((m) => (
-            <li
-              key={m.kod}
-              className="flex items-center justify-between gap-2 px-2 py-1.5"
-            >
+            <li key={m.kod} className="flex items-center justify-between gap-2 px-2 py-1.5">
               <span className="min-w-0">
                 <span className="font-mono text-xs">{m.kod}</span>
                 <span className="ml-2 truncate">{m.ad ?? "—"}</span>
                 <span className="block text-xs text-muted-foreground tabular-nums">
-                  {m.fiyatsiz
-                    ? "Fiyatsız"
-                    : paraBicimle(m.fiyat ?? "0", malzemeBirimi(m), 4)}
+                  {m.fiyatsiz ? "Fiyatsız" : paraBicimle(m.fiyat ?? "0", malzemeBirimi(m), 4)}
                   {m.gecerlilik_basi ? ` · ${goster(m.gecerlilik_basi)}` : ""}
                 </span>
               </span>
@@ -277,6 +238,7 @@ function FiyatKarti({
                   gecerlilik_basi: v.tarih,
                   neden: v.neden,
                   para_birimi: malzemeBirimi(duzenlenen),
+                  onay: false,
                 },
               },
               {
@@ -289,21 +251,14 @@ function FiyatKarti({
           }
         />
       )}
+      {ekle.onayDiyalogu}
     </Kart>
   );
 }
 
 /* ------------------------------------------------------------------ Parametre */
 
-function ParametreKarti({
-  senaryoId,
-  kilitli,
-  onMesaj,
-}: {
-  senaryoId: number;
-  kilitli: boolean;
-  onMesaj: (m: string) => void;
-}) {
+function ParametreKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; kilitli: boolean; onMesaj: (m: string) => void }) {
   const id = useId();
   const { senaryo } = useSenaryo();
   const tanimlar = useParametreTanimlari();
@@ -312,20 +267,16 @@ function ParametreKarti({
   const [anahtar, setAnahtar] = useState("");
   const [duzenlenen, setDuzenlenen] = useState<ParametreTanimi | null>(null);
   const liste = useMemo(() => {
-    const t: ParametreTanimi[] = (tanimlar.data?.kayitlar ?? []).filter(
-      (x) => !SALT_OKUNUR(x.anahtar),
-    );
+    const t: ParametreTanimi[] = (tanimlar.data?.kayitlar ?? []).filter((x) => !SALT_OKUNUR(x.anahtar));
     const bilinen = new Set(t.map((x) => x.anahtar));
     for (const a of Object.keys(degerler.data ?? {}))
-      if (!bilinen.has(a) && !SALT_OKUNUR(a))
-        t.push({ anahtar: a, aciklama: null, birim: null });
+      if (!bilinen.has(a) && !SALT_OKUNUR(a)) t.push({ anahtar: a, aciklama: null, birim: null });
     return t;
   }, [tanimlar.data, degerler.data]);
   const secili = liste.find((t) => t.anahtar === anahtar) ?? null;
   const deger = secili ? degerler.data?.[secili.anahtar] : undefined;
   // Parametreler sayfasıyla aynı kural: gerçekleşen senaryoda enflasyon kilitlidir.
-  const enflasyonKilidi =
-    senaryo?.tur === "gerceklesen" && anahtar === "enflasyon";
+  const enflasyonKilidi = senaryo?.tur === "gerceklesen" && anahtar === "enflasyon";
   const hata = tanimlar.error ?? degerler.error;
 
   return (
@@ -359,15 +310,8 @@ function ParametreKarti({
       )}
       {secili && (
         <p className="text-sm">
-          Geçerli değer:{" "}
-          <strong className="tabular-nums">
-            {deger === undefined ? "—" : degerMetni(deger, secili.birim)}
-          </strong>
-          {enflasyonKilidi && (
-            <span className="block text-xs text-muted-foreground">
-              Gerçekleşen senaryoda enflasyon kilitlidir.
-            </span>
-          )}
+          Geçerli değer: <strong className="tabular-nums">{deger === undefined ? "—" : degerMetni(deger, secili.birim)}</strong>
+          {enflasyonKilidi && <span className="block text-xs text-muted-foreground">Gerçekleşen senaryoda enflasyon kilitlidir.</span>}
         </p>
       )}
       <div>
@@ -401,9 +345,7 @@ function ParametreKarti({
                   gecerlilik_basi: v.tarih,
                   neden: v.neden,
                   kapsam_tipi: v.kapsam_tipi,
-                  ...(v.kapsam_tipi === "urun"
-                    ? { kapsam_id: v.kapsam_id }
-                    : {}),
+                  ...(v.kapsam_tipi === "urun" ? { kapsam_id: v.kapsam_id } : {}),
                 },
               },
               {
@@ -422,28 +364,10 @@ function ParametreKarti({
 
 /* ------------------------------------------------------------------ Hat kapasitesi (Üretim Adetleri sayfası) */
 
-function KapasiteKarti({
-  senaryoId,
-  kilitli,
-  onMesaj,
-}: {
-  senaryoId: number;
-  kilitli: boolean;
-  onMesaj: (m: string) => void;
-}) {
+function KapasiteKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; kilitli: boolean; onMesaj: (m: string) => void }) {
   const id = useId();
   const liste = useKapasite(senaryoId, { boyut: LISTE_BOYUTU });
-  const {
-    duzenleme,
-    basla,
-    alanDegistir,
-    nedenDegistir,
-    iptal,
-    hatalar,
-    kaydedilebilir,
-    gonder,
-    kaydet,
-  } = useKapasiteDuzenleme(senaryoId);
+  const { duzenleme, basla, alanDegistir, nedenDegistir, iptal, hatalar, kaydedilebilir, gonder, kaydet } = useKapasiteDuzenleme(senaryoId);
   const kayitlar = liste.data?.kayitlar ?? [];
 
   return (
@@ -483,21 +407,12 @@ function KapasiteKarti({
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {KAPASITE_ALANLARI.map((a) => {
-              const mevcut = kayitlar.find(
-                (k) => k.urun_kodu === duzenleme.urunKodu,
-              )?.[a.anahtar];
+              const mevcut = kayitlar.find((k) => k.urun_kodu === duzenleme.urunKodu)?.[a.anahtar];
               return (
                 <div key={a.anahtar} className="flex flex-col gap-1">
-                  <label
-                    htmlFor={`${id}-${a.anahtar}`}
-                    className="text-xs text-muted-foreground"
-                  >
+                  <label htmlFor={`${id}-${a.anahtar}`} className="text-xs text-muted-foreground">
                     {a.etiket}
-                    {mevcut !== undefined && (
-                      <span className="ml-1 tabular-nums">
-                        (şu an {kapasiteSayisi(mevcut)})
-                      </span>
-                    )}
+                    {mevcut !== undefined && <span className="ml-1 tabular-nums">(şu an {kapasiteSayisi(mevcut)})</span>}
                   </label>
                   <Input
                     id={`${id}-${a.anahtar}`}
@@ -535,11 +450,7 @@ function KapasiteKarti({
               type="button"
               size="sm"
               disabled={!kaydedilebilir || kilitli}
-              onClick={() =>
-                gonder((kod) =>
-                  onMesaj(`${kod} için üretim adetleri kaydedildi.`),
-                )
-              }
+              onClick={() => gonder((kod) => onMesaj(`${kod} için üretim adetleri kaydedildi.`))}
             >
               Kaydet
             </Button>
@@ -576,37 +487,15 @@ export default function VeriGirisi() {
         </p>
       )}
       {senaryoId == null ? (
-        <p className="text-muted-foreground">
-          Başlamak için yukarıdan bir senaryo seçin.
-        </p>
+        <p className="text-muted-foreground">Başlamak için yukarıdan bir senaryo seçin.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           <YeniUrunKarti senaryoId={senaryoId} onMesaj={setMesaj} />
-          <HavuzGirisKarti
-            senaryoId={senaryoId}
-            kilitli={kilitli}
-            onMesaj={setMesaj}
-          />
-          <FiyatKarti
-            senaryoId={senaryoId}
-            kilitli={kilitli}
-            onMesaj={setMesaj}
-          />
-          <ParametreKarti
-            senaryoId={senaryoId}
-            kilitli={kilitli}
-            onMesaj={setMesaj}
-          />
-          <UretimBilgileriKarti
-            senaryoId={senaryoId}
-            kilitli={kilitli}
-            onMesaj={setMesaj}
-          />
-          <KapasiteKarti
-            senaryoId={senaryoId}
-            kilitli={kilitli}
-            onMesaj={setMesaj}
-          />
+          <HavuzGirisKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
+          <FiyatKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
+          <ParametreKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
+          <UretimBilgileriKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
+          <KapasiteKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
         </div>
       )}
     </section>

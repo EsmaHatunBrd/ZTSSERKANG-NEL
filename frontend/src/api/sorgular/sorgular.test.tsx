@@ -97,7 +97,7 @@ describe("geçersiz kılma", () => {
       await result.current.ekle.mutateAsync({
         kod: "M-001",
         senaryo: 1,
-        govde: { fiyat: "6", gecerlilik_basi: "2026-10-21", neden: "Test" },
+        govde: { fiyat: "6", gecerlilik_basi: "2026-10-21", neden: "Test", onay: false },
       });
     });
     await waitFor(() => {

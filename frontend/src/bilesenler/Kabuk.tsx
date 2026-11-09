@@ -1,24 +1,33 @@
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
-  Calculator,
-  Coins,
-  FileText,
-  LayoutDashboard,
-  ListChecks,
-  Menu as MenuSimgesi,
-  PencilLine,
-  Scale,
-  ScrollText,
-  Settings2,
-  Upload,
-  Wallet,
-  Factory,
-  X,
-  CircleHelp,
+  Boxes,
+  CalendarRange,
+  ChartPie,
+  ClipboardList,
+  FileSpreadsheet,
+  GitCompareArrows,
+  Handshake,
   History,
   House,
-  UsersRound,
+  ListChecks,
+  Layers,
+  Menu as MenuSimgesi,
+  PackageSearch,
+  ReceiptText,
+  Scale,
+  ShieldCheck,
+  Sigma,
+  SlidersHorizontal,
+  Split,
+  SquarePen,
+  Tags,
+  Timer,
+  TrendingUp,
+  UserCog,
+  Warehouse,
+  X,
+  CircleHelp,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -54,15 +63,23 @@ export const MENU_GRUPLARI: MenuGrubu[] = [
     grup: "Çalışma",
     ogeler: [
       { yol: "/", etiket: "Ana Sayfa", son: true, simge: House },
-      { yol: "/genel-bakis", etiket: "Genel Bakış", son: false, simge: LayoutDashboard, aciklama: "Tüm ürünlerin maliyet ve satış özeti" },
-      { yol: "/urunler", etiket: "Ürün Maliyeti", son: false, simge: Calculator, aciklama: "Tek ürünün reçetesi, giderleri ve fiyatı" },
-      { yol: "/teklifler", etiket: "Teklifler", son: false, simge: FileText, aciklama: "Teklif turları ve Teklif Kapak" },
+      { yol: "/genel-bakis", etiket: "Genel Bakış", son: false, simge: ChartPie, aciklama: "Tüm ürünlerin maliyet ve satış özeti" },
+      { yol: "/urunler", etiket: "Ürün Maliyeti", son: false, simge: PackageSearch, aciklama: "Tek ürünün reçetesi, giderleri ve fiyatı" },
+      { yol: "/teklifler", etiket: "Teklifler", son: false, simge: Handshake, aciklama: "Teklif turları ve Teklif Kapak" },
+      {
+        yol: "/ya-olursa",
+        etiket: "Analiz",
+        son: false,
+        simge: TrendingUp,
+        ekYollar: ["/zam-etkisi", "/kur-riski", "/karlilik", "/hedef-fiyat", "/liste-calismasi"],
+        aciklama: "Ya olursa, zam etkisi, liste fiyatı çalışması",
+      },
       // Bütçe vs Gerçekleşen, ürün aileleri ve geçmiş kayıtlar tek öğe; sayfalar arası geçiş sekmelerle (SayfaSekmeleri).
       {
         yol: "/butce-gerceklesen",
         etiket: "Kıyasla",
         son: false,
-        simge: Scale,
+        simge: GitCompareArrows,
         ekYollar: ["/karsilastirma", "/arsiv"],
         aciklama: "Bütçe vs gerçekleşen, ürün aileleri, geçmiş kayıtlar",
       },
@@ -77,21 +94,27 @@ export const MENU_GRUPLARI: MenuGrubu[] = [
         yol: "/veri-girisi",
         etiket: "Veri Girişi",
         son: false,
-        simge: PencilLine,
+        simge: SquarePen,
         aciklama: "Fiyat, parametre, gider, üretim bilgisini tek tek gir",
       },
-      { yol: "/recete-aktar", etiket: "Veri Aktar", son: false, simge: Upload, aciklama: "Excel'den toplu yükle" },
+      { yol: "/recete-aktar", etiket: "Veri Aktar", son: false, simge: FileSpreadsheet, aciklama: "Excel'den toplu yükle" },
     ],
   },
   {
     // Girilen veriyi nerede görürüm: tam listeler, geçmiş ve düzenleme.
     grup: "Kayıtlar",
     ogeler: [
-      { yol: "/fiyatlar", etiket: "Malzeme Fiyatları", son: false, simge: Coins, aciklama: "Malzeme kartları, fiyatlar ve revizeler" },
-      { yol: "/parametreler", etiket: "Parametreler", son: false, simge: Settings2, aciklama: "Enflasyon, kurlar, faiz, kâr oranları" },
-      { yol: "/gider", etiket: "Gider Dağıtım", son: false, simge: Wallet, aciklama: "Gider havuzları ve dağıtım payları" },
-      { yol: "/uretim-adetleri", etiket: "Üretim Adetleri", son: false, simge: Factory, aciklama: "Vardiya kapasitesi ve hedef adetler" },
-      { yol: "/satis-gecmisi", etiket: "Satış Geçmişi", son: false, simge: History, aciklama: "Geçen yıl satış fiyatları" },
+      { yol: "/fiyatlar", etiket: "Malzeme Fiyatları", son: false, simge: Tags, aciklama: "Malzeme kartları, fiyatlar ve revizeler" },
+      {
+        yol: "/parametreler",
+        etiket: "Parametreler",
+        son: false,
+        simge: SlidersHorizontal,
+        aciklama: "Enflasyon, kurlar, faiz, kâr oranları",
+      },
+      { yol: "/gider", etiket: "Gider Dağıtım", son: false, simge: Split, aciklama: "Gider havuzları ve dağıtım payları" },
+      { yol: "/uretim-adetleri", etiket: "Üretim Adetleri", son: false, simge: Boxes, aciklama: "Vardiya kapasitesi ve hedef adetler" },
+      { yol: "/satis-gecmisi", etiket: "Satış Geçmişi", son: false, simge: ReceiptText, aciklama: "Geçen yıl satış fiyatları" },
     ],
   },
   {
@@ -101,47 +124,147 @@ export const MENU_GRUPLARI: MenuGrubu[] = [
         yol: "/veri-kontrolu",
         etiket: "Veri Kontrolü",
         son: false,
-        simge: ListChecks,
+        simge: ShieldCheck,
         ekYollar: ["/uyarilar"],
         aciklama: "Eksik ya da çelişkili veriler tek listede",
       },
-      { yol: "/gunluk", etiket: "Değişiklik Günlüğü", son: false, simge: ScrollText, aciklama: "Kim, ne zaman, neyi değiştirdi" },
+      { yol: "/gunluk", etiket: "Değişiklik Günlüğü", son: false, simge: History, aciklama: "Kim, ne zaman, neyi değiştirdi" },
     ],
   },
   {
     grup: "Yönetim",
     yoneticiye: true,
     ogeler: [
-      { yol: "/kullanicilar", etiket: "Kullanıcılar", son: false, simge: UsersRound, aciklama: "Kullanıcı ekle, rol ata, şifre sıfırla" },
+      { yol: "/kullanicilar", etiket: "Kullanıcılar", son: false, simge: UserCog, aciklama: "Kullanıcı ekle, rol ata, şifre sıfırla" },
     ],
   },
 ];
 
 export const MENU: readonly MenuOgesi[] = MENU_GRUPLARI.flatMap((g) => g.ogeler);
 
+/** İkinci iş: maliyet muhasebesi (aylık SMM). Kendi menüsü vardır; fiyat çalışmasının menüsüyle karışmaz. */
+export const SMM_MENU_GRUPLARI: MenuGrubu[] = [
+  {
+    grup: "Maliyet Muhasebesi",
+    ogeler: [
+      { yol: "/", etiket: "Ana Sayfa", son: true, simge: House },
+      { yol: "/smm", etiket: "Dönemler", son: true, simge: CalendarRange, aciklama: "SMM Excel'ini yükle, aylık dönemleri yönet" },
+      {
+        yol: "/smm/veri",
+        etiket: "Veri Girişi",
+        son: false,
+        simge: ListChecks,
+        aciklama: "Aylık veriler: kontrol listesi, kaynak bazında yükleme, kapanış",
+      },
+      {
+        yol: "/smm/stok",
+        etiket: "Stok ve Envanter",
+        son: false,
+        simge: Warehouse,
+        aciklama: "Dönem başı, alım, sayım, sarf ve ortalama maliyet",
+      },
+      {
+        yol: "/smm/uretim",
+        etiket: "Üretim Maliyeti",
+        son: false,
+        simge: Layers,
+        aciklama: "20 → 40 → 50 aşama maliyetleri, işçilik ve genel gider dağıtımı",
+      },
+      {
+        yol: "/smm/sarf-farki",
+        etiket: "Sarf Farkı",
+        son: false,
+        simge: Scale,
+        aciklama: "Reçeteye göre sarf ile sayıma göre sarf",
+      },
+      {
+        yol: "/smm/ozet",
+        etiket: "SMM Özeti",
+        son: false,
+        simge: Sigma,
+        aciklama: "Satılan mamul maliyeti, stok mizanı karşılaştırması ve fiş taslağı",
+      },
+    ],
+  },
+  {
+    grup: "Ana veriler",
+    ogeler: [
+      {
+        yol: "/smm/receteler",
+        etiket: "Reçeteler",
+        son: false,
+        simge: ClipboardList,
+        aciklama: "Canias ürün ağacı: kalıcı 20 / 40 / 50 reçeteleri ve alternatifler",
+      },
+      {
+        yol: "/smm/sureler",
+        etiket: "Üretim Süreleri",
+        son: false,
+        simge: Timer,
+        aciklama: "Dolum ve etiket süreleri; işçilik ve genel gider dağıtımı",
+      },
+    ],
+  },
+];
+
+export type Alan = "fiyat" | "smm";
+export const ALAN_ANAHTARI = "fiyat-calismasi.alan";
+export const ALAN_ADI: Record<Alan, string> = { fiyat: "Fiyat Çalışması", smm: "Maliyet Muhasebesi" };
+
+/** Bulunulan iş alanı: /smm ile başlayan sayfalar maliyet muhasebesi, diğerleri fiyat çalışması. */
+export function useAlan(): Alan {
+  return useLocation().pathname.startsWith("/smm") ? "smm" : "fiyat";
+}
+
 /** Oturumdaki rolün gördüğü menü grupları (Yönetim yalnız Genel Direktör'e, Veri girişi izleyiciye gösterilmez). */
-export function useGorunurGruplar(): MenuGrubu[] {
+export function useGorunurGruplar(alan: Alan = "fiyat"): MenuGrubu[] {
   const { girisZorunlu, yonetici, yazabilir } = useOturum();
-  return MENU_GRUPLARI.filter((g) => (!g.yoneticiye || (girisZorunlu && yonetici)) && (!g.yazanlara || yazabilir));
+  const kaynak = alan === "smm" ? SMM_MENU_GRUPLARI : MENU_GRUPLARI;
+  return kaynak.filter((g) => (!g.yoneticiye || (girisZorunlu && yonetici)) && (!g.yazanlara || yazabilir));
+}
+
+/** Üst çubukta iki iş arasında geçiş (Ana Sayfa'ya dönmeden). */
+function AlanSecici() {
+  const alan = useAlan();
+  const { senaryoId } = useSenaryo();
+  const hedef: Record<Alan, string> = { fiyat: senaryoId === null ? "/genel-bakis" : `/genel-bakis?senaryo=${senaryoId}`, smm: "/smm" };
+  return (
+    <nav aria-label="İş alanı" className="flex rounded-full border bg-muted p-0.5 text-sm">
+      {(["fiyat", "smm"] as Alan[]).map((a) => (
+        <NavLink
+          key={a}
+          to={hedef[a]}
+          aria-current={alan === a ? "page" : undefined}
+          className={cn(
+            "rounded-full px-3 py-1 font-medium text-muted-foreground transition-colors hover:text-foreground",
+            alan === a && "bg-card text-foreground shadow-xs",
+          )}
+        >
+          {ALAN_ADI[a]}
+        </NavLink>
+      ))}
+    </nav>
+  );
 }
 
 /** Menü bağlantıları seçili senaryoyu `?senaryo=` ile taşır (sayfa değişince senaryo sıfırlanmasın). */
 function Menu({ kapat }: { kapat: () => void }) {
   const { senaryoId } = useSenaryo();
   const { pathname } = useLocation();
-  const gruplar = useGorunurGruplar();
+  const alan = useAlan();
+  const gruplar = useGorunurGruplar(alan);
   const ekte = (m: MenuOgesi) => !!m.ekYollar?.some((y) => pathname === y || pathname.startsWith(`${y}/`));
   return (
     <nav className="flex flex-col gap-4 px-3" aria-label="Ana menü">
       {gruplar.map((g) => (
         <div key={g.grup} role="group" aria-label={g.grup} className="flex flex-col gap-0.5">
-          <div className="px-3 pb-1 text-[11px] font-semibold tracking-wider text-sidebar-foreground/55 uppercase">{g.grup}</div>
+          <div className="px-3 pb-1 text-[11px] font-semibold tracking-wider text-sidebar-foreground/65 uppercase">{g.grup}</div>
           {g.ogeler.map((m) => {
             const Simge = m.simge;
             return (
               <NavLink
                 key={m.yol}
-                to={senaryoId === null ? m.yol : `${m.yol}?senaryo=${senaryoId}`}
+                to={senaryoId === null || alan === "smm" ? m.yol : `${m.yol}?senaryo=${senaryoId}`}
                 end={m.son}
                 onClick={kapat}
                 className={({ isActive }) =>
@@ -182,6 +305,16 @@ export function Kabuk() {
   const [acik, setAcik] = useState(false);
   // Ana Sayfa bölüm seçme ekranıdır: sol panel yok (kartlar menünün yerini tutar); bir bölüm seçilince panel gelir.
   const anaSayfa = useLocation().pathname === "/";
+  const alan = useAlan();
+  // Ana Sayfa son kullanılan işi açsın diye bulunulan alan hatırlanır (Ana Sayfa'nın kendisi seçimi değiştirmez).
+  useEffect(() => {
+    if (anaSayfa) return;
+    try {
+      localStorage.setItem(ALAN_ANAHTARI, alan);
+    } catch {
+      /* depolama kapalı */
+    }
+  }, [alan, anaSayfa]);
   return (
     <SenaryoSaglayici>
       <div className="flex min-h-screen bg-background text-foreground">
@@ -189,13 +322,15 @@ export function Kabuk() {
         {!anaSayfa && (
           <aside
             className={cn(
-              "z-40 w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar py-5 text-sidebar-foreground md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto",
+              "z-40 w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar py-5 text-sidebar-foreground md:sticky md:top-3 md:my-3 md:ml-3 md:flex md:h-[calc(100vh-1.5rem)] md:overflow-y-auto md:rounded-2xl md:border md:shadow-sm",
               acik ? "fixed inset-y-0 left-0 flex shadow-xl md:static md:shadow-none" : "hidden",
             )}
           >
             <div className="flex flex-col gap-1.5 px-5">
-              <Logo className="self-start bg-white px-2.5 py-1.5 shadow-sm" />
-              <div className="px-0.5 text-xs font-medium text-sidebar-foreground/65">Fiyat Çalışması · Berrak</div>
+              <Logo className="self-start" rozet />
+              <div className="px-0.5 text-xs font-medium text-sidebar-foreground/70">
+                {alan === "smm" ? "Maliyet Muhasebesi · SMM" : "Fiyat Çalışması · Berrak"}
+              </div>
             </div>
             <Menu kapat={() => setAcik(false)} />
           </aside>
@@ -217,7 +352,8 @@ export function Kabuk() {
                   {acik ? <X className="size-4" /> : <MenuSimgesi className="size-4" />}
                 </button>
               )}
-              <SenaryoSecici />
+              {!anaSayfa && <AlanSecici />}
+              {alan === "fiyat" && <SenaryoSecici />}
             </div>
             <div className="flex min-w-0 items-center gap-2">
               <HizliArama />

@@ -57,6 +57,6 @@ describe("Dashboard ambalaj özeti kartı (U8)", () => {
     );
     const kart = await screen.findByRole("region", { name: "Ambalaj özeti" });
     expect(await within(kart).findByText(/özet hesaplanamadı/)).toBeInTheDocument();
-    expect(await screen.findByText("Biber Turşusu 370 ml")).toBeInTheDocument();
+    expect(await within(await screen.findByRole("table")).findByText("Biber Turşusu 370 ml")).toBeInTheDocument();
   });
 });

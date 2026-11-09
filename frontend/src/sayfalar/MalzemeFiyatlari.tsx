@@ -1,8 +1,9 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { History, Pencil, Upload } from "lucide-react";
-import { useFiyatEkle, useFiyatGecmisi, useMalzemeler } from "@/api/sorgular/malzemeler";
+import { useFiyatGecmisi, useMalzemeler } from "@/api/sorgular/malzemeler";
 import type { Malzeme } from "@/api/tipler";
+import { useOnayliFiyatEkle } from "@/bilesenler/FiyatSapmaOnayi";
 import { GecmisCekmecesi } from "@/bilesenler/GecmisCekmecesi";
 import { KaynakRozeti, ZS_ACIKLAMA, zsEtiketi } from "@/bilesenler/KaynakRozeti";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
@@ -42,7 +43,7 @@ function FiyatGecmisiPaneli({
   onBasari: (m: string) => void;
 }) {
   const gecmis = useFiyatGecmisi(malzeme.kod, senaryo);
-  const ekle = useFiyatEkle();
+  const ekle = useOnayliFiyatEkle();
   const kayitlar = useMemo(
     () =>
       (gecmis.data?.kayitlar ?? []).map((k) => ({
@@ -69,6 +70,7 @@ function FiyatGecmisiPaneli({
           gecerlilik_basi: bugunIso(),
           neden,
           para_birimi: k.para_birimi ?? malzeme.para_birimi ?? "TL",
+          onay: false,
         },
       },
       {
@@ -110,6 +112,7 @@ function FiyatGecmisiPaneli({
           }}
         />
       )}
+      {ekle.onayDiyalogu}
     </>
   );
 }
@@ -135,7 +138,7 @@ export default function MalzemeFiyatlari() {
     sayfa,
     boyut: BOYUT,
   });
-  const ekle = useFiyatEkle();
+  const ekle = useOnayliFiyatEkle();
 
   function revizeAyarla(acik: boolean) {
     setParams(
@@ -357,6 +360,7 @@ export default function MalzemeFiyatlari() {
                   gecerlilik_basi: v.tarih,
                   neden: v.neden,
                   para_birimi: duzenlenen.para_birimi ?? "TL",
+                  onay: false,
                 },
               },
               {
@@ -369,6 +373,7 @@ export default function MalzemeFiyatlari() {
           }
         />
       )}
+      {ekle.onayDiyalogu}
 
       {gecmisMalzeme && senaryoId != null && (
         <FiyatGecmisiPaneli

@@ -8,7 +8,7 @@ from backend.depo.veritabani import Base, motor_olustur, oturum_fabrikasi, oturu
 from backend.servisler import import_servisi as ims, tutarlilik_servisi as ts
 from backend.uygulama import uygulama_olustur
 
-KODLAR = ["hesaplanamayan", "parametre_eksik", "fiyatsiz", "malzeme_karti", "pay", "hat", "parametre_uyari", "recetesiz", "gecici_kod",
+KODLAR = ["hesaplanamayan", "parametre_eksik", "fiyatsiz", "eksik_fiyat_etkisi", "hedef_alti", "malzeme_karti", "pay", "hat", "parametre_uyari", "recetesiz", "gecici_kod",
           "uretim_adetleri", "elle_hucre"]
 
 
@@ -34,6 +34,12 @@ def test_gercek_kitapta_bilinen_sorunlar(ortam):
     assert k["hesaplanamayan"]["durum"] == k["parametre_eksik"]["durum"] == k["recetesiz"]["durum"] == "tamam"
     assert k["fiyatsiz"]["durum"] == "dikkat" and k["fiyatsiz"]["sayi"] > 100
     assert all(o["yol"].startswith("/fiyatlar?fiyatsiz=1&arama=") and "üründe kullanılıyor" in o["aciklama"] for o in k["fiyatsiz"]["ogeler"])
+    # eksik fiyatın ürüne etkisi: fiyatsız malzemeyi kullanan ürünler, en çok fiyatsız satırı olan üstte
+    etki = k["eksik_fiyat_etkisi"]["ogeler"]
+    assert k["eksik_fiyat_etkisi"]["durum"] == "dikkat" and etki and all("reçete satırının fiyatı yok" in o["aciklama"] for o in etki)
+    sayilar = [int(o["aciklama"].split(" ", 1)[0]) for o in etki]
+    assert sayilar == sorted(sayilar, reverse=True)
+    assert k["hedef_alti"]["durum"] == "tamam"   # kitapta kâr oranı %20 (eşik %10)
     assert {o["etiket"] for o in k["pay"]["ogeler"]} == {"elektrik", "dogalgaz"}   # %100,1 ve %99,5 (muhasebeye soruldu)
     assert k["gecici_kod"]["sayi"] == 12 and all(o["etiket"].startswith("SAYFA-") for o in k["gecici_kod"]["ogeler"])
     eslesmeyen = k["uretim_adetleri"]["ogeler"]   # 02/03 kod sorunu: neredeyse hepsi 02.* (birkaç kodun da kartı yok)

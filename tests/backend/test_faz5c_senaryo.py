@@ -34,8 +34,8 @@ def _zengin_kaynak(c, oturum):
         {"malzeme_kodu": "KAV", "ad": "Kavanoz", "miktar": "1", "birim": "AD", "fire_override": "0.02", "brut_miktar_elle": "1.1", "seviye": 1},
         {"malzeme_kodu": "ARA", "ad": "Ara mamul", "miktar": "0.5", "birim": "KG", "dugum_tipi": "ara_mamul", "birim_fiyat_elle": "12.5", "seviye": 2},
     ]).status_code == 201   # v2 aktif; v1 pasif (kopyalanmamalı)
-    assert c.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={"fiyat": "4", "gecerlilik_basi": "2026-05-01", "neden": "eski"}).status_code == 201
-    assert c.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={"fiyat": "9", "gecerlilik_basi": "2099-01-01", "neden": "gelecek"}).status_code == 201
+    assert c.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={"onay": True, "fiyat": "4", "gecerlilik_basi": "2026-05-01", "neden": "eski"}).status_code == 201
+    assert c.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={"onay": True, "fiyat": "9", "gecerlilik_basi": "2099-01-01", "neden": "gelecek"}).status_code == 201
     assert c.post(f"{A}/parametreler/kur.USD/degerler?senaryo={sid}", json={"deger": "51", "gecerlilik_basi": "2026-06-01", "neden": "ürüne özel",
                                                                              "kapsam_tipi": "urun", "kapsam_id": uid}).status_code == 201
     assert c.post(f"{A}/metin-parametreler?senaryo={sid}", json={"anahtar": "satis_fiyati_notu", "deger": "not 1", "gecerlilik_basi": "2026-06-01", "neden": "n"}).status_code == 201
@@ -168,7 +168,7 @@ def _kur_dosya(c, sid, fab):
     with fab() as s:
         gider_tohumla(s, sid); s.commit()
     assert c.post(f"{A}/malzemeler", json={"kod": "KAV", "ad": "Kavanoz", "tip": "0008-Ambalaj Malzeme", "birim": "AD", "para_birimi": "TL", "zs": "S"}).status_code == 201
-    assert c.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={"fiyat": "5.9", "gecerlilik_basi": "2026-06-01", "neden": "bütçe"}).status_code == 201
+    assert c.post(f"{A}/malzemeler/KAV/fiyatlar?senaryo={sid}", json={"onay": True, "fiyat": "5.9", "gecerlilik_basi": "2026-06-01", "neden": "bütçe"}).status_code == 201
     assert c.put(f"{A}/urunler/TEST", json={"ad": "Test", "ambalaj_hacmi": "370", "hat": "Niko", "taze_tursu_sinifi": "Turşu/Turşu", "suzme_kg": "0.18"}).status_code == 200
     assert c.put(f"{A}/urunler/TEST/uretim-hedefi?senaryo={sid}", json=HEDEF).status_code == 200
     assert c.post(f"{A}/urunler/TEST/recete?senaryo={sid}", json=[{"malzeme_kodu": "KAV", "ad": "Kavanoz", "miktar": "1", "birim": "AD", "fire_override": "0.02"}]).status_code == 201

@@ -44,17 +44,18 @@ function kur() {
   );
 }
 
+/** Tablo yüklenene dek bekler. Ürün adı yalnız tabloda aranır: grafik kütüphanesi yazı ölçmek için gövdeye gizli bir alan ekler. */
 async function yuklendi() {
-  await screen.findByText("Salatalık Turşusu 720 ml");
+  await within(await screen.findByRole("table")).findByText("Salatalık Turşusu 720 ml");
 }
 
 describe("Dashboard", () => {
   it("3 ürün satırını ve kartları gösterir", async () => {
     kur();
     await yuklendi();
-    expect(screen.getByText("Biber Turşusu 370 ml")).toBeInTheDocument();
-    expect(screen.getByText("Deneme Ürünü")).toBeInTheDocument();
-    expect(screen.getByText("38,13 TL")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Biber Turşusu 370 ml")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Deneme Ürünü")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("38,13 TL")).toBeInTheDocument();
     const urunKarti = screen.getByText("Ürün sayısı").parentElement as HTMLElement;
     expect(within(urunKarti).getByText("3")).toBeInTheDocument();
     const hataKarti = screen.getByText("Hesaplanamayan ürün").parentElement as HTMLElement;
@@ -69,7 +70,7 @@ describe("Dashboard", () => {
     tumSutunlarAcik();
     kur();
     await yuklendi();
-    const satir = screen.getByText("Deneme Ürünü").closest("tr") as HTMLElement;
+    const satir = within(screen.getByRole("table")).getByText("Deneme Ürünü").closest("tr") as HTMLElement;
     const rozet = within(satir).getByText("Reçete bulunamadı");
     expect(rozet).toBeInTheDocument();
     expect(rozet.className).toMatch(/text-destructive/);
@@ -88,28 +89,28 @@ describe("Dashboard", () => {
     kur();
     await yuklendi();
     await userEvent.type(screen.getByRole("searchbox", { name: "Ürün ara" }), "biber");
-    expect(screen.queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument();
-    expect(screen.getByText("Biber Turşusu 370 ml")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Biber Turşusu 370 ml")).toBeInTheDocument();
     await userEvent.clear(screen.getByRole("searchbox", { name: "Ürün ara" }));
     await userEvent.type(screen.getByRole("searchbox", { name: "Ürün ara" }), "urun-001");
-    expect(screen.getByText("Salatalık Turşusu 720 ml")).toBeInTheDocument();
-    expect(screen.queryByText("Biber Turşusu 370 ml")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Salatalık Turşusu 720 ml")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).queryByText("Biber Turşusu 370 ml")).not.toBeInTheDocument();
   });
 
   it("hat seçimi süzer", async () => {
     kur();
     await yuklendi();
     await userEvent.selectOptions(screen.getByLabelText("Hat"), "Pet Hattı");
-    expect(screen.queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument();
-    expect(screen.getByText("Deneme Ürünü")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Deneme Ürünü")).toBeInTheDocument();
   });
 
   it("geçici kodlu anahtarı gecici=true ile sorgular", async () => {
     kur();
     await yuklendi();
     await userEvent.click(screen.getByRole("checkbox", { name: "Geçici kodlu" }));
-    await waitFor(() => expect(screen.queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument());
-    expect(screen.getByText("Deneme Ürünü")).toBeInTheDocument();
+    await waitFor(() => expect(within(screen.getByRole("table")).queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument());
+    expect(within(screen.getByRole("table")).getByText("Deneme Ürünü")).toBeInTheDocument();
   });
 
   it("toplam satırı yalnızca üretim adedini toplar, maliyet sütunlarında toplam yoktur", async () => {
@@ -123,7 +124,7 @@ describe("Dashboard", () => {
   it("satıra tıklayınca ürün sayfasına senaryo ile gider", async () => {
     kur();
     await yuklendi();
-    await userEvent.click(screen.getByText("Biber Turşusu 370 ml"));
+    await userEvent.click(within(screen.getByRole("table")).getByText("Biber Turşusu 370 ml"));
     expect(await screen.findByTestId("yer")).toHaveTextContent("/urunler/URUN-002?senaryo=1");
   });
 
@@ -225,7 +226,7 @@ describe("Dashboard", () => {
     await userEvent.selectOptions(hatSecici, "Cam Hattı");
     expect(hatSecici.value).toBe("Cam Hattı");
     await userEvent.click(screen.getByRole("button", { name: "Sonraki" }));
-    await screen.findByText("Deneme Ürünü");
+    await screen.findAllByText("Deneme Ürünü");
     expect((screen.getByLabelText("Hat") as HTMLSelectElement).value).toBe("");
     expect(screen.getByRole("option", { name: "Tüm hatlar" })).toBeInTheDocument();
   });
@@ -233,7 +234,7 @@ describe("Dashboard", () => {
 
 describe("Dashboard karşılaştırma sütunları", () => {
   beforeEach(() => tumSutunlarAcik());
-  const satirOf = (ad: string) => screen.getByText(ad).closest("tr") as HTMLElement;
+  const satirOf = (ad: string) => within(screen.getByRole("table")).getByText(ad).closest("tr") as HTMLElement;
 
   it("geçen yıl, enflasyon rozeti ve hedef adetle maliyet dolu satırda görünür; null satırda tire", async () => {
     kur();
@@ -274,11 +275,11 @@ describe("Dashboard karşılaştırma sütunları", () => {
     kur();
     await yuklendi();
     expect(screen.getByRole("columnheader", { name: /^Ambalaj/ })).toBeInTheDocument();
-    const lt = screen.getByText("Biber Turşusu 370 ml").closest("tr") as HTMLElement;
+    const lt = within(screen.getByRole("table")).getByText("Biber Turşusu 370 ml").closest("tr") as HTMLElement;
     expect(within(lt).getByText("5 lt")).toBeInTheDocument();
     expect(within(lt).queryByText(/5 ml|0,54 ml/)).not.toBeInTheDocument();
     // etiketsiz satır: hacim birimsiz
-    const bos = screen.getByText("Deneme Ürünü").closest("tr") as HTMLElement;
+    const bos = within(screen.getByRole("table")).getByText("Deneme Ürünü").closest("tr") as HTMLElement;
     expect(within(bos).getByText("500")).toBeInTheDocument();
   });
 
@@ -286,8 +287,8 @@ describe("Dashboard karşılaştırma sütunları", () => {
     kur();
     await yuklendi();
     await userEvent.selectOptions(screen.getByLabelText("Enflasyon eşiği"), "ustunde");
-    expect(screen.queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument();
-    expect(screen.getByText("Biber Turşusu 370 ml")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Biber Turşusu 370 ml")).toBeInTheDocument();
   });
 
   it("Sütunlar menüsü grubu kapatır ve tercihi localStorage'a yazar", async () => {
@@ -317,10 +318,10 @@ describe("Dashboard varsayılan sade tablo", () => {
     kur();
     await yuklendi();
     await userEvent.click(screen.getByRole("button", { name: /Hesaplanamayan ürün/ }));
-    expect(screen.queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument();
-    expect(screen.getByText("Deneme Ürünü")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Deneme Ürünü")).toBeInTheDocument();
     expect(screen.getByText("1 / 3 ürün")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Süzgeçleri temizle/ }));
-    expect(screen.getByText("Salatalık Turşusu 720 ml")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Salatalık Turşusu 720 ml")).toBeInTheDocument();
   });
 });

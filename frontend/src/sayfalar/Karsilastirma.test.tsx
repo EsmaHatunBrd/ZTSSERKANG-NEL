@@ -6,6 +6,8 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { http, HttpResponse } from "msw";
 import { sunucu } from "@/test/msw/sunucu";
 import { SenaryoSaglayici } from "@/bilesenler/SenaryoSecici";
+import { ayarDegerleri } from "@/test/fikstur/ayarlar";
+import { dashboardSatirlari } from "@/test/fikstur/urunler";
 import Karsilastirma from "./Karsilastirma";
 
 beforeAll(() => {
@@ -16,7 +18,10 @@ beforeAll(() => {
       this.cb = cb;
     }
     observe(hedef: Element) {
-      this.cb([{ target: hedef, contentRect: { width: 600, height: 220 } } as unknown as ResizeObserverEntry], this as unknown as ResizeObserver);
+      this.cb(
+        [{ target: hedef, contentRect: { width: 600, height: 220 } } as unknown as ResizeObserverEntry],
+        this as unknown as ResizeObserver,
+      );
     }
     unobserve() {}
     disconnect() {}
@@ -158,6 +163,70 @@ describe("Karşılaştırma sayfası", () => {
     sunucu.use(http.get("*/api/v1/karsilastirma/aileler", () => HttpResponse.json([])));
     kur();
     expect(await screen.findByText(/Aile bulunamadı/)).toBeInTheDocument();
+  });
+
+  it("kârlılık haritası görünümü: URL gorunum=karlilik ile açılır; bölge sayıları, grafik noktaları ve risk tablosu", async () => {
+    sunucu.use(http.get("*/api/v1/parametreler", () => HttpResponse.json(ayarDegerleri)));
+    kur("/karsilastirma?senaryo=1&gorunum=karlilik");
+    expect(await screen.findByRole("tab", { name: "Kârlılık haritası", selected: true })).toBeInTheDocument();
+    // Fikstürde geçen yıl fiyatı var → varsayılan kaynak geçen yılın gerçek satışı; düz not yok.
+    const kaynak = await screen.findByLabelText("Kâr hangi satış fiyatıyla ölçülsün");
+    expect(kaynak).toHaveValue("gecen_yil");
+    expect(screen.queryByTestId("duz-notu")).not.toBeInTheDocument();
+    // Hesaplanan satış fiyatına geçince bütçe kuralı gereği herkes %20'de: düz not çıkar, risk tablosu boş.
+    await userEvent.setup().selectOptions(kaynak, "hesap");
+    expect(await screen.findByTestId("duz-notu")).toHaveTextContent("tüm ürünler aynı kâr oranında");
+    await waitFor(() => expect(screen.getByTestId("bolge-risk")).toHaveTextContent("0"));
+    const karli = Number(screen.getByTestId("bolge-guclu").textContent) + Number(screen.getByTestId("bolge-nis").textContent);
+    expect(karli).toBeGreaterThan(0);
+    expect(screen.getByText("Çok satan ürünlerin hepsi kâr eşiğinin üstünde.")).toBeInTheDocument();
+    const grafik = screen.getByRole("img", { name: /Kârlılık haritası/ });
+    await waitFor(() => expect(grafik.querySelectorAll(".recharts-scatter-symbol").length).toBe(karli));
+    expect(screen.getByText(/hedef kâr oranı/)).toBeInTheDocument();
+    // Sekmeyle aile görünümüne dönünce URL parametresi silinir.
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Ürün aileleri" }));
+    await waitFor(() => expect(yon.state.location.search).toBe("?senaryo=1"));
+    expect(await screen.findByRole("navigation", { name: "Aile listesi" })).toBeInTheDocument();
+  });
+
+  it("kârlılık haritası: çok satan ama marjı zayıf ürün risk tablosunda listelenir", async () => {
+    sunucu.use(
+      http.get("*/api/v1/parametreler", () => HttpResponse.json(ayarDegerleri)),
+      http.get("*/api/v1/urunler", () =>
+        HttpResponse.json({
+          kayitlar: [
+            {
+              ...dashboardSatirlari[0],
+              kod: "COK-ZAYIF",
+              ad: "Çok satan zayıf",
+              uretim_adedi: "900000",
+              maliyet_tl: "100",
+              satis_tl: "120",
+              gecen_yil_tl: "105",
+            },
+            {
+              ...dashboardSatirlari[0],
+              kod: "AZ-KARLI",
+              ad: "Az satan kârlı",
+              uretim_adedi: "500",
+              maliyet_tl: "100",
+              satis_tl: "120",
+              gecen_yil_tl: "140",
+            },
+          ],
+          toplam: 2,
+          enflasyon_altinda_toplam: 0,
+        }),
+      ),
+    );
+    kur("/karsilastirma?senaryo=1&gorunum=karlilik");
+    const tablo = await screen.findByRole("table", { name: "Çok satan, marjı zayıf ürünler" });
+    const satir = within(tablo).getByRole("row", { name: /COK-ZAYIF/ });
+    expect(satir).toHaveTextContent("900.000");
+    expect(satir).toHaveTextContent("5,0 %");
+    expect(within(satir).getByRole("link", { name: "COK-ZAYIF" })).toHaveAttribute("href", "/urunler/COK-ZAYIF?senaryo=1");
+    expect(screen.getByTestId("bolge-risk")).toHaveTextContent("1");
+    expect(screen.getByTestId("bolge-nis")).toHaveTextContent("1");
   });
 
   it("aile listesi hata verirse uyarı gösterir", async () => {

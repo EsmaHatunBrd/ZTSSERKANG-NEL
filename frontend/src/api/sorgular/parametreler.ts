@@ -7,10 +7,7 @@ export function useParametreler(senaryo: number | null | undefined, tarih?: stri
   return useQuery({
     queryKey: anahtar.parametreler(senaryo, tarih),
     enabled: senaryo != null,
-    queryFn: () =>
-      cagir(
-        api.GET("/api/v1/parametreler", { params: { query: { senaryo: senaryo as number, tarih } } }),
-      ),
+    queryFn: () => cagir(api.GET("/api/v1/parametreler", { params: { query: { senaryo: senaryo as number, tarih } } })),
   });
 }
 
@@ -39,15 +36,7 @@ export function useParametreGecmisi(a: string | null | undefined, senaryo: numbe
 export function useParametreEkle() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      anahtar: a,
-      senaryo,
-      govde,
-    }: {
-      anahtar: string;
-      senaryo: number;
-      govde: Sema["ParametreDegerGiris"];
-    }) =>
+    mutationFn: ({ anahtar: a, senaryo, govde }: { anahtar: string; senaryo: number; govde: Sema["ParametreDegerGiris"] }) =>
       cagir(
         api.POST("/api/v1/parametreler/{anahtar}/degerler", {
           params: { path: { anahtar: a }, query: { senaryo } },
@@ -56,7 +45,7 @@ export function useParametreEkle() {
       ),
     onSuccess: () =>
       Promise.all(
-        ["parametreler", "parametre-gecmisi", "urunler", "uyarilar"].map((k) => qc.invalidateQueries({ queryKey: [k] })),
+        ["parametreler", "parametre-gecmisi", "urunler", "uyarilar", "liste-calismasi"].map((k) => qc.invalidateQueries({ queryKey: [k] })),
       ),
   });
 }

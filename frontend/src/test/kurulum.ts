@@ -24,5 +24,24 @@ beforeEach(() => {
   }
 });
 
+// jsdom'da ResizeObserver yok; grafik (recharts ResponsiveContainer) içeren sayfalar onsuz çizilemez. Testlerin kendi sahtesi
+// varsa o kullanılır; yoksa sabit boyut bildiren bu varsayılan.
+if (!("ResizeObserver" in globalThis)) {
+  globalThis.ResizeObserver = class {
+    cb: ResizeObserverCallback;
+    constructor(cb: ResizeObserverCallback) {
+      this.cb = cb;
+    }
+    observe(hedef: Element) {
+      this.cb(
+        [{ target: hedef, contentRect: { width: 600, height: 300 } } as unknown as ResizeObserverEntry],
+        this as unknown as ResizeObserver,
+      );
+    }
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}
+
 // globals: false oldugu icin otomatik temizlik yok.
 afterEach(() => cleanup());

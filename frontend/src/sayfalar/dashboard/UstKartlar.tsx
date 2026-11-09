@@ -4,6 +4,15 @@ import { ArrowRight, Boxes, CircleAlert, PackageX, TrendingDown, TriangleAlert, 
 import { cn } from "@/lib/utils";
 
 type Ton = "sakin" | "dikkat" | "hata";
+/** Kart zemini: türüne göre açık pastel ton (verilmezse beyaz kart). */
+export type KartRengi = "yesil" | "turuncu" | "sari" | "mavi" | "acik";
+const ZEMIN: Record<KartRengi, string> = {
+  yesil: "border-transparent bg-kart-yesil",
+  turuncu: "border-transparent bg-kart-turuncu",
+  sari: "border-transparent bg-kart-sari",
+  mavi: "border-transparent bg-kart-mavi",
+  acik: "border-transparent bg-card/85 shadow-none",
+};
 
 /** Özet kutucuğu: sayı her zaman okunur renkte; yalnız müdahale gereken durumda küçük renkli işaret ve "İncele" görünür. */
 export function Kart({
@@ -14,6 +23,7 @@ export function Kart({
   hedef,
   onTikla,
   eylem = "İncele",
+  renk,
 }: {
   baslik: string;
   deger: ReactNode;
@@ -24,17 +34,20 @@ export function Kart({
   /** Bağlantı yerine eylem (ör. tabloyu süz). */
   onTikla?: () => void;
   eylem?: string;
+  renk?: KartRengi;
 }) {
   const icerik = (
     <>
       <span
         className={cn(
           "flex size-9 shrink-0 items-center justify-center rounded-lg",
-          ton === "hata"
-            ? "bg-destructive/10 text-destructive"
-            : ton === "dikkat"
-              ? "bg-sari text-foreground"
-              : "bg-muted text-muted-foreground",
+          renk
+            ? "bg-card/70 text-foreground shadow-xs"
+            : ton === "hata"
+              ? "bg-destructive/10 text-destructive"
+              : ton === "dikkat"
+                ? "bg-sari text-foreground"
+                : "bg-muted text-muted-foreground",
         )}
         aria-hidden
       >
@@ -42,7 +55,15 @@ export function Kart({
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-sm text-muted-foreground">{baslik}</span>
-        <span className={cn("text-2xl font-semibold tabular-nums", ton === "hata" ? "text-destructive" : "text-foreground")}>{deger}</span>
+        <span
+          className={cn(
+            "font-semibold tabular-nums",
+            renk ? "text-3xl tracking-tight" : "text-2xl",
+            ton === "hata" ? "text-destructive" : "text-foreground",
+          )}
+        >
+          {deger}
+        </span>
       </span>
       {ton !== "sakin" && (hedef || onTikla) && (
         <span className="flex items-center gap-1 self-end text-xs font-medium text-muted-foreground group-hover:text-foreground">
@@ -52,7 +73,10 @@ export function Kart({
       )}
     </>
   );
-  const sinif = "group flex items-center gap-3 rounded-xl border bg-card p-4 text-left text-card-foreground shadow-xs transition-colors";
+  const sinif = cn(
+    "group flex items-center gap-3 rounded-xl border bg-card p-4 text-left text-card-foreground shadow-xs transition-colors",
+    renk && cn(ZEMIN[renk], "p-5"),
+  );
   const etkin = ton !== "sakin" && (hedef || onTikla);
   if (etkin && hedef) {
     return (
@@ -106,9 +130,10 @@ export function UstKartlar({
     return q ? `${p}?${q}` : p;
   };
   return (
+    // Özetler tek açık yeşil kutuda toplanır (Power BI tarzı özet paneli); kutucuklar içinde açık zeminli.
     <div className="flex flex-col gap-3">
-      <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", hataSayisi ? "xl:grid-cols-5" : "xl:grid-cols-4")}>
-        <Kart baslik="Ürün sayısı" deger={goster(urunSayisi)} simge={Boxes} />
+      <div className={cn("grid flex-1 auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2", hataSayisi ? "2xl:grid-cols-3" : "")}>
+        <Kart baslik="Ürün sayısı" deger={goster(urunSayisi)} simge={Boxes} renk="acik" />
         {!!hataSayisi && (
           <Kart baslik="Hesaplanamayan ürün" deger={goster(hataSayisi)} simge={CircleAlert} ton="hata" onTikla={onHataSuz} eylem="Göster" />
         )}
@@ -118,6 +143,7 @@ export function UstKartlar({
           simge={TriangleAlert}
           ton={uyariliUrun ? "dikkat" : "sakin"}
           hedef={yol("/uyarilar")}
+          renk="acik"
         />
         <Kart
           baslik="Fiyatsız malzeme"
@@ -125,6 +151,7 @@ export function UstKartlar({
           simge={PackageX}
           ton={fiyatsizMalzeme ? "dikkat" : "sakin"}
           hedef={yol("/veri-kontrolu")}
+          renk="acik"
         />
         <Kart
           baslik="Enflasyonun altındaki ürün"
@@ -133,6 +160,7 @@ export function UstKartlar({
           ton={enflasyonAltinda ? "dikkat" : "sakin"}
           onTikla={onEnflasyonSuz}
           eylem="Göster"
+          renk="acik"
         />
       </div>
     </div>

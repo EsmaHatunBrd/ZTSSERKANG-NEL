@@ -1,6 +1,7 @@
 from datetime import date
 from fastapi import APIRouter, Depends, Query
-from ..servisler import fiyat_servisi as fs
+from ..servisler import analiz_servisi, fiyat_servisi as fs
+from ..servisler.hatalar import DogrulamaHatasi
 from ..servisler.donusum import zaman_iso
 from .bagimliliklar import OturumDep, SenaryoDep, kullanici_ver
 from .semalar import FiyatEkleCikis, FiyatGecmisi, FiyatGiris, HATA_404_409_422, HATA_404_422, MalzemeGiris, MalzemeKartiCikis, MalzemeListesi, PasifCikis
@@ -55,6 +56,8 @@ def pasiflestir(s: OturumDep, kod: str, k: str = Depends(kullanici_ver)):
 
 @router.post("/malzemeler/{kod}/fiyatlar", status_code=201, response_model=FiyatEkleCikis, responses=HATA_404_409_422)
 def fiyat_ekle(s: OturumDep, kod: str, g: FiyatGiris, sen: SenaryoDep, k: str = Depends(kullanici_ver)):
+    if not g.onay and (sapma := analiz_servisi.fiyat_sapmasi(s, sen.id, kod, g.fiyat, g.para_birimi, g.gecerlilik_basi)):
+        raise DogrulamaHatasi("fiyat bir önceki fiyattan eşikten fazla farklı; onaylayıp yeniden gönderin", sapma, kod=analiz_servisi.FIYAT_SAPMA)
     f = fs.fiyat_ekle(s, sen.id, kod, g.fiyat, g.gecerlilik_basi, g.neden, "elle", g.para_birimi, k)
     return {"id": f.id, "fiyat": str(f.fiyat), "gecerlilik_basi": f.gecerlilik_basi.isoformat()}
 

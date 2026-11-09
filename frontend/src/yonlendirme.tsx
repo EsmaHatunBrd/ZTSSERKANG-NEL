@@ -14,6 +14,20 @@ const GiderDagitim = lazy(() => import("@/sayfalar/GiderDagitim"));
 const Gunluk = lazy(() => import("@/sayfalar/Gunluk"));
 const HesapGoruntule = lazy(() => import("@/sayfalar/HesapGoruntule"));
 const Kullanicilar = lazy(() => import("@/sayfalar/Kullanicilar"));
+const ListeCalismasi = lazy(() => import("@/sayfalar/ListeCalismasi"));
+const YaOlursa = lazy(() => import("@/sayfalar/YaOlursa"));
+const ZamEtkisi = lazy(() => import("@/sayfalar/ZamEtkisi"));
+const KurRiski = lazy(() => import("@/sayfalar/KurRiski"));
+const KarlilikHaritasi = lazy(() => import("@/sayfalar/KarlilikHaritasi"));
+const HedefFiyat = lazy(() => import("@/sayfalar/HedefFiyat"));
+const SmmDonemler = lazy(() => import("@/sayfalar/smm/SmmDonemler"));
+const SmmStok = lazy(() => import("@/sayfalar/smm/SmmStok"));
+const SmmUretim = lazy(() => import("@/sayfalar/smm/SmmUretim"));
+const SmmSarfFarki = lazy(() => import("@/sayfalar/smm/SmmSarfFarki"));
+const SmmOzet = lazy(() => import("@/sayfalar/smm/SmmOzet"));
+const SmmReceteler = lazy(() => import("@/sayfalar/smm/SmmReceteler"));
+const SmmSureler = lazy(() => import("@/sayfalar/smm/SmmSureler"));
+const SmmVeri = lazy(() => import("@/sayfalar/smm/SmmVeri"));
 const MalzemeFiyatlari = lazy(() => import("@/sayfalar/MalzemeFiyatlari"));
 const Karsilastirma = lazy(() => import("@/sayfalar/Karsilastirma"));
 const Parametreler = lazy(() => import("@/sayfalar/Parametreler"));
@@ -46,6 +60,20 @@ export const rotalar = [
       { path: "parametreler", element: <Parametreler /> },
       { path: "gider", element: <GiderDagitim /> },
       { path: "teklifler", element: <Teklifler /> },
+      { path: "liste-calismasi", element: <ListeCalismasi /> },
+      { path: "ya-olursa", element: <YaOlursa /> },
+      { path: "zam-etkisi", element: <ZamEtkisi /> },
+      { path: "kur-riski", element: <KurRiski /> },
+      { path: "karlilik", element: <KarlilikHaritasi /> },
+      { path: "hedef-fiyat", element: <HedefFiyat /> },
+      { path: "smm", element: <SmmDonemler /> },
+      { path: "smm/stok", element: <SmmStok /> },
+      { path: "smm/uretim", element: <SmmUretim /> },
+      { path: "smm/sarf-farki", element: <SmmSarfFarki /> },
+      { path: "smm/ozet", element: <SmmOzet /> },
+      { path: "smm/receteler", element: <SmmReceteler /> },
+      { path: "smm/sureler", element: <SmmSureler /> },
+      { path: "smm/veri", element: <SmmVeri /> },
       { path: "uretim-adetleri", element: <UretimAdetleri /> },
       { path: "satis-gecmisi", element: <SatisGecmisi /> },
       { path: "karsilastirma", element: <Karsilastirma /> },

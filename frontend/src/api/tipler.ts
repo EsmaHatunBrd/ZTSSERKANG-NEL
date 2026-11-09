@@ -124,3 +124,35 @@ export type BgAyristirma = Sema["BgKiyasAyristirma"];
 // D7: Veri Kontrolü (çalışmanın veri sorunları tek listede).
 export type Tutarlilik = Sema["TutarlilikCikis"];
 export type TutarlilikKontrolu = Sema["TutarlilikKontrolu"];
+export type ListeCalismasi = Sema["ListeCalismasi"];
+export type ListeCalismaSatiri = Sema["ListeCalismaSatiri"];
+export type ListeYilSatiri = Sema["ListeYilSatiri"];
+export type AnalizSatiri = Sema["AnalizSatiri"];
+export type AnalizOzeti = Sema["AnalizOzeti"];
+export type SmmDonem = Sema["SmmDonemCikis"];
+export type SmmStokSatiri = Sema["SmmStokSatiri"];
+export type SmmStokTablosu = Sema["SmmStokTablosu"];
+export type SmmUretimMaliyeti = Sema["SmmUretimMaliyeti"];
+export type SmmAsamaUrunu = Sema["SmmAsamaUrunu"];
+export type SmmUrunRecetesi = Sema["SmmUrunRecetesi"];
+export type SmmDagitim = Sema["SmmDagitim"];
+export type SmmSarfFarki = Sema["SmmSarfFarki"];
+export type SmmSarfSatiri = Sema["SmmSarfSatiri"];
+export type SmmOzeti = Sema["SmmOzeti"];
+export type SmmReceteListesi = Sema["SmmReceteListesi"];
+export type SmmReceteUrunu = Sema["SmmReceteUrunu"];
+export type SmmReceteDetayi = Sema["SmmReceteDetayi"];
+export type SmmAnaReceteOnizleme = Sema["SmmAnaReceteOnizleme"];
+export type SmmReceteKiyas = Sema["SmmReceteKiyas"];
+export type SmmYeniDonem = Sema["SmmYeniDonemCikis"];
+export type SmmSure = Sema["SmmSure"];
+export type SmmVeriDurumu = Sema["SmmVeriDurumu"];
+
+export type KurRiskiSatiri = Sema["KurRiskiSatiri"];
+export type KurRiskiSonucu = Sema["KurRiskiCikis"];
+export type KarlilikBolgesi = "yuksek_adet_yuksek_marj" | "yuksek_adet_dusuk_marj" | "dusuk_adet_yuksek_marj" | "dusuk_adet_dusuk_marj";
+export type KarlilikSatiri = Sema["KarlilikSatiri"];
+export type KarlilikSonucu = Sema["KarlilikCikis"];
+
+export type HedefFiyatSatiri = Sema["HedefFiyatSatiri"];
+export type HedefFiyatSonucu = Sema["HedefFiyatCikis"];

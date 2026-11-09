@@ -18,7 +18,14 @@ describe("Kabuk menüsü", () => {
     ]);
   });
   it("Ana Sayfa kökte, Genel Bakış kendi adresinde; kıyas sayfaları tek Kıyasla öğesinde; ürün uyarıları Veri Kontrolü altında", () => {
-    expect(MENU_GRUPLARI[0].ogeler.map((o) => o.etiket)).toEqual(["Ana Sayfa", "Genel Bakış", "Ürün Maliyeti", "Teklifler", "Kıyasla"]);
+    expect(MENU_GRUPLARI[0].ogeler.map((o) => o.etiket)).toEqual([
+      "Ana Sayfa",
+      "Genel Bakış",
+      "Ürün Maliyeti",
+      "Teklifler",
+      "Analiz",
+      "Kıyasla",
+    ]);
     expect(MENU.find((m) => m.etiket === "Ana Sayfa")).toMatchObject({ yol: "/", son: true });
     expect(MENU.find((m) => m.etiket === "Genel Bakış")?.yol).toBe("/genel-bakis");
     expect(MENU.find((m) => m.etiket === "Kıyasla")).toMatchObject({ yol: "/butce-gerceklesen", ekYollar: ["/karsilastirma", "/arsiv"] });

@@ -18,6 +18,10 @@
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar: var(--sidebar);
     --color-sari: var(--sari);
+    --color-kart-yesil: var(--kart-yesil);
+    --color-kart-turuncu: var(--kart-turuncu);
+    --color-kart-sari: var(--kart-sari);
+    --color-kart-mavi: var(--kart-mavi);
     --color-marka: var(--marka);
     --color-chart-5: var(--chart-5);
     --color-chart-4: var(--chart-4);
@@ -52,42 +56,47 @@
 }
 
 :root {
-    /* Zeytursan: koyu yeşil #183018 (ana marka), açık yeşil #80b840 (vurgu), krem-beyaz zemin #f7f8f3. */
-    --background: oklch(0.975 0.004 120);
+    /* Zeytin yönü (09.11.2026): fildişi zemin, beyaz kartlar, zeytin yeşili vurgu, koyu zeytin kenar menü. Yerleşim değişmedi. */
+    --background: oklch(0.955 0.012 95);
     --foreground: oklch(0.25 0.045 144);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.25 0.045 144);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.25 0.045 144);
-    --primary: oklch(0.282 0.052 144);
-    --primary-foreground: oklch(0.977 0.007 115.7);
-    --secondary: oklch(0.954 0.019 119.8);
-    --secondary-foreground: oklch(0.282 0.052 144);
-    --muted: oklch(0.954 0.019 119.8);
+    --primary: oklch(0.50 0.11 128);
+    --primary-foreground: oklch(0.99 0.005 110);
+    --secondary: oklch(0.94 0.014 100);
+    --secondary-foreground: oklch(0.30 0.05 135);
+    --muted: oklch(0.94 0.014 100);
     --muted-foreground: oklch(0.43 0.035 135);   /* daha koyu: küçük gri yazılar okunur kalsın */
-    --accent: oklch(0.939 0.034 121.5);
-    --accent-foreground: oklch(0.282 0.052 144);
+    --accent: oklch(0.93 0.03 115);
+    --accent-foreground: oklch(0.30 0.05 135);
     --destructive: oklch(0.52 0.15 35);
-    --border: oklch(0.92 0.008 120);
-    --input: oklch(0.88 0.012 120);
-    --ring: oklch(0.55 0.14 135);
-    --marka: oklch(0.719 0.161 130.9);
+    --border: oklch(0.905 0.014 95);
+    --input: oklch(0.87 0.016 95);
+    --ring: oklch(0.50 0.11 128);
+    --marka: oklch(0.50 0.11 128);
     --sari: oklch(0.967 0.05 101.1);
+    /* Özet kartı zeminleri (açık pastel; marka yeşili ağırlıklı). */
+    --kart-yesil: oklch(0.94 0.035 125);
+    --kart-turuncu: oklch(0.945 0.04 55);
+    --kart-sari: oklch(0.955 0.04 98);
+    --kart-mavi: oklch(0.945 0.02 240);
     --chart-1: oklch(0.570 0.145 137.0);
     --chart-2: oklch(0.563 0.133 251.2);
     --chart-3: oklch(0.637 0.133 67.0);
     --chart-4: oklch(0.574 0.149 302.4);
     --chart-5: oklch(0.548 0.152 35.8);
     --radius: 0.8rem;
-    /* Sol menü marka koyu yeşili: içerikten net ayrılır; seçili sayfa açık yeşil hap. */
-    --sidebar: oklch(0.262 0.045 146);
-    --sidebar-foreground: oklch(0.9 0.025 125);
-    --sidebar-primary: oklch(0.8 0.15 130);
-    --sidebar-primary-foreground: oklch(0.2 0.04 144);
+    /* Sol menü: koyu zeytin panel; seçili sayfa zeytin yeşili hap, beyaz yazı. */
+    --sidebar: oklch(0.27 0.035 140);
+    --sidebar-foreground: oklch(0.88 0.02 115);
+    --sidebar-primary: oklch(0.52 0.11 128);
+    --sidebar-primary-foreground: oklch(0.99 0.005 110);
     --sidebar-accent: oklch(1 0 0 / 9%);
-    --sidebar-accent-foreground: oklch(0.98 0.01 120);
-    --sidebar-border: oklch(1 0 0 / 8%);
-    --sidebar-ring: oklch(0.8 0.15 130);
+    --sidebar-accent-foreground: oklch(0.97 0.01 115);
+    --sidebar-border: oklch(0.27 0.035 140);
+    --sidebar-ring: oklch(0.72 0.13 128);
 }
 
 .dark {
@@ -111,16 +120,20 @@
     --ring: oklch(0.719 0.161 130.9);
     --marka: oklch(0.719 0.161 130.9);
     --sari: oklch(0.34 0.055 100);
+    --kart-yesil: oklch(0.31 0.05 140);
+    --kart-turuncu: oklch(0.31 0.045 55);
+    --kart-sari: oklch(0.32 0.05 98);
+    --kart-mavi: oklch(0.30 0.035 250);
     --chart-1: oklch(0.658 0.156 133.0);
     --chart-2: oklch(0.645 0.140 253.4);
     --chart-3: oklch(0.665 0.129 77.6);
     --chart-4: oklch(0.644 0.151 298.3);
     --chart-5: oklch(0.648 0.148 39.4);
-    --sidebar: oklch(0.165 0.02 145);
-    --sidebar-foreground: oklch(0.88 0.02 125);
-    --sidebar-primary: oklch(0.76 0.15 130);
-    --sidebar-primary-foreground: oklch(0.2 0.03 144);
-    --sidebar-accent: oklch(1 0 0 / 7%);
+    --sidebar: oklch(0.225 0.025 145);
+    --sidebar-foreground: oklch(0.86 0.02 125);
+    --sidebar-primary: oklch(0.38 0.08 135);
+    --sidebar-primary-foreground: oklch(0.96 0.03 125);
+    --sidebar-accent: oklch(1 0 0 / 6%);
     --sidebar-accent-foreground: oklch(0.97 0.01 120);
     --sidebar-border: oklch(1 0 0 / 12%);
     --sidebar-ring: oklch(0.719 0.161 130.9);

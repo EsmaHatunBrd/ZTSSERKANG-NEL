@@ -1,0 +1,125 @@
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
+import { http, HttpResponse } from "msw";
+import { sunucu } from "@/test/msw/sunucu";
+import { SenaryoSaglayici } from "@/bilesenler/SenaryoSecici";
+import type { HedefFiyatSatiri } from "@/api/tipler";
+import HedefFiyat from "./HedefFiyat";
+
+beforeAll(() => sunucu.listen({ onUnhandledFrame: "error" }));
+afterEach(() => sunucu.resetHandlers());
+afterAll(() => sunucu.close());
+
+const T = "*/api/v1";
+
+function satir(
+  kod: string,
+  ad: string,
+  bolge: HedefFiyatSatiri["bolge"],
+  zam: string | null,
+  ek: string | null,
+  hata: string | null = null,
+): HedefFiyatSatiri {
+  return {
+    kod,
+    ad,
+    aile: "Turşu",
+    bolge,
+    maliyet: "30",
+    gecen_yil_fiyat: zam === null ? null : "33",
+    hesap_fiyati: "35",
+    mevcut_marj: "0.1",
+    hedef_fiyat: "34.5",
+    gereken_zam: zam,
+    liste_fiyati: "54.76",
+    adet: "10000",
+    yillik_ek_gelir: ek,
+    hata,
+  };
+}
+
+const KAYITLAR = [
+  satir("U1", "Biber Turşusu", "yuksek_adet_dusuk_marj", "0.0455", "15000"),
+  satir("U2", "Zeytin Ezmesi", "yuksek_adet_yuksek_marj", "-0.05", "-17000"),
+  satir("U3", "Domates Salçası", "dusuk_adet_dusuk_marj", "0.08", "4000"),
+  satir("U4", "Nar Ekşisi", null, null, null, "Reçete eksik"),
+];
+
+function kur(marjlar: (string | null)[]) {
+  sunucu.use(
+    http.get(`${T}/analiz/hedef-fiyat`, ({ request }) => {
+      const m = new URL(request.url).searchParams.get("marj");
+      marjlar.push(m);
+      return HttpResponse.json({
+        marj: m ?? "0.15",
+        bolen: "0.63",
+        adet_kaynagi: "satis_gecmisi",
+        ozet: { urun_sayisi: 4, zam_gereken: 2, fiyatsiz: 0, hatali: 1, yillik_ek_gelir: "19000", ort_zam: "0.052" },
+        kayitlar: KAYITLAR,
+      });
+    }),
+  );
+}
+
+function ciz(adres = "/?senaryo=1") {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={[adres]}>
+        <SenaryoSaglayici>
+          <HedefFiyat />
+        </SenaryoSaglayici>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+describe("Marjı koruyan fiyat", () => {
+  it("ilk istekte marj göndermez, gelen marjı kutuya yazar; değiştirip Hesapla deyince marj=0.2 gider", async () => {
+    const marjlar: (string | null)[] = [];
+    kur(marjlar);
+    ciz();
+    expect(await screen.findByText("Biber Turşusu")).toBeInTheDocument();
+    expect(marjlar[0]).toBeNull();
+    const kutu = screen.getByLabelText("Hedef marj (%)");
+    expect(kutu).toHaveValue("15");
+    expect(screen.getByText("Zam gereken ürün")).toBeInTheDocument();
+    expect(screen.getByText(/Liste fiyatı = hedef fiyat ÷ 0,63/)).toBeInTheDocument();
+    // Hatalı ürün tabloda değil, ayrı notta
+    expect(screen.getByRole("region", { name: "Hesaplanamayan ürünler" })).toHaveTextContent("Reçete eksik");
+
+    await userEvent.clear(kutu);
+    await userEvent.type(kutu, "20{Enter}");
+    await waitFor(() => expect(marjlar.at(-1)).toBe("0.2"));
+    await waitFor(() => expect(screen.getByLabelText("Hedef marj (%)")).toHaveValue("20"));
+  });
+
+  it("varsayılan yalnız zam gerekenleri gösterir; kutu kaldırılınca hepsi görünür", async () => {
+    kur([]);
+    ciz();
+    const tablo = await screen.findByRole("table");
+    expect(await within(tablo).findByText("Biber Turşusu")).toBeInTheDocument();
+    expect(within(tablo).getByText("Domates Salçası")).toBeInTheDocument();
+    expect(within(tablo).queryByText("Zeytin Ezmesi")).not.toBeInTheDocument();
+    expect(within(tablo).queryByText("Nar Ekşisi")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText("Yalnız zam gerekenler"));
+    expect(within(tablo).getByText("Zeytin Ezmesi")).toBeInTheDocument();
+  });
+
+  it("?bolge= ile o bölgeye süzülür; Tümü süzmeyi kaldırır", async () => {
+    kur([]);
+    ciz("/?senaryo=1&bolge=yuksek_adet_dusuk_marj");
+    const tablo = await screen.findByRole("table");
+    expect(await within(tablo).findByText("Biber Turşusu")).toBeInTheDocument();
+    expect(within(tablo).queryByText("Domates Salçası")).not.toBeInTheDocument();
+    const grup = screen.getByRole("group", { name: "Bölge" });
+    expect(within(grup).getByRole("button", { name: "Fiyatı gözden geçir" })).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(within(grup).getByRole("button", { name: "Tümü" }));
+    expect(within(tablo).getByText("Domates Salçası")).toBeInTheDocument();
+  });
+});

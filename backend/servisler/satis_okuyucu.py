@@ -26,7 +26,6 @@ def _baslik_anahtari(b) -> str:
     return "".join(c for c in metin if c.isalnum())
 
 
-_ESLEME = {_baslik_anahtari(b): b for b in BASLIKLAR}
 
 
 def _tarih(v) -> date | None:
@@ -104,12 +103,15 @@ def _satir(no: int, ham: dict) -> dict:
             "tarih": tarih, "fiyat": fiyat, "para_birimi": str(ham.get("para_birimi") or "").strip().upper(), "adet": adet, "hatalar": hatalar}
 
 
-def _satirlara(baslik: list, govde) -> list[dict]:
-    """Başlık satırı + (satir_no, hücreler) üreteci -> çözümlenmiş satırlar. Tamamen boş satırlar atlanır."""
-    sutun = {i: _ESLEME[k] for i, b in enumerate(baslik) if (k := _baslik_anahtari(b)) in _ESLEME}
-    eksik = [b for b in BASLIKLAR if b not in sutun.values()]
+def _satirlara(baslik: list, govde, basliklar: tuple = BASLIKLAR, satir_fn=None, istege_bagli: tuple = ()) -> list[dict]:
+    """Başlık satırı + (satir_no, hücreler) üreteci -> çözümlenmiş satırlar. Tamamen boş satırlar atlanır.
+    `basliklar`/`satir_fn`: başka bir tablo biçimi (ör. liste fiyatları) aynı okuyucuyla okunur; `istege_bagli` başlıklar eksik olabilir."""
+    satir_fn = satir_fn or _satir
+    esleme = {_baslik_anahtari(b): b for b in basliklar}
+    sutun = {i: esleme[k] for i, b in enumerate(baslik) if (k := _baslik_anahtari(b)) in esleme}
+    eksik = [b for b in basliklar if b not in sutun.values() and b not in istege_bagli]
     if eksik:
-        raise DogrulamaHatasi("dosyada zorunlu başlık eksik", {"eksik_basliklar": eksik, "beklenen": list(BASLIKLAR)})
+        raise DogrulamaHatasi("dosyada zorunlu başlık eksik", {"eksik_basliklar": eksik, "beklenen": list(basliklar)})
     sonuc = []
     for no, hucreler in govde:
         if no - 1 > MAKS_SATIR:   # no = dosyadaki satır (başlık 1); bellek şişmesin diye daha fazla ayrıştırılmaz
@@ -117,13 +119,13 @@ def _satirlara(baslik: list, govde) -> list[dict]:
         ham = {ad: (hucreler[i] if i < len(hucreler) else None) for i, ad in sutun.items()}
         if all(v is None or str(v).strip() == "" for v in ham.values()):
             continue
-        sonuc.append(_satir(no, ham))
+        sonuc.append(satir_fn(no, ham))
     if not sonuc:
         raise DogrulamaHatasi("dosyada veri satırı yok")
     return sonuc
 
 
-def _csv_oku(icerik: bytes) -> list[dict]:
+def _csv_oku(icerik: bytes, **bicim) -> list[dict]:
     try:
         metin = icerik.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -134,10 +136,10 @@ def _csv_oku(icerik: bytes) -> list[dict]:
     ayirac = ";" if ilk.count(";") >= ilk.count(",") and ";" in ilk else ","
     okuyucu = csv.reader(io.StringIO(metin), delimiter=ayirac)
     baslik = next(okuyucu)
-    return _satirlara(baslik, ((i, r) for i, r in enumerate(okuyucu, start=2)))
+    return _satirlara(baslik, ((i, r) for i, r in enumerate(okuyucu, start=2)), **bicim)
 
 
-def _xlsx_oku(icerik: bytes) -> list[dict]:
+def _xlsx_oku(icerik: bytes, **bicim) -> list[dict]:
     try:
         wb = load_workbook(io.BytesIO(icerik), read_only=True, data_only=True)
     except (zipfile.BadZipFile, InvalidFileException, KeyError):
@@ -147,15 +149,16 @@ def _xlsx_oku(icerik: bytes) -> list[dict]:
         baslik = next(satirlar, None)
         if baslik is None:
             raise DogrulamaHatasi("dosya boş")
-        return _satirlara(list(baslik), ((i, list(r)) for i, r in enumerate(satirlar, start=2)))
+        return _satirlara(list(baslik), ((i, list(r)) for i, r in enumerate(satirlar, start=2)), **bicim)
     finally:
         wb.close()
 
 
-def oku(icerik: bytes, dosya_adi: str = "") -> list[dict]:
+def oku(icerik: bytes, dosya_adi: str = "", **bicim) -> list[dict]:
+    """`bicim`: `_satirlara` seçenekleri (basliklar, satir_fn, istege_bagli); verilmezse satış geçmişi biçimi."""
     if len(icerik) > MAKS_BAYT:
         raise DogrulamaHatasi("dosya 10 MB'den büyük")
     ad = (dosya_adi or "").lower()
     if ad.endswith(".csv") or (not ad.endswith(".xlsx") and not icerik.startswith(b"PK")):
-        return _csv_oku(icerik)
-    return _xlsx_oku(icerik)
+        return _csv_oku(icerik, **bicim)
+    return _xlsx_oku(icerik, **bicim)

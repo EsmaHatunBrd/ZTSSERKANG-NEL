@@ -86,6 +86,7 @@ class FiyatGiris(BaseModel):
     gecerlilik_basi: date
     neden: str = Field(min_length=1)
     para_birimi: str | None = None
+    onay: bool = Field(default=False, description="Fiyat eşikten fazla değişiyorsa (422 kod=fiyat_sapma) kullanıcı onayıyla yeniden gönderilir")
 
 
 class AnahtarGiris(BaseModel):
@@ -1324,3 +1325,763 @@ class ReceteUygulanan(BaseModel):
 class AktarimUygulaRecete(BaseModel):
     uygulanan: list[ReceteUygulanan]
     yeni_urun: int
+
+
+# ---------------------------------------------------------------- Liste fiyatı çalışması (Berrak)
+class ListeFiyatiGiris(BaseModel):
+    urun_kodu: str = Field(min_length=1, max_length=32)
+    yil: int = Field(ge=2000, le=2100)
+    liste_fiyati: Decimal = Field(gt=0)
+    birim_maliyet: Decimal | None = Field(default=None, gt=0)
+
+
+class ListeFiyatiCikis(BaseModel):
+    urun_kodu: str
+    yil: int
+    liste_fiyati: str
+    birim_maliyet: str | None
+    ornek: bool
+
+
+class ListeGecmisSatiri(BaseModel):
+    yil: int
+    liste_fiyati: str
+    birim_maliyet: str | None
+    ornek: bool
+
+
+class ListeCalismaSatiri(BaseModel):
+    kod: str
+    ad: str
+    hat: str | None
+    hata: str | None
+    maliyet_tl: str | None
+    satis_tl: str | None
+    yeni_liste: str | None
+    onceki_yil: int | None
+    onceki_liste: str | None
+    liste_artis: str | None
+    maliyet_artis: str | None
+    fark: str | None
+    gecmis: list[ListeGecmisSatiri]
+
+
+class ListeCalismaOzeti(BaseModel):
+    liste_artis_ort: str | None
+    maliyet_artis_ort: str | None
+    fark: str | None
+    karsilastirilan: int
+    urun_sayisi: int
+    gerisinde: int
+
+
+class ListeYilSatiri(BaseModel):
+    yil: int
+    liste_artis_ort: str | None
+    maliyet_artis_ort: str | None
+    urun_sayisi: int
+
+
+class ListeCalismasi(BaseModel):
+    yil: int
+    bolen: str
+    bolen_kayitli: bool
+    varsayilan_bolen: str
+    ornek_var: bool
+    ozet: ListeCalismaOzeti
+    yillar: list[ListeYilSatiri]
+    kayitlar: list[ListeCalismaSatiri]
+
+
+class ListeYuklemeOzeti(BaseModel):
+    yazilan: int
+    hatalar: list[SatisYuklemeHatasi]
+
+
+class ListeOrnekOzeti(BaseModel):
+    yazilan: int
+
+
+# ---------------------------------------------------------------- Analizler (ya olursa, zam etkisi)
+class AnalizSatiri(BaseModel):
+    kod: str
+    ad: str
+    hat: str | None
+    hata: str | None
+    maliyet_once: str | None
+    maliyet_sonra: str | None
+    fark_tl: str | None
+    fark_yuzde: str | None
+    satis_once: str | None
+    satis_sonra: str | None
+    kar_orani: str | None
+    mevcut_fiyatla_kar: str | None
+    esik_alti: bool
+
+
+class AnalizOzeti(BaseModel):
+    urun_sayisi: int
+    etkilenen: int
+    ort_fark_yuzde: str | None
+    en_yuksek_fark_yuzde: str | None
+    esik_alti: int
+    hatali: int
+
+
+class YaOlursaVarsayimlari(BaseModel):
+    kur: str
+    ambalaj: str
+    hammadde: str
+    adet: str
+
+
+class YaOlursaCikis(BaseModel):
+    varsayimlar: YaOlursaVarsayimlari
+    marj_esigi: str
+    ozet: AnalizOzeti
+    kayitlar: list[AnalizSatiri]
+
+
+class ZamMalzemesi(BaseModel):
+    kod: str
+    ad: str
+    tip: str | None
+    birim: str | None
+    fiyat: str | None
+    para_birimi: str | None
+    yeni_fiyat: str | None
+
+
+class ZamEtkisiCikis(BaseModel):
+    malzeme: ZamMalzemesi
+    oran: str
+    marj_esigi: str
+    ozet: AnalizOzeti
+    kayitlar: list[AnalizSatiri]
+
+
+# ---------------------------------------------------------------- Maliyet muhasebesi (SMM)
+class SmmExcelKontrol(BaseModel):
+    karsilastirilan: int
+    esit: int
+    farkli: int
+    farkli_ornek: list[str]
+    excelde_sarf_bos: int
+    excelde_sarf_bos_ornek: list[str]
+    excelde_sarf_bos_tutar: str
+    excelde_tekrar: list[str] = []
+
+
+class SmmDonemCikis(BaseModel):
+    id: int
+    yil: int
+    ay: int
+    ad: str
+    kaynak_dosya: str | None
+    finansman: str
+    kalem_sayisi: int | None
+    excel_kontrol: SmmExcelKontrol | None
+    olusturan: str
+    recete_kaynagi: str = "excel"
+    devir_donem_id: int | None = None
+    kilitli: bool = False
+    kilitleyen: str | None = None
+
+
+class SmmKaynakSon(BaseModel):
+    dosya: str | None = None
+    zaman: str | None = None
+    kullanici: str | None = None
+    satir: int | None = None
+    excel: bool = False
+
+
+class SmmVeriKaynagi(BaseModel):
+    kaynak: str
+    ad: str
+    zorunlu: bool
+    yuklendi: bool
+    dolu: int
+    son: SmmKaynakSon | None
+
+
+class SmmDonemBasi(BaseModel):
+    kaynak: str
+    dolu: int
+    tutar: str
+    hazir: bool
+
+
+class SmmVeriAyarlari(BaseModel):
+    finansman: str
+    gider_720: str
+    gider_730: str
+
+
+class SmmVeriDurumu(BaseModel):
+    donem: "SmmDonemCikis"
+    donem_basi: SmmDonemBasi
+    kaynaklar: list[SmmVeriKaynagi]
+    eksik: list[str]
+    ayarlar: SmmVeriAyarlari
+    turler: list[str]
+
+
+class SmmAyarGiris(BaseModel):
+    finansman: Decimal | None = None
+    gider_720: Decimal | None = None
+    gider_730: Decimal | None = None
+
+
+class SmmKilitGiris(BaseModel):
+    kilitli: bool
+
+
+class SmmYeniDonemGiris(BaseModel):
+    yil: int
+    ay: int
+
+
+class SmmDevir(BaseModel):
+    onceki: str | None
+    kalem: int
+    tutar: str
+
+
+class SmmYeniDonemCikis(SmmDonemCikis):
+    devir: SmmDevir
+
+
+class SmmReceteKaynagiGiris(BaseModel):
+    kaynak: Literal["excel", "ana"]
+
+
+class SmmAnaReceteOnizleme(BaseModel):
+    satir_sayisi: int
+    urun_sayisi: int
+    asama: dict[str, int]
+    alternatifli_urun: int
+    mevcut_urun: int
+    eklenecek_urun: int
+    kalkacak_urun: int
+    degisecek_urun: int
+    korunan: list["SmmKorunanRecete"] = []
+    ornek: list[dict[str, str | None]]
+
+
+class SmmKorunanRecete(BaseModel):
+    ana_kod: str
+    ana_ad: str | None
+    caniasta_var: bool
+    canias_farkli: bool
+
+
+class SmmReceteYuklemeBilgi(BaseModel):
+    kaynak_dosya: str | None
+    satir_sayisi: int
+    urun_sayisi: int
+    olusturan: str
+    zaman: str | None
+
+
+class SmmReceteUrunu(BaseModel):
+    ana_kod: str
+    ana_ad: str | None
+    asama: int
+    alternatifler: list[str]
+    secili_alternatif: str
+    satir_sayisi: int
+    elle: bool = False
+
+
+class SmmReceteListesi(BaseModel):
+    son_yukleme: SmmReceteYuklemeBilgi | None
+    asama_sayilari: dict[str, int]
+    alternatifli_urun: int
+    elle_urun: int = 0
+    kayitlar: list[SmmReceteUrunu]
+
+
+class SmmReceteKalemi2(BaseModel):
+    id: int
+    satir_no: int
+    kalem_tipi: int | None
+    malzeme_kod: str
+    malzeme_ad: str | None
+    miktar: str
+    birim: str | None
+    fire_orani: str
+
+
+class SmmReceteAlternatifi(BaseModel):
+    alternatif: str
+    satirlar: list[SmmReceteKalemi2]
+
+
+class SmmReceteDetayi(BaseModel):
+    ana_kod: str
+    ana_ad: str | None
+    asama: int
+    kod_asamasi: int = 20
+    secili_alternatif: str
+    elle: bool = False
+    elle_degistiren: str | None = None
+    canias_var: bool = False
+    alternatifler: list[SmmReceteAlternatifi]
+
+
+class SmmReceteSatirGiris(BaseModel):
+    """Reçeteye satır. `fire_orani` oran (0,05 = %5)."""
+    alternatif: str = "00"
+    malzeme_kod: str = Field(min_length=1, max_length=40)
+    malzeme_ad: str | None = Field(None, max_length=200)
+    miktar: Decimal
+    birim: str = Field(min_length=1, max_length=16)
+    fire_orani: Decimal = Decimal(0)
+
+
+class SmmYeniReceteGiris(SmmReceteSatirGiris):
+    ana_kod: str = Field(min_length=1, max_length=40)
+    ana_ad: str | None = Field(None, max_length=200)
+
+
+class SmmReceteSatirGuncelle(BaseModel):
+    malzeme_kod: str | None = Field(None, max_length=40)
+    malzeme_ad: str | None = Field(None, max_length=200)
+    miktar: Decimal | None = None
+    birim: str | None = Field(None, max_length=16)
+    fire_orani: Decimal | None = None
+
+
+class SmmAlternatifKopyaGiris(BaseModel):
+    kaynak: str
+    yeni: str
+
+
+class SmmMalzemeAdayi(BaseModel):
+    kod: str
+    ad: str | None
+    birim: str | None
+
+
+class SmmAlternatifGiris(BaseModel):
+    alternatif: str
+
+
+class SmmReceteFarki(BaseModel):
+    asama: int
+    ana_kod: str
+    ana_ad: str | None
+    durum: str
+    ayrinti: dict[str, list[str]] | None
+
+
+class SmmReceteKiyas(BaseModel):
+    donem: int
+    sayilar: dict[str, dict[str, int]]
+    farklar: list[SmmReceteFarki]
+
+
+class SmmDonemListesi(BaseModel):
+    kayitlar: list[SmmDonemCikis]
+
+
+class SmmStokSatiri(BaseModel):
+    kod: str
+    ad: str | None
+    birim: str | None
+    tur: str | None
+    mizan_kodu: str | None
+    dbs_miktar: str
+    dbs_tutar: str
+    alim_miktar: str
+    alim_tutar: str
+    iade_miktar: str
+    iade_tutar: str
+    uretim_miktar: str
+    sayim_miktar: str
+    satis_miktar: str = "0"
+    sahit_miktar: str = "0"
+    finansman_payi: str
+    toplam_miktar: str
+    toplam_tutar: str
+    ortalama_fiyat: str
+    kalan_miktar: str
+    kalan_tutar: str
+    dss_tutar: str
+    sarf_miktar: str
+    sarf_tutar: str
+    uretime_giden: str
+    kontrol: bool
+
+
+class SmmStokToplamlari(BaseModel):
+    dbs_tutar: str
+    alim_tutar: str
+    finansman_payi: str
+    iade_tutar: str
+    dss_tutar: str
+    sarf_tutar: str
+    uretime_giden: str
+
+
+class SmmTurOzeti(BaseModel):
+    tur: str
+    kalem: int
+    dbs_tutar: str
+    alim_tutar: str
+    dss_tutar: str
+    sarf_tutar: str
+
+
+class SmmStokTablosu(BaseModel):
+    donem: SmmDonemCikis
+    toplamlar: SmmStokToplamlari
+    kontrol_sayisi: int
+    turler: list[SmmTurOzeti]
+    kayitlar: list[SmmStokSatiri]
+
+
+class SmmHavuz(BaseModel):
+    anahtar: str
+    ad: str
+    tutar: str
+    excel: str
+    degisti: bool
+
+
+class SmmDagitim(BaseModel):
+    havuzlar: list[SmmHavuz]
+    dagitilan: str
+    mizan_720: str
+    mizan_730: str
+    dagitilmayan: str | None
+    anahtarlar: list["SmmDagitimAnahtari"] = []
+
+
+class SmmDagitimAnahtari(BaseModel):
+    anahtar: str
+    ad: str
+    alan: str
+    excel_varsayilani: str
+
+
+class SmmDagitimGiris(BaseModel):
+    """Değiştirilecek havuzlar (anahtar -> TL) ve dağıtım anahtarları (havuz -> uretim / dolum_sn / etiket_adam_sn …). Verilmeyenler kalır."""
+    havuzlar: dict[str, Decimal] = {}
+    anahtarlar: dict[str, str] = {}
+
+
+class SmmUrunElleGiris(BaseModel):
+    """Birim başına TL; null = formüle dön."""
+    alanlar: dict[str, Decimal | None]
+
+
+class SmmAsamaGiris(BaseModel):
+    asama: int
+
+
+class SmmSure(BaseModel):
+    id: int
+    kod: str
+    mamul_kod: str | None
+    yari_mamul_kod: str | None
+    ad: str | None
+    vardiya_uretim: str
+    dolum_isci: str
+    etiket_isci: str
+    dolum_sn: str
+    dolum_adam_sn: str
+    etiket_sn: str
+    etiket_adam_sn: str
+
+
+class SmmSureListesi(BaseModel):
+    donem: "SmmDonemCikis"
+    kayitlar: list[SmmSure]
+
+
+class SmmSureGiris(BaseModel):
+    mamul_kod: str | None = Field(None, max_length=40)
+    yari_mamul_kod: str | None = Field(None, max_length=40)
+    ad: str | None = Field(None, max_length=200)
+    vardiya_uretim: Decimal | None = None
+    dolum_isci: Decimal | None = None
+    etiket_isci: Decimal | None = None
+    dolum_sn: Decimal | None = None
+    dolum_adam_sn: Decimal | None = None
+    etiket_sn: Decimal | None = None
+    etiket_adam_sn: Decimal | None = None
+
+
+class SmmAsamaKarsilastirma(BaseModel):
+    karsilastirilan: int
+    esit: int
+    farkli: int
+    farkli_ornek: list[str]
+
+
+class SmmAsamaOzeti(BaseModel):
+    asama: int
+    ad: str
+    urun_sayisi: int
+    uretilen_urun: int
+    sure_yok: int
+    alim_kurali: int
+    kod_bosluklu: int
+    excel_elle: int
+    malzeme: str
+    iscilik: str
+    gug: str
+    fire: str
+    toplam: str
+    excel: SmmAsamaKarsilastirma
+
+
+class SmmAsamaUrunu(BaseModel):
+    kod: str
+    ad: str | None
+    birim: str | None
+    uretim_miktar: str
+    malzeme: str
+    stok_payi: str
+    iscilik: str
+    gug: str
+    fire: str
+    alim_fiyati: str
+    alim_kurali: bool
+    birim_maliyet: str
+    toplam: str
+    satir_sayisi: int
+    sure_yok: bool
+    elle_alanlar: list[str] = []
+    excel_birim: str | None
+    excel_farkli: bool
+
+
+class SmmUretimMaliyeti(BaseModel):
+    donem: SmmDonemCikis
+    asama: int
+    ozetler: list[SmmAsamaOzeti]
+    dagitim: SmmDagitim
+    kayitlar: list[SmmAsamaUrunu]
+
+
+class SmmReceteKalemi(BaseModel):
+    malzeme_kod: str
+    malzeme_ad: str | None
+    miktar: str
+    birim: str | None
+    carpan: str
+    fiyat: str
+    fiyat_kaynagi: str
+    tutar: str
+    fire_orani: str
+    fire_tutari: str
+
+
+class SmmUrunRecetesi(BaseModel):
+    urun: SmmAsamaUrunu
+    asama: int
+    satirlar: list[SmmReceteKalemi]
+
+
+class SmmSarfSatiri(BaseModel):
+    kod: str
+    ad: str | None
+    birim: str | None
+    tur: str
+    ortalama_fiyat: str
+    recete_sarf: str
+    stok_sarf: str
+    fark: str
+    fark_tutar: str
+    fark_orani: str | None
+    urun_sayisi: int
+    kartsiz: bool
+    uretim_girisi: str
+    satis_miktar: str
+    sahit_miktar: str
+    birim_uyumsuz: bool
+    recete_birimleri: list[str]
+
+
+class SmmSarfToplamlari(BaseModel):
+    recete_tutar: str = "0"
+    stok_tutar: str = "0"
+    fazla: str = "0"
+    eksik: str = "0"
+
+
+class SmmTabloSatiri(BaseModel):
+    ad: str
+    isaret: str
+    tutar: str
+
+
+class SmmTabloBlogu(BaseModel):
+    hesap: str
+    ad: str
+    kalem: int
+    satirlar: list[SmmTabloSatiri]
+    sonuc_ad: str
+    sonuc: str
+
+
+class SmmDssKiyas(BaseModel):
+    karsilastirilan: int
+    esit: int
+    farkli: int
+    farkli_ornek: list[str]
+    excel_toplam: str
+    bizim_toplam: str
+
+
+class SmmMizanKiyas(BaseModel):
+    hesap: str
+    ad: str
+    mizan: str
+    sayim: str
+    fark: str
+
+
+class SmmFisSatiri(BaseModel):
+    hesap: str
+    ad: str
+    aciklama: str
+    borc: str
+    alacak: str
+
+
+class SmmOzeti(BaseModel):
+    donem: SmmDonemCikis
+    smm: str
+    uretim_maliyeti: str
+    uretilen: str
+    ilk_madde: str
+    donem_sonu_stok: str
+    satilan_hm_ym: str
+    tablo: list[SmmTabloBlogu]
+    dss_kiyas: SmmDssKiyas
+    mizan_kiyas: list[SmmMizanKiyas]
+    mizan_tarihi: str | None
+    yansitilan: dict[str, str | None]
+    fis: list[SmmFisSatiri]
+    fis_borc: str
+    fis_alacak: str
+
+
+class SmmSarfFarki(BaseModel):
+    donem: SmmDonemCikis
+    toplamlar: SmmSarfToplamlari
+    birim_uyumsuz_sayisi: int
+    turler: list[str]
+    kayitlar: list[SmmSarfSatiri]
+
+
+# ---------------------------------------------------------------- Analizler: kur riski, kârlılık haritası
+class KurRiskiOzeti(BaseModel):
+    urun_sayisi: int
+    doviz_payi_ort: str | None
+    yillik_maliyet: str
+    yillik_etki: str
+    adetsiz_urun: int
+    hatali: int
+
+
+class KurRiskiParaBirimi(BaseModel):
+    para_birimi: str
+    yillik_etki: str
+    pay: str | None
+
+
+class KurRiskiSatiri(BaseModel):
+    kod: str
+    ad: str
+    hat: str | None
+    maliyet: str | None
+    doviz_payi: str | None
+    usd_payi: str | None
+    eur_payi: str | None
+    birim_etki: str | None
+    yeni_maliyet: str | None
+    yillik_adet: str | None
+    yillik_etki: str | None
+    hata: str | None
+
+
+class KurRiskiCikis(BaseModel):
+    oran: str
+    kurlar: dict[str, str]
+    adet_kaynagi: str   # yıllık adedin kaynağı: "satis_gecmisi" (geçen yıl satış adedi)
+    ozet: KurRiskiOzeti
+    para_birimleri: list[KurRiskiParaBirimi]
+    kayitlar: list[KurRiskiSatiri]
+
+
+class KarlilikOzeti(BaseModel):
+    yuksek_adet_yuksek_marj: int
+    yuksek_adet_dusuk_marj: int
+    dusuk_adet_yuksek_marj: int
+    dusuk_adet_dusuk_marj: int
+    adetsiz: int
+    hatali: int
+
+
+KarlilikBolgesi = Literal["yuksek_adet_yuksek_marj", "yuksek_adet_dusuk_marj", "dusuk_adet_yuksek_marj", "dusuk_adet_dusuk_marj"]
+
+
+class KarlilikSatiri(BaseModel):
+    kod: str
+    ad: str
+    aile: str | None
+    adet: str | None
+    maliyet: str | None
+    satis_fiyati: str | None
+    marj: str | None
+    fiyat_kaynagi: Literal["satis_gecmisi", "hesap"] | None
+    yillik_kar: str | None
+    bolge: KarlilikBolgesi | None
+    hata: str | None
+
+
+class KarlilikCikis(BaseModel):
+    esik_marj: str
+    esik_adet: str | None
+    adet_kaynagi: str   # yıllık adedin kaynağı: "satis_gecmisi" (geçen yıl satış adedi)
+    ozet: KarlilikOzeti
+    kayitlar: list[KarlilikSatiri]
+
+
+class HedefFiyatOzeti(BaseModel):
+    urun_sayisi: int
+    zam_gereken: int      # gereken_zam > 0
+    fiyatsiz: int         # hatasız ama geçen yıl fiyatı yok
+    hatali: int
+    yillik_ek_gelir: str  # yalnız pozitif yıllık ek gelirlerin toplamı
+    ort_zam: str | None   # ciro ağırlıklı: Σ(hedef - geçen) x adet / Σ geçen x adet
+
+
+class HedefFiyatSatiri(BaseModel):
+    kod: str
+    ad: str
+    aile: str | None
+    adet: str | None
+    maliyet: str | None
+    hesap_fiyati: str | None      # çalışmanın hesapladığı satış fiyatı
+    gecen_yil_fiyat: str | None   # geçen yıl adet ağırlıklı TL satış fiyatı
+    mevcut_marj: str | None
+    hedef_fiyat: str | None       # maliyet x (1 + marj)
+    gereken_zam: str | None       # hedef / geçen - 1
+    liste_fiyati: str | None      # hedef / bölen
+    yillik_ek_gelir: str | None   # (hedef - geçen) x adet; negatif olabilir
+    bolge: KarlilikBolgesi | None
+    hata: str | None
+
+
+class HedefFiyatCikis(BaseModel):
+    marj: str
+    bolen: str
+    adet_kaynagi: str   # yıllık adedin kaynağı: "satis_gecmisi" (geçen yıl satış adedi)
+    ozet: HedefFiyatOzeti
+    kayitlar: list[HedefFiyatSatiri]

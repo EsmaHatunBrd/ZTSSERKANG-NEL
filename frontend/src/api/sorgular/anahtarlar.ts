@@ -37,4 +37,7 @@ export const anahtar = {
   kiyasUrun: (kod: string, a: Kimlik, b: Kimlik) => ["kiyas", "urun", kod, a ?? null, b ?? null] as const,
   karsiSenaryo: (senaryo: Kimlik) => ["kiyas", "karsi", senaryo ?? null] as const,
   tutarlilik: (senaryo: Kimlik) => ["tutarlilik", senaryo ?? null] as const,
+  yaOlursa: (senaryo: Kimlik, v: object) => ["analiz", "ya-olursa", senaryo ?? null, v] as const,
+  zamEtkisi: (senaryo: Kimlik, malzeme: string, oran: string) => ["analiz", "zam", senaryo ?? null, malzeme, oran] as const,
+  listeCalismasi: (senaryo: Kimlik, bolen?: string) => ["liste-calismasi", senaryo ?? null, bolen ?? null] as const,
 };

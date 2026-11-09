@@ -66,3 +66,18 @@ Dosya gelince: gerçekleşen Excel ayrı senaryo (tür "gerçekleşen", enflasyo
 
 ## Bugün yapılanların özeti (23.10)
 Faz 5b: muhasebe cevapları (Z/S, revize fiyat, elle giriş + çarpanlar, Veri Girişi, Üretim bilgileri kartı). Faz 5c: Yeni çalışma (boş / kopya / Excel), senaryo düzenle-sil, yeni ürün, reçetesiz ürün akışı, senaryo üyeliği. Performans: ısıtıcı, paylaşılan hesap bağlamı, tek adres. Raporlar: `10-23-2026-faz5b-kapanis-raporu.md`, `10-23-2026-faz5c-kapanis-raporu.md`.
+
+## Güncelleme 09.11.2026 — analiz önerileri (Claude Docs belgesi, 18 madde)
+Yapıldı: 1 Ya olursa, 2 Neden değişti (Bütçe vs Gerçekleşen sapma ayrıştırması), 5 şirket toplamı sapma, 6 Zam etkisi, 16 Eksik fiyat etkisi, 17 Hatalı fiyat uyarısı (%30), 20 Hedef altı ürünler, **13 Kârlılık haritası (09.11: Karşılaştırma → "Kârlılık haritası" sekmesi; x üretim adedi log, y kâr oranı; eşikler medyan adet × hedef kâr `satis_kar`; dört bölge sayıları; "çok satan, marjı zayıf" tablosu; fiyat kaynağı seçimi: geçen yıl gerçek satış / hesaplanan satış — bütçe satışı maliyet × hedef kâr olduğundan hesaplanan kaynakta harita düzdür, not gösterilir)**.
+Kısmen: 12 Enflasyona göre fiyat (satış geçmişi bekliyor), 19 Ambalaj tutarlılığı (tablo var, uyarı yok).
+Kalan: 7 80/20, 8 yıllık malzeme ihtiyacı, 9 fiyat eğilimi, 10 taban fiyat (Sonra), 11 eskimiş teklif (Sonra), 14 kur riski, 15 yönetim özeti, 18 marjı koruyan fiyat.
+Not: SMM ajanları çalışırken yalnız frontend dosyalarına dokunuldu (Karsilastirma.tsx + karsilastirma/karlilik.ts, KarlilikHaritasi.tsx, testler); backend yeniden başlatılmadı.
+
+## Güncelleme 09.11.2026 — SMM stok/envanter elle düzenleme
+Kullanıcı isteği ("stok ve envanteri de elle düzenleyebilmek gerekmez mi" → "hızlıca yap"). SMM ajanları aynı anda reçeteler üzerinde çalıştığı için
+yalnız yeni dosyalarla yapıldı: `backend/servisler/smm_stok_servisi.py`, `backend/api/smm_stok.py` (PATCH /smm/donemler/{id}/stok/{kod},
+POST /smm/donemler/{id}/stok, GET /smm/donemler/{id}/stok/elle), `uygulama.py` kayıt; frontend `api/sorgular/smmStok.ts` (gevşek tipli çağrı,
+sema.d.ts'e dokunmaz), `sayfalar/smm/SmmKalemDuzenle.tsx`, `SmmStok.tsx` (Düzenle sütunu, "elle" rozeti, Kalem ekle). Her değişiklik
+`DegisiklikKaydi(tablo="smm_kalem")` ile neden/kullanıcıyla tutulur; sarf, DSS ve SMM özeti istek anında yeniden hesaplanır (model değişmedi).
+Testler: backend `test_smm_stok_duzenleme.py` (3), vitest `SmmStok.test.tsx` (2). Kapsam dışı: kalem silme/pasife alma, dönemler arası devir
+(SMM ajanlarının "yeni dönem / devir" işi), günlükte `smm_kalem` satırlarının özel biçimi (şimdilik "diğer" türünde görünür).

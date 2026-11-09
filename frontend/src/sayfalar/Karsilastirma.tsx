@@ -3,6 +3,8 @@ import { Search, TriangleAlert } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
 import { useAileTrendi, useAileler } from "@/api/sorgular/karsilastirma";
+import { useParametreler } from "@/api/sorgular/parametreler";
+import { useUrunler } from "@/api/sorgular/urunler";
 import type { AileSatiri } from "@/api/tipler";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
@@ -16,6 +18,14 @@ import { D, yuzdeBicimle } from "@/yardimcilar/para";
 
 // recharts yalnızca grafik çizilirken indirilir.
 const AileGrafigi = lazy(() => import("./karsilastirma/AileGrafigi").then((m) => ({ default: m.AileGrafigi })));
+const KarlilikHaritasi = lazy(() => import("./karsilastirma/KarlilikHaritasi").then((m) => ({ default: m.KarlilikHaritasi })));
+
+/** Sayfa içi görünüm: ürün aileleri (varsayılan) ya da kârlılık haritası; URL `gorunum=karlilik` ile paylaşılabilir. */
+const GORUNUMLER = [
+  { kod: "aileler", ad: "Ürün aileleri" },
+  { kod: "karlilik", ad: "Kârlılık haritası" },
+] as const;
+type Gorunum = (typeof GORUNUMLER)[number]["kod"];
 
 const tr = (s: string) => s.toLocaleLowerCase("tr");
 
@@ -88,10 +98,23 @@ export default function Karsilastirma() {
   const { senaryoId, senaryolar, yukleniyor: senaryoYukleniyor } = useSenaryo();
   const [params, setParams] = useSearchParams();
   const secili = params.get("aile");
+  const gorunum: Gorunum = params.get("gorunum") === "karlilik" ? "karlilik" : "aileler";
   const [arama, setArama] = useState("");
 
   const aileler = useAileler(senaryoId);
   const trend = useAileTrendi(secili, senaryoId);
+  // Kârlılık haritası dashboard satırlarından çizilir (yalnız o görünümde istenir); eşik için satis_kar parametresi.
+  const urunler = useUrunler(gorunum === "karlilik" ? senaryoId : null, { boyut: 500 });
+  const parametreler = useParametreler(gorunum === "karlilik" ? senaryoId : null);
+
+  function gorunumSec(g: Gorunum) {
+    setParams((onceki) => {
+      const yeni = new URLSearchParams(onceki);
+      if (g === "aileler") yeni.delete("gorunum");
+      else yeni.set("gorunum", g);
+      return yeni;
+    });
+  }
 
   const gorunen = useMemo(() => {
     const q = tr(arama.trim());
@@ -138,111 +161,164 @@ export default function Karsilastirma() {
   return (
     <section className="flex flex-col gap-4 p-4">
       <SayfaSekmeleri etiket="Kıyas türü" sekmeler={KIYAS_SEKMELERI} />
-      <SayfaBasligi baslik="Karşılaştırma" altBaslik="Aynı ailedeki ürünlerin ambalaj hacmine göre satış fiyatları" />
-      <p role="note" className="rounded-lg border border-marka/40 bg-accent/40 px-3 py-2 text-sm text-muted-foreground">
-        Bu sayfa yüklü fiyat çalışmasını kullanır: aileler ürün adlarından otomatik kurulur, fiyatlar bu yılın hesabıdır. Geçen yıl kıyası
-        ve enflasyon eşiği için{" "}
-        <Link
-          to={senaryoId === null ? "/satis-gecmisi" : `/satis-gecmisi?senaryo=${senaryoId}`}
-          className="text-primary underline-offset-4 hover:underline"
-        >
-          Satış Geçmişi
-        </Link>{" "}
-        yükleyin.
-      </p>
-      <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <nav aria-label="Aile listesi" className="flex flex-col gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              type="search"
-              aria-label="Aile ara"
-              placeholder="Aile veya ürün ara"
-              value={arama}
-              onChange={(e) => setArama(e.target.value)}
-              className="pl-8"
-            />
+      <SayfaBasligi
+        baslik="Karşılaştırma"
+        altBaslik={
+          gorunum === "karlilik"
+            ? "Ürünler üretim adedi ve kâr oranına göre dört bölgede"
+            : "Aynı ailedeki ürünlerin ambalaj hacmine göre satış fiyatları"
+        }
+      />
+      <div role="tablist" aria-label="Görünüm" className="flex w-fit gap-1 rounded-lg border bg-muted/40 p-1 text-sm">
+        {GORUNUMLER.map((g) => (
+          <button
+            key={g.kod}
+            type="button"
+            role="tab"
+            aria-selected={gorunum === g.kod}
+            onClick={() => gorunumSec(g.kod)}
+            className={cn(
+              "rounded-md px-3 py-1 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+              gorunum === g.kod ? "bg-card font-medium text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {g.ad}
+          </button>
+        ))}
+      </div>
+      {gorunum === "karlilik" ? (
+        urunler.error ? (
+          <div role="alert" className="text-sm text-destructive">
+            {hataMetni(urunler.error as ApiHatasi)}
           </div>
-          {aileler.error ? (
-            <div role="alert" className="text-sm text-destructive">
-              {hataMetni(aileler.error as ApiHatasi)}
-            </div>
-          ) : aileler.isPending ? (
-            <div role="status" aria-label="Yükleniyor" className="flex flex-col gap-2">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} aria-hidden className="h-9 animate-pulse rounded-lg bg-muted" />
-              ))}
-            </div>
-          ) : gorunen.length === 0 ? (
-            <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-              {arama ? "Aramaya uyan aile yok" : "Aile bulunamadı — ürün ekranından aile atayabilirsiniz."}
-            </p>
-          ) : (
-            <ul className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto">
-              {gorunen.map((a) => (
-                <li key={a.aile}>
-                  <button
-                    type="button"
-                    aria-current={a.aile === secili ? "true" : undefined}
-                    onClick={() => aileSec(a.aile)}
-                    className={cn(
-                      "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
-                      a.aile === secili ? "border-marka bg-accent font-medium text-accent-foreground" : "border-transparent",
-                      a.tek_uyeli && a.aile !== secili && "opacity-60",
-                    )}
-                  >
-                    <span className="min-w-0 truncate">{a.aile_ad}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {a.tek_uyeli ? "tek ürün" : `${a.urun_sayisi} ürün`}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </nav>
-
-        <div className="flex min-w-0 flex-col gap-4">
-          {!secili ? (
-            <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">Soldan bir aile seçin.</div>
-          ) : (
-            <>
-              <h2 className="text-base font-semibold">
-                {trend.data?.aile_ad ?? aileler.data?.find((a) => a.aile === secili)?.aile_ad ?? secili}
-              </h2>
-              {aileler.data?.find((a) => a.aile === secili)?.tek_uyeli && (
-                <p role="note" data-testid="tek-uyeli-notu" className="text-sm text-muted-foreground">
-                  Bu aile tek üyeli: karşılaştırılacak başka ambalaj yok. Aynı ürünün diğer ambalajlarını ürün ekranından bu aileye
-                  atayabilirsiniz.
-                </p>
-              )}
-              <div className="overflow-x-auto">
-                <VeriTablosu
-                  veri={satirlar}
-                  sutunlar={sutunlar}
-                  yukleniyor={trend.isPending}
-                  hata={(trend.error as ApiHatasi | null) ?? null}
-                  bosMetin="Bu ailede ürün yok"
+        ) : urunler.isPending || parametreler.isPending ? (
+          <div role="status" aria-label="Yükleniyor" className="h-80 animate-pulse rounded-xl bg-muted" />
+        ) : (
+          <Suspense
+            fallback={
+              <div role="status" className="text-sm text-muted-foreground">
+                Grafik yükleniyor…
+              </div>
+            }
+          >
+            <KarlilikHaritasi
+              satirlar={urunler.data?.kayitlar ?? []}
+              hedefKarOrani={parametreler.data?.satis_kar ?? null}
+              senaryoId={senaryoId}
+            />
+          </Suspense>
+        )
+      ) : (
+        <>
+          <p role="note" className="rounded-lg border border-marka/40 bg-accent/40 px-3 py-2 text-sm text-muted-foreground">
+            Bu sayfa yüklü fiyat çalışmasını kullanır: aileler ürün adlarından otomatik kurulur, fiyatlar bu yılın hesabıdır. Geçen yıl
+            kıyası ve enflasyon eşiği için{" "}
+            <Link
+              to={senaryoId === null ? "/satis-gecmisi" : `/satis-gecmisi?senaryo=${senaryoId}`}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Satış Geçmişi
+            </Link>{" "}
+            yükleyin.
+          </p>
+          <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+            <nav aria-label="Aile listesi" className="flex flex-col gap-2">
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  type="search"
+                  aria-label="Aile ara"
+                  placeholder="Aile veya ürün ara"
+                  value={arama}
+                  onChange={(e) => setArama(e.target.value)}
+                  className="pl-8"
                 />
               </div>
-              {grafikSatirSayisi > 0 && (
-                <Suspense
-                  fallback={
-                    <div role="status" className="text-sm text-muted-foreground">
-                      Grafik yükleniyor…
-                    </div>
-                  }
-                >
-                  <AileGrafigi satirlar={satirlar} aile={trend.data?.aile_ad ?? secili} />
-                </Suspense>
+              {aileler.error ? (
+                <div role="alert" className="text-sm text-destructive">
+                  {hataMetni(aileler.error as ApiHatasi)}
+                </div>
+              ) : aileler.isPending ? (
+                <div role="status" aria-label="Yükleniyor" className="flex flex-col gap-2">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div key={i} aria-hidden className="h-9 animate-pulse rounded-lg bg-muted" />
+                  ))}
+                </div>
+              ) : gorunen.length === 0 ? (
+                <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                  {arama ? "Aramaya uyan aile yok" : "Aile bulunamadı — ürün ekranından aile atayabilirsiniz."}
+                </p>
+              ) : (
+                <ul className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto">
+                  {gorunen.map((a) => (
+                    <li key={a.aile}>
+                      <button
+                        type="button"
+                        aria-current={a.aile === secili ? "true" : undefined}
+                        onClick={() => aileSec(a.aile)}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+                          a.aile === secili ? "border-marka bg-accent font-medium text-accent-foreground" : "border-transparent",
+                          a.tek_uyeli && a.aile !== secili && "opacity-60",
+                        )}
+                      >
+                        <span className="min-w-0 truncate">{a.aile_ad}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                          {a.tek_uyeli ? "tek ürün" : `${a.urun_sayisi} ürün`}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
-              {trend.data && grafikSatirSayisi === 0 && satirlar.length > 0 && (
-                <p className="text-sm text-muted-foreground">Hesap hatası nedeniyle grafik çizilemedi.</p>
+            </nav>
+
+            <div className="flex min-w-0 flex-col gap-4">
+              {!secili ? (
+                <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">Soldan bir aile seçin.</div>
+              ) : (
+                <>
+                  <h2 className="text-base font-semibold">
+                    {trend.data?.aile_ad ?? aileler.data?.find((a) => a.aile === secili)?.aile_ad ?? secili}
+                  </h2>
+                  {aileler.data?.find((a) => a.aile === secili)?.tek_uyeli && (
+                    <p role="note" data-testid="tek-uyeli-notu" className="text-sm text-muted-foreground">
+                      Bu aile tek üyeli: karşılaştırılacak başka ambalaj yok. Aynı ürünün diğer ambalajlarını ürün ekranından bu aileye
+                      atayabilirsiniz.
+                    </p>
+                  )}
+                  <div className="overflow-x-auto">
+                    <VeriTablosu
+                      veri={satirlar}
+                      sutunlar={sutunlar}
+                      yukleniyor={trend.isPending}
+                      hata={(trend.error as ApiHatasi | null) ?? null}
+                      bosMetin="Bu ailede ürün yok"
+                    />
+                  </div>
+                  {grafikSatirSayisi > 0 && (
+                    <Suspense
+                      fallback={
+                        <div role="status" className="text-sm text-muted-foreground">
+                          Grafik yükleniyor…
+                        </div>
+                      }
+                    >
+                      <AileGrafigi satirlar={satirlar} aile={trend.data?.aile_ad ?? secili} />
+                    </Suspense>
+                  )}
+                  {trend.data && grafikSatirSayisi === 0 && satirlar.length > 0 && (
+                    <p className="text-sm text-muted-foreground">Hesap hatası nedeniyle grafik çizilemedi.</p>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </div>
-      </div>
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }

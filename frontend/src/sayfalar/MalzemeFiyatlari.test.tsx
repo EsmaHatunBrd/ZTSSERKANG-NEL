@@ -184,7 +184,7 @@ describe("MalzemeFiyatlari", () => {
     expect(kayit.fiyat[0]).toEqual({
       kod: "M-001",
       senaryo: "1",
-      govde: { fiyat: "6.5", gecerlilik_basi: bugunIso(), neden: "Yeni liste", para_birimi: "TL" },
+      govde: { fiyat: "6.5", gecerlilik_basi: bugunIso(), neden: "Yeni liste", para_birimi: "TL", onay: false },
     });
     expect(await screen.findByRole("status")).toHaveTextContent(/M-001 fiyatı kaydedildi/);
   });

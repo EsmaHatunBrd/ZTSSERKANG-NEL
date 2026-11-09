@@ -25,10 +25,19 @@ _TABLO_TUR = {"urun": "urun", "uretim_hedefi": "hedef", "gider_havuzu": "havuz",
               "satis_gecmisi": "satis", "recete": "recete", "teklif": "teklif"}
 _TABLO_ETIKET = {"urun": "Ürün kartı", "uretim_hedefi": "Üretim hedefi", "gider_havuzu": "Gider havuzu", "ambalaj_sinifi": "Ambalaj sınıfları",
                  "uretim_kapasitesi": "Üretim kapasitesi", "satis_gecmisi": "Satış geçmişi", "malzeme": "Malzeme kartı", "recete": "Reçete",
-                 "senaryo": "Senaryo", "teklif": "Teklif turu"}
+                 "senaryo": "Senaryo", "teklif": "Teklif turu", "liste_fiyati": "Liste fiyatı", "smm_donem": "SMM dönemi",
+                 "smm_recete": "SMM reçeteleri"}
 _ISLEM_ETIKET = {"guncelle": "güncellendi", "olustur": "oluşturuldu", "ekle": "eklendi", "sil": "silindi", "pasiflestir": "pasifleştirildi",
                  "aile_degistir": "ailesi değişti", "kod_degistir": "kodu değişti", "toplu_yukle": "toplu yüklendi", "etkinlestir": "sürümü etkinleştirildi",
-                 "kilitle": "kilitlendi", "kilit_ac": "kilidi açıldı", "kopyala": "kopyalanarak oluşturuldu"}
+                 "kilitle": "kilitlendi", "kilit_ac": "kilidi açıldı", "kopyala": "kopyalanarak oluşturuldu",
+                 "ornek_uret": "örnek verisi üretildi", "ornek_sil": "örnek verisi silindi",
+                 "dagitim": "dağıtım havuzları değişti", "alternatif": "reçete alternatifi değişti",
+                 "recete_kaynagi": "reçete kaynağı değişti", "satir_ekle": "reçete satırı eklendi",
+                 "satir_guncelle": "reçete satırı değişti", "satir_sil": "reçete satırı silindi",
+                 "alternatif_kopyala": "reçete alternatifi kopyalandı", "canias_don": "Canias reçetesine döndürüldü",
+                 "asama": "aşaması değişti", "asama_elle": "aşama değeri elle girildi", "sure_ekle": "üretim süresi eklendi",
+                 "sure_guncelle": "üretim süresi değişti", "sure_sil": "üretim süresi silindi",
+                 "veri_yukle": "veri yüklendi", "kalem_guncelle": "stok kalemi düzeltildi", "ayar_guncelle": "finansman / gider tutarı değişti"}
 
 
 @dataclass
@@ -183,6 +192,9 @@ def _degisiklik_satirlari(s: Session, senaryo: int | None, urunler: dict[int, m.
             urun_kodu = None
         elif t == "senaryo":
             sen_id = k.kayit_id
+        elif t == "liste_fiyati":
+            veri = k.yeni if isinstance(k.yeni, dict) else k.eski
+            urun_kodu = veri.get("urun_kodu") if isinstance(veri, dict) else None
         elif t == "teklif" and isinstance(k.eski, dict):   # silinmiş tur: ürün ve senaryo içerikte saklıdır
             urun_kodu, sen_id = k.eski.get("urun_kodu"), k.eski.get("senaryo_id")
         if senaryo is not None and sen_id is not None and sen_id != senaryo:

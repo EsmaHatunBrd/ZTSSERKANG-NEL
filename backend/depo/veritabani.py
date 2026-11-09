@@ -46,7 +46,14 @@ EKSIK_KOLONLAR = (("recete_satiri", "seviye", "INTEGER"), ("urun", "aile", "VARC
                  ("senaryo", "kilitli", "BOOLEAN DEFAULT 0"), ("senaryo", "kaynak_dosya", "VARCHAR(200)"),
                  ("gider_havuzu", "taban_tutar", "VARCHAR(48)"), ("gider_havuzu", "carpanlar", "JSON"),
                  ("urun", "aile_ad", "VARCHAR(120)"), ("uretim_hedefi", "gider_elle", "JSON"),
-                 ("recete_satiri", "zs_elle", "VARCHAR(1)"), ("recete_satiri", "para_birimi_elle", "VARCHAR(8)"))
+                 ("recete_satiri", "zs_elle", "VARCHAR(1)"), ("recete_satiri", "para_birimi_elle", "VARCHAR(8)"),
+                 ("smm_donem", "dagitim", "JSON"), ("smm_donem", "dagitim_excel", "JSON"), ("smm_donem", "gider_mizan", "JSON"),
+                 ("smm_donem", "excel_asama", "JSON"), ("smm_kalem", "envanterde", "BOOLEAN DEFAULT 1"),
+                 ("smm_iscilik", "mamul_kod", "VARCHAR(40)"), ("smm_iscilik", "yari_mamul_kod", "VARCHAR(40)"),
+                 ("smm_donem", "asama_elle", "JSON"), ("smm_recete_satiri", "ozel", "JSON"), ("smm_kalem", "uretim_asamasi", "INTEGER"),
+                 ("smm_kalem", "satis_miktar", "VARCHAR(48)"), ("smm_kalem", "sahit_miktar", "VARCHAR(48)"), ("smm_donem", "excel_ozet", "JSON"),
+                 ("smm_donem", "recete_kaynagi", "VARCHAR(10) DEFAULT 'excel'"), ("smm_donem", "devir_donem_id", "INTEGER"),
+                 ("smm_donem", "veri_kaynaklari", "JSON"), ("smm_donem", "kilitli", "BOOLEAN DEFAULT 0"), ("smm_donem", "kilitleyen", "VARCHAR(64)"))
 
 
 def eksik_kolonlari_tamamla(engine: Engine) -> list[str]:
