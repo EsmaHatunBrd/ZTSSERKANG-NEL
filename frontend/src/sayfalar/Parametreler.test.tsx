@@ -1,10 +1,12 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http } from "msw";
+import { http, HttpResponse } from "msw";
 import { sunucu } from "@/test/msw/sunucu";
 import { dogrulamaHatasi } from "@/test/msw/isleyiciler";
 import { ayarlarIsleyicileri, yeniKayit, type YazimKaydi } from "@/test/msw/isleyiciler-ayarlar";
+import { ayarDegerleri, ayarTanimlari } from "@/test/fikstur/ayarlar";
+import { EVET_HAYIR_BIRIMI } from "./ayarlar/ortak";
 import { kurSayfa } from "@/test/kur-ayarlar";
 import { bugunIso } from "@/yardimcilar/tarih";
 import Parametreler from "./Parametreler";
@@ -159,5 +161,39 @@ describe("Parametreler", () => {
     await u.click(screen.getByRole("button", { name: "Kaydet" }));
     expect(await screen.findByText("Sayı olmalı")).toBeInTheDocument();
     expect(kayit.parametre).toHaveLength(0);
+  });
+
+  it("açık/kapalı parametre 'Kapalı' görünür; Aç nedenle 1 değerini bugünden genel kapsamda yazar", async () => {
+    const tanimlar = [
+      ...ayarTanimlari,
+      { anahtar: "satis_ortalama_maliyetten", aciklama: "Satış fiyatı ortalama maliyetten", birim: EVET_HAYIR_BIRIMI },
+    ];
+    sunucu.use(
+      http.get("*/api/v1/parametreler/tanimlar", () => HttpResponse.json({ kayitlar: tanimlar, toplam: tanimlar.length })),
+      http.get("*/api/v1/parametreler", () => HttpResponse.json({ ...ayarDegerleri, satis_ortalama_maliyetten: "0" })),
+    );
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    const anahtar = await screen.findByRole("switch", { name: "Aç/Kapat satis_ortalama_maliyetten" });
+    expect(anahtar).toHaveAttribute("aria-checked", "false");
+    const satir = screen.getByText("satis_ortalama_maliyetten").closest("tr") as HTMLElement;
+    expect(within(satir).getByText("Kapalı")).toBeInTheDocument();
+    // Değer girişi değil aç/kapa: "Değiştir" düğmesi yok.
+    expect(within(satir).queryByRole("button", { name: /^Değiştir/ })).not.toBeInTheDocument();
+
+    await u.click(anahtar);
+    const diyalog = await screen.findByRole("dialog");
+    expect(diyalog).toHaveTextContent(/tüm ürünler için Açık olacak/);
+    await u.click(within(diyalog).getByRole("button", { name: "Aç" }));
+    expect(within(diyalog).getByText("Neden zorunlu")).toBeInTheDocument();
+    expect(kayit.parametre).toHaveLength(0);
+    await u.type(within(diyalog).getByLabelText("Neden (zorunlu)"), "Stok kararı");
+    await u.click(within(diyalog).getByRole("button", { name: "Aç" }));
+    await waitFor(() => expect(kayit.parametre).toHaveLength(1));
+    expect(kayit.parametre[0]).toEqual({
+      anahtar: "satis_ortalama_maliyetten",
+      govde: { deger: "1", gecerlilik_basi: bugunIso(), neden: "Stok kararı", kapsam_tipi: "genel" },
+    });
+    expect(await screen.findByRole("status")).toHaveTextContent("satis_ortalama_maliyetten açıldı.");
   });
 });

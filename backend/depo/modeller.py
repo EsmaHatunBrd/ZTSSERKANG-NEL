@@ -116,6 +116,7 @@ class Urun(Base, Ortak):
     gecici_kod: Mapped[bool] = mapped_column(Boolean, default=False)   # True: ERP kodu yok, SAYFA-<ad> geçici kodu
     aile: Mapped[str | None] = mapped_column(String(120))   # ürün ailesi (aynı ürün, farklı ambalaj); boşsa addan türetilir (servisler/aile.py)
     aile_ad: Mapped[str | None] = mapped_column(String(120))   # elle yazılan görünen aile adı; boşsa addan türetilir (anahtar `aile` ile eşleşir)
+    marka: Mapped[str | None] = mapped_column(String(64))   # "Berrak" -> liste fiyatı uygulanır; NULL: bilinmiyor (açılışta addan türetilir), "": bilerek boş
 
 
 class UretimHedefi(Base, Ortak):
@@ -219,15 +220,31 @@ class SatisGecmisi(Base, Ortak):
 
 
 class ListeFiyati(Base, Ortak):
-    """Ürünün bir yıldaki liste fiyatı (TL, KDV hariç) ve isteğe bağlı o yılki birim maliyeti. ornek=True: gerçek veri gelene kadar
+    """Ürünün bir yıldaki, bir pazardaki (yurtici | yurtdisi) liste fiyatı (TL, KDV hariç) ve isteğe bağlı o yılki birim maliyeti. ornek=True: gerçek veri gelene kadar
     üretilmiş tahmini satır (ekranda etiketlenir, tek tıkla silinir)."""
     __tablename__ = "liste_fiyati"
-    __table_args__ = (UniqueConstraint("urun_id", "yil"),)
+    __table_args__ = (UniqueConstraint("urun_id", "yil", "pazar"),)
     urun_id: Mapped[int] = mapped_column(ForeignKey("urun.id"))
     yil: Mapped[int] = mapped_column(Integer)
+    pazar: Mapped[str] = mapped_column(String(8), default="yurtici", server_default="yurtici")   # yurtici | yurtdisi
     liste_fiyati: Mapped[Decimal] = mapped_column(ParaTipi)
     birim_maliyet: Mapped[Decimal | None] = mapped_column(ParaTipi)
+    bolen: Mapped[Decimal | None] = mapped_column(ParaTipi)   # kaydedildiği andaki pazar böleni (izlenebilirlik); eski kayıtlarda boş
     ornek: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
+
+class StokDevri(Base, Ortak):
+    """Fiyat çalışmasında ürünün geçen yıldan stokta kalan miktarı ve birim maliyeti (çalışmaya bağlı; çalışma kopyalanırken taşınmaz).
+    enflasyon ve uretim_adedi elle girilirse kullanılır; boşsa çalışmanın `enflasyon` parametresi / geçen yıl satış adedi - stok.
+    Değişiklikler DegisiklikKaydi'na (tablo="stok_devri") yazılır."""
+    __tablename__ = "stok_devri"
+    __table_args__ = (UniqueConstraint("urun_id", "senaryo_id"),)
+    urun_id: Mapped[int] = mapped_column(ForeignKey("urun.id"))
+    senaryo_id: Mapped[int] = mapped_column(ForeignKey("senaryo.id"))
+    adet: Mapped[Decimal] = mapped_column(ParaTipi)
+    birim_maliyet: Mapped[Decimal | None] = mapped_column(ParaTipi)   # TL; adet 0 iken boş olabilir
+    enflasyon: Mapped[Decimal | None] = mapped_column(ParaTipi)       # elle; 0,40 = %40
+    uretim_adedi: Mapped[Decimal | None] = mapped_column(ParaTipi)    # elle; bu yıl üretilecek adet
 
 
 class DegisiklikKaydi(Base, Ortak):

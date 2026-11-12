@@ -1,14 +1,15 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Banknote, CircleAlert, Percent, TrendingUp } from "lucide-react";
+import { Banknote, CircleAlert, Download, Percent, TrendingUp } from "lucide-react";
 import type { ApiHatasi } from "@/api/istemci";
-import { useHedefFiyat } from "@/api/sorgular/analiz";
+import { hedefFiyatXlsxAdresi, useHedefFiyat } from "@/api/sorgular/analiz";
 import type { HedefFiyatSatiri } from "@/api/tipler";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
+import { MaliyetHucresi } from "@/bilesenler/MaliyetHucresi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { ANALIZ_SEKMELERI, SayfaSekmeleri } from "@/bilesenler/SayfaSekmeleri";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
-import { Button } from "@/bilesenler/ui/button";
+import { Button, buttonVariants } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
 import { YuzdeHucresi } from "@/bilesenler/YuzdeHucresi";
@@ -113,7 +114,12 @@ export default function HedefFiyat() {
           );
         },
       },
-      { id: "maliyet", accessorFn: (r) => sayi(r.maliyet), header: "Maliyet", cell: (c) => <ParaHucresi deger={c.row.original.maliyet} /> },
+      {
+        id: "maliyet",
+        accessorFn: (r) => sayi(r.maliyet),
+        header: "Maliyet",
+        cell: (c) => <MaliyetHucresi deger={c.row.original.maliyet} kaynak={c.row.original.maliyet_kaynagi} />,
+      },
       {
         id: "gecen_yil_fiyat",
         accessorFn: (r) => sayi(r.gecen_yil_fiyat),
@@ -144,10 +150,16 @@ export default function HedefFiyat() {
         ),
       },
       {
-        id: "liste_fiyati",
-        accessorFn: (r) => sayi(r.liste_fiyati),
-        header: "Liste fiyatı",
-        cell: (c) => <ParaHucresi deger={c.row.original.liste_fiyati} />,
+        id: "liste_fiyati_yurtici",
+        accessorFn: (r) => sayi(r.liste_fiyati_yurtici),
+        header: "Liste fiyatı yurtiçi",
+        cell: (c) => <ParaHucresi deger={c.row.original.liste_fiyati_yurtici} />,
+      },
+      {
+        id: "liste_fiyati_yurtdisi",
+        accessorFn: (r) => sayi(r.liste_fiyati_yurtdisi),
+        header: "Liste fiyatı yurtdışı",
+        cell: (c) => <ParaHucresi deger={c.row.original.liste_fiyati_yurtdisi} />,
       },
       {
         id: "adet",
@@ -180,14 +192,28 @@ export default function HedefFiyat() {
   });
 
   const urunYolu = (kod: string) => `/urunler/${encodeURIComponent(kod)}${senaryoId === null ? "" : `?senaryo=${senaryoId}`}`;
-  const bolen = v ? paraBicimle(v.bolen, "", 2) : "…";
+  const bolenMetni = (x: string | undefined) => (x ? paraBicimle(x, "", 2) : "…");
+  const adim = v?.yuvarlama ? (D(v.yuvarlama).isInteger() ? D(v.yuvarlama).toFixed(0) : paraBicimle(v.yuvarlama, "", 2)) : "…";
+  const listeKurali = `liste fiyatı yalnız Berrak: yurtiçi ÷ ${bolenMetni(v?.bolen_yurtici)}, yurtdışı ÷ ${bolenMetni(v?.bolen_yurtdisi)}, en yakın ${adim} TL`;
 
   return (
     <section className="flex flex-col gap-5">
       <SayfaSekmeleri etiket="Analiz türü" sekmeler={ANALIZ_SEKMELERI} />
       <SayfaBasligi
         baslik="Marjı koruyan fiyat"
-        altBaslik={`Hedef fiyat = maliyet × (1 + hedef marj). Gereken zam, geçen yılın gerçek satış fiyatına göredir. Liste fiyatı = hedef fiyat ÷ ${bolen}. Hiçbir şey kaydedilmez.`}
+        altBaslik={`Hedef fiyat = maliyet × (1 + hedef marj). Gereken zam, geçen yılın gerçek satış fiyatına göredir. Hedef fiyattan ${listeKurali}. Hiçbir şey kaydedilmez.`}
+        eylemler={
+          senaryoId !== null && (
+            <a
+              href={hedefFiyatXlsxAdresi(senaryoId, uygulanan, seciliBolge, yalnizZam)}
+              download
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              <Download aria-hidden />
+              Excel'e indir
+            </a>
+          )
+        }
       />
 
       <form onSubmit={hesapla} aria-label="Hedef marj" className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
@@ -210,7 +236,7 @@ export default function HedefFiyat() {
         </Button>
         <span className="text-xs text-muted-foreground">
           Boş bırakırsanız Parametreler'deki marj eşiği kullanılır.
-          {v && ` Bölen: ${bolen}. Yıllık adet: ${v.adet_kaynagi === "satis_gecmisi" ? "geçen yılın satış adedi" : v.adet_kaynagi}.`}
+          {v && ` Yıllık adet: ${v.adet_kaynagi === "satis_gecmisi" ? "geçen yılın satış adedi" : v.adet_kaynagi}.`}
         </span>
         {gecersiz && (
           <p role="alert" className="w-full text-sm text-destructive">

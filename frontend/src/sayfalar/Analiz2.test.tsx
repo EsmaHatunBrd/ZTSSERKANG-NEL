@@ -68,6 +68,10 @@ describe("Kur riski", () => {
     await userEvent.type(kutu, "20");
     await userEvent.click(screen.getByRole("button", { name: "Hesapla" }));
     await waitFor(() => expect(oranlar.at(-1)).toBe("0.2"));
+    expect(screen.getByRole("link", { name: /Excel'e indir/ })).toHaveAttribute(
+      "href",
+      "/api/v1/disa-aktar/kur-riski.xlsx?senaryo=1&oran=0.2",
+    );
   });
 });
 
@@ -116,6 +120,8 @@ describe("Kârlılık haritası", () => {
     expect(screen.getByText("bölge yok")).toBeInTheDocument();
     expect(screen.getAllByText("geçen yıl").length).toBeGreaterThan(0);
     expect(screen.getByText(/1 ürünün yıllık adeti yok/)).toBeInTheDocument();
+    const indir = () => screen.getByRole("link", { name: /Excel'e indir/ });
+    expect(indir()).toHaveAttribute("href", "/api/v1/disa-aktar/karlilik.xlsx?senaryo=1");
 
     const bolgeler = screen.getByRole("group", { name: "Bölgeler" });
     await userEvent.click(within(bolgeler).getByRole("button", { name: /Fiyatı gözden geçir/ }));
@@ -124,8 +130,10 @@ describe("Kârlılık haritası", () => {
     expect(within(tablo).getByText("Zeytin Ezmesi")).toBeInTheDocument();
     expect(within(tablo).queryByText("Biber Turşusu")).not.toBeInTheDocument();
     expect(within(tablo).queryByText("Domates Salçası")).not.toBeInTheDocument();
+    expect(indir()).toHaveAttribute("href", "/api/v1/disa-aktar/karlilik.xlsx?senaryo=1&bolge=yuksek_adet_dusuk_marj");
 
     await userEvent.click(screen.getByRole("button", { name: /Süzmeyi kaldır/ }));
     expect(within(tablo).getByText("Biber Turşusu")).toBeInTheDocument();
+    expect(indir()).toHaveAttribute("href", "/api/v1/disa-aktar/karlilik.xlsx?senaryo=1");
   });
 });

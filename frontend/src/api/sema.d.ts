@@ -823,6 +823,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/disa-aktar/hedef-fiyat.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Hedef Fiyat Xlsx
+         * @description Marjı koruyan fiyat analizini Excel olarak indirir (bölge / yalnız zam gerekenler süzmesiyle). Özet sayfası süzmeden bağımsızdır.
+         */
+        get: operations["hedef_fiyat_xlsx_api_v1_disa_aktar_hedef_fiyat_xlsx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disa-aktar/karlilik.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Karlilik Xlsx
+         * @description Kârlılık haritasını Excel olarak indirir. Özet sayfası süzmeden bağımsızdır.
+         */
+        get: operations["karlilik_xlsx_api_v1_disa_aktar_karlilik_xlsx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disa-aktar/kur-riski.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kur Riski Xlsx
+         * @description Kur riski analizini Excel olarak indirir; Özet sayfasında para birimi kırılımı.
+         */
+        get: operations["kur_riski_xlsx_api_v1_disa_aktar_kur_riski_xlsx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/uretim-kapasitesi": {
         parameters: {
             query?: never;
@@ -1452,7 +1512,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Calisma */
+        /**
+         * Calisma
+         * @description Yalnız Berrak markalı ürünler. yeni_liste = satış ÷ pazar böleni, adıma en yakına yuvarlanmış (KDV hariç); yeni_liste_ham yuvarlamasız.
+         */
         get: operations["calisma_api_v1_liste_calismasi_get"];
         put?: never;
         post?: never;
@@ -1542,7 +1605,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Ornek Uret */
+        /**
+         * Ornek Uret
+         * @description Berrak ürünleri için iki pazarın (yurtiçi, yurtdışı) son 3 yılına tahmini liste fiyatı yazar.
+         */
         post: operations["ornek_uret_api_v1_liste_calismasi_ornek_post"];
         /** Ornek Sil */
         delete: operations["ornek_sil_api_v1_liste_calismasi_ornek_delete"];
@@ -2256,6 +2322,149 @@ export interface paths {
          * @description Kalemin dönem başı / alım / iade / üretim / sayım / şahit ve kart alanlarını değiştirir; neden zorunlu, günlüğe düşer.
          */
         patch: operations["kalem_guncelle_api_v1_smm_donemler__donem_id__stok__kod__patch"];
+        trace?: never;
+    };
+    "/api/v1/urunler/{kod}/stok-devri": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Getir
+         * @description Kayıt yoksa 200: alanlar null, stok_etkisi false. Kayıt varsa bu yılın maliyeti bugünkü canlı hesaptan gelir.
+         */
+        get: operations["getir_api_v1_urunler__kod__stok_devri_get"];
+        /** Kaydet */
+        put: operations["kaydet_api_v1_urunler__kod__stok_devri_put"];
+        post?: never;
+        /**
+         * Sil
+         * @description Kayıt yoksa da 204 (değişiklik kaydı açılmaz). Silinen değerler değişiklik günlüğünde kalır.
+         */
+        delete: operations["sil_api_v1_urunler__kod__stok_devri_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stok-devri": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listele
+         * @description Yalnız kaydı olan ürünler (ürün koduna göre). Bu yılın maliyeti tek hesap bağlamıyla canlı hesaplanır.
+         */
+        get: operations["listele_api_v1_stok_devri_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/stok-devri/sablon.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sablon */
+        get: operations["sablon_api_v1_aktarim_stok_devri_sablon_xlsx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/stok-devri/onizle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Onizle
+         * @description Sütun eşlemesi, yeni/değişen/aynı satırlar ve hatalı satırlar (atlanmaz, listelenir). Hiçbir şey yazılmaz.
+         */
+        post: operations["onizle_api_v1_aktarim_stok_devri_onizle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/stok-devri/uygula": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Uygula
+         * @description Hatalı satır varsa 422 (`alanlar.hatalar` = [{satir_no, mesaj}]) ve hiçbir satır yazılmaz. Kilitli çalışmaya yazılmaz (409).
+         */
+        post: operations["uygula_api_v1_aktarim_stok_devri_uygula_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analiz/fiyat-egilimi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fiyat Egilimi
+         * @description Her malzeme için pencere başı/sonu fiyatı, değişim %, yıllık %, eşik (TL: enflasyon parametresi; döviz: 0) ve aşıp aşmadığı.
+         *     Sıralama: aşanlar önce, sonra yıllık % azalan.
+         */
+        get: operations["fiyat_egilimi_api_v1_analiz_fiyat_egilimi_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/yonetim/ozet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Yonetim Ozeti
+         * @description Ürün/marj/maliyet yapısı/hedef altı/kur riski/teklif/veri kontrolü/en pahalı/stok etkisi/uyarılar. X-Onbellek: hesap | isabet.
+         */
+        get: operations["yonetim_ozeti_api_v1_yonetim_ozet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -3007,6 +3216,13 @@ export interface components {
             /** Neden */
             neden: string;
         };
+        /** Body_onizle_api_v1_aktarim_stok_devri_onizle_post */
+        Body_onizle_api_v1_aktarim_stok_devri_onizle_post: {
+            /** Dosya */
+            dosya: string;
+            /** Senaryo */
+            senaryo: number;
+        };
         /** Body_recete_onizle_api_v1_aktarim_recete_onizle_post */
         Body_recete_onizle_api_v1_aktarim_recete_onizle_post: {
             /** Dosya */
@@ -3072,6 +3288,15 @@ export interface components {
         };
         /** Body_uretim_uygula_api_v1_aktarim_uretim_adetleri_uygula_post */
         Body_uretim_uygula_api_v1_aktarim_uretim_adetleri_uygula_post: {
+            /** Dosya */
+            dosya: string;
+            /** Senaryo */
+            senaryo: number;
+            /** Neden */
+            neden: string;
+        };
+        /** Body_uygula_api_v1_aktarim_stok_devri_uygula_post */
+        Body_uygula_api_v1_aktarim_stok_devri_uygula_post: {
             /** Dosya */
             dosya: string;
             /** Senaryo */
@@ -3177,6 +3402,13 @@ export interface components {
             enflasyon_fark_yuzde?: string | null;
             /** Hedef Adet Maliyet Tl */
             hedef_adet_maliyet_tl?: string | null;
+            /** Ortalama Maliyet Tl */
+            ortalama_maliyet_tl?: string | null;
+            /**
+             * Stok Etkisi
+             * @default false
+             */
+            stok_etkisi: boolean;
         };
         /** DegisiklikKaydi */
         DegisiklikKaydi: {
@@ -3281,6 +3513,59 @@ export interface components {
             eski: string;
             /** Yeni */
             yeni: string;
+        };
+        /** FiyatEgilimiCikis */
+        FiyatEgilimiCikis: {
+            /** Senaryo Id */
+            senaryo_id: number;
+            /** Ay */
+            ay: number;
+            /** Tarih */
+            tarih: string;
+            /** Pencere Basi */
+            pencere_basi: string;
+            /** Enflasyon Yuzde */
+            enflasyon_yuzde: string | null;
+            /** Satirlar */
+            satirlar: components["schemas"]["FiyatEgilimiSatiri"][];
+            /** Asan Sayisi */
+            asan_sayisi: number;
+            /** Toplam */
+            toplam: number;
+        };
+        /**
+         * FiyatEgilimiSatiri
+         * @description Yüzdeler 2 basamak (ROUND_HALF_UP); degisim/yillik null: ilk fiyat 0 ya da ilk/son kaydın para birimi farklı.
+         */
+        FiyatEgilimiSatiri: {
+            /** Kod */
+            kod: string;
+            /** Ad */
+            ad: string;
+            /** Tip */
+            tip: string | null;
+            /** Para Birimi */
+            para_birimi: string;
+            /** Ilk Fiyat */
+            ilk_fiyat: string;
+            /** Ilk Tarih */
+            ilk_tarih: string;
+            /** Son Fiyat */
+            son_fiyat: string;
+            /** Son Tarih */
+            son_tarih: string;
+            /** Kayit Sayisi */
+            kayit_sayisi: number;
+            /** Degisim Yuzde */
+            degisim_yuzde: string | null;
+            /** Yillik Yuzde */
+            yillik_yuzde: string | null;
+            /** Esik Yuzde */
+            esik_yuzde: string;
+            /** Enflasyonu Asiyor */
+            enflasyonu_asiyor: boolean;
+            /** Kullanan Urun Sayisi */
+            kullanan_urun_sayisi: number;
         };
         /** FiyatEkleCikis */
         FiyatEkleCikis: {
@@ -3633,8 +3918,12 @@ export interface components {
         HedefFiyatCikis: {
             /** Marj */
             marj: string;
-            /** Bolen */
-            bolen: string;
+            /** Bolen Yurtici */
+            bolen_yurtici: string;
+            /** Bolen Yurtdisi */
+            bolen_yurtdisi: string;
+            /** Yuvarlama */
+            yuvarlama: string;
             /** Adet Kaynagi */
             adet_kaynagi: string;
             ozet: components["schemas"]["HedefFiyatOzeti"];
@@ -3662,6 +3951,8 @@ export interface components {
             kod: string;
             /** Ad */
             ad: string;
+            /** Marka */
+            marka: string | null;
             /** Aile */
             aile: string | null;
             /** Adet */
@@ -3678,14 +3969,18 @@ export interface components {
             hedef_fiyat: string | null;
             /** Gereken Zam */
             gereken_zam: string | null;
-            /** Liste Fiyati */
-            liste_fiyati: string | null;
+            /** Liste Fiyati Yurtici */
+            liste_fiyati_yurtici: string | null;
+            /** Liste Fiyati Yurtdisi */
+            liste_fiyati_yurtdisi: string | null;
             /** Yillik Ek Gelir */
             yillik_ek_gelir: string | null;
             /** Bolge */
             bolge: ("yuksek_adet_yuksek_marj" | "yuksek_adet_dusuk_marj" | "dusuk_adet_yuksek_marj" | "dusuk_adet_dusuk_marj") | null;
             /** Hata */
             hata: string | null;
+            /** Maliyet Kaynagi */
+            maliyet_kaynagi?: ("bu_yil" | "ortalama") | null;
         };
         /** HesapFiyatlari */
         HesapFiyatlari: {
@@ -3877,6 +4172,12 @@ export interface components {
             parametreler?: components["schemas"]["ParametreOzetiCikis"] | null;
             /** Notlar */
             notlar?: string[] | null;
+            stok_devri?: components["schemas"]["StokDevriCikis"] | null;
+            /**
+             * Satis Ortalamadan
+             * @default false
+             */
+            satis_ortalamadan: boolean;
         };
         /** HesaplaGiris */
         HesaplaGiris: {
@@ -4038,6 +4339,8 @@ export interface components {
             bolge: ("yuksek_adet_yuksek_marj" | "yuksek_adet_dusuk_marj" | "dusuk_adet_yuksek_marj" | "dusuk_adet_dusuk_marj") | null;
             /** Hata */
             hata: string | null;
+            /** Maliyet Kaynagi */
+            maliyet_kaynagi?: ("bu_yil" | "ortalama") | null;
         };
         /** KartFarki */
         KartFarki: {
@@ -4126,6 +4429,8 @@ export interface components {
             aktif: boolean;
             /** Gecici Kod */
             gecici_kod: boolean;
+            /** Marka */
+            marka?: string | null;
             uretim_hedefi?: components["schemas"]["UretimHedefiCikis"] | null;
             /** Senaryoda */
             senaryoda?: boolean | null;
@@ -4290,6 +4595,13 @@ export interface components {
              */
             elle_degerleri_kaldir: boolean;
         };
+        /** ListeBolenleri */
+        ListeBolenleri: {
+            /** Yurtici */
+            yurtici: string;
+            /** Yurtdisi */
+            yurtdisi: string;
+        };
         /** ListeCalismaOzeti */
         ListeCalismaOzeti: {
             /** Liste Artis Ort */
@@ -4319,6 +4631,8 @@ export interface components {
             maliyet_tl: string | null;
             /** Satis Tl */
             satis_tl: string | null;
+            /** Yeni Liste Ham */
+            yeni_liste_ham: string | null;
             /** Yeni Liste */
             yeni_liste: string | null;
             /** Onceki Yil */
@@ -4334,16 +4648,35 @@ export interface components {
             /** Gecmis */
             gecmis: components["schemas"]["ListeGecmisSatiri"][];
         };
-        /** ListeCalismasi */
+        /**
+         * ListeCalismasi
+         * @description Yalnız Berrak markalı ürünler; `pazar` için hesaplanır.
+         */
         ListeCalismasi: {
             /** Yil */
             yil: number;
+            /**
+             * Pazar
+             * @enum {string}
+             */
+            pazar: "yurtici" | "yurtdisi";
             /** Bolen */
             bolen: string;
+            bolenler: components["schemas"]["ListeBolenleri"];
             /** Bolen Kayitli */
             bolen_kayitli: boolean;
             /** Varsayilan Bolen */
             varsayilan_bolen: string;
+            /** Yuvarlama */
+            yuvarlama: string;
+            /** Yuvarlama Kayitli */
+            yuvarlama_kayitli: boolean;
+            /** Varsayilan Yuvarlama */
+            varsayilan_yuvarlama: string;
+            /** Yuvarlama Secenekleri */
+            yuvarlama_secenekleri: string[];
+            /** Berrak Disi */
+            berrak_disi: number;
             /** Ornek Var */
             ornek_var: boolean;
             ozet: components["schemas"]["ListeCalismaOzeti"];
@@ -4358,10 +4691,17 @@ export interface components {
             urun_kodu: string;
             /** Yil */
             yil: number;
+            /**
+             * Pazar
+             * @enum {string}
+             */
+            pazar: "yurtici" | "yurtdisi";
             /** Liste Fiyati */
             liste_fiyati: string;
             /** Birim Maliyet */
             birim_maliyet: string | null;
+            /** Bolen */
+            bolen: string | null;
             /** Ornek */
             ornek: boolean;
         };
@@ -4371,19 +4711,34 @@ export interface components {
             urun_kodu: string;
             /** Yil */
             yil: number;
+            /**
+             * Pazar
+             * @default yurtici
+             * @enum {string}
+             */
+            pazar: "yurtici" | "yurtdisi";
             /** Liste Fiyati */
             liste_fiyati: number | string;
             /** Birim Maliyet */
             birim_maliyet?: number | string | null;
+            /** Bolen */
+            bolen?: number | string | null;
         };
         /** ListeGecmisSatiri */
         ListeGecmisSatiri: {
             /** Yil */
             yil: number;
+            /**
+             * Pazar
+             * @enum {string}
+             */
+            pazar: "yurtici" | "yurtdisi";
             /** Liste Fiyati */
             liste_fiyati: string;
             /** Birim Maliyet */
             birim_maliyet: string | null;
+            /** Bolen */
+            bolen: string | null;
             /** Ornek */
             ornek: boolean;
         };
@@ -6289,6 +6644,154 @@ export interface components {
             /** Ana Ad */
             ana_ad?: string | null;
         };
+        /** StokDevriAktarimHatasi */
+        StokDevriAktarimHatasi: {
+            /** Satir No */
+            satir_no: number;
+            /** Mesaj */
+            mesaj: string;
+        };
+        /** StokDevriAktarimSatiri */
+        StokDevriAktarimSatiri: {
+            /** Satir No */
+            satir_no: number;
+            /** Urun Kodu */
+            urun_kodu: string;
+            /** Ad */
+            ad: string | null;
+            /** Adet */
+            adet: string | null;
+            /** Birim Maliyet */
+            birim_maliyet: string | null;
+            /** Enflasyon */
+            enflasyon: string | null;
+            /** Uretim Adedi */
+            uretim_adedi: string | null;
+            /**
+             * Durum
+             * @enum {string}
+             */
+            durum: "yeni" | "degisen" | "ayni";
+            /** Eski */
+            eski?: {
+                [key: string]: string | null;
+            } | null;
+        };
+        /**
+         * StokDevriCikis
+         * @description Ürünün stokta kalan (geçen yıldan devreden) bilgisi ve ortalama maliyet. İlk dört alan elle girilenler (kayıt yoksa null);
+         *     `_kullanilan` alanlar hesapta kullanılan değerler. Oranlar 0,40 = %40; tutarlar TL.
+         */
+        StokDevriCikis: {
+            /** Urun Kodu */
+            urun_kodu: string;
+            /** Adet */
+            adet: string | null;
+            /** Birim Maliyet */
+            birim_maliyet: string | null;
+            /** Enflasyon */
+            enflasyon: string | null;
+            /** Uretim Adedi */
+            uretim_adedi: string | null;
+            /** Enflasyon Kullanilan */
+            enflasyon_kullanilan: string | null;
+            /** Uretim Adedi Kullanilan */
+            uretim_adedi_kullanilan: string | null;
+            /** Uretim Adedi Kaynagi */
+            uretim_adedi_kaynagi: ("elle" | "satis_gecmisi") | null;
+            /** Guncel Stok Maliyeti */
+            guncel_stok_maliyeti: string | null;
+            /** Bu Yil Maliyet */
+            bu_yil_maliyet: string | null;
+            /** Ortalama Maliyet */
+            ortalama_maliyet: string | null;
+            /** Stok Payi */
+            stok_payi: string | null;
+            /** Stok Etkisi */
+            stok_etkisi: boolean;
+            /** Aciklama */
+            aciklama: string | null;
+        };
+        /**
+         * StokDevriGiris
+         * @description PUT /urunler/{kod}/stok-devri gövdesi. Sayılar metin ya da sayı; oranlar 0,40 = %40.
+         */
+        StokDevriGiris: {
+            /** Adet */
+            adet: number | string;
+            /** Birim Maliyet */
+            birim_maliyet?: number | string | null;
+            /** Enflasyon */
+            enflasyon?: number | string | null;
+            /** Uretim Adedi */
+            uretim_adedi?: number | string | null;
+            /** Neden */
+            neden: string;
+        };
+        /** StokDevriListesi */
+        StokDevriListesi: {
+            /** Kayitlar */
+            kayitlar: components["schemas"]["StokDevriSatiri"][];
+        };
+        /** StokDevriOnizle */
+        StokDevriOnizle: {
+            /** Sutunlar */
+            sutunlar: {
+                [key: string]: string | null;
+            };
+            /** Satirlar */
+            satirlar: components["schemas"]["StokDevriAktarimSatiri"][];
+            /** Hatalar */
+            hatalar: components["schemas"]["StokDevriAktarimHatasi"][];
+            /** Yeni */
+            yeni: number;
+            /** Degisen */
+            degisen: number;
+            /** Ayni */
+            ayni: number;
+        };
+        /** StokDevriSatiri */
+        StokDevriSatiri: {
+            /** Urun Kodu */
+            urun_kodu: string;
+            /** Adet */
+            adet: string | null;
+            /** Birim Maliyet */
+            birim_maliyet: string | null;
+            /** Enflasyon */
+            enflasyon: string | null;
+            /** Uretim Adedi */
+            uretim_adedi: string | null;
+            /** Enflasyon Kullanilan */
+            enflasyon_kullanilan: string | null;
+            /** Uretim Adedi Kullanilan */
+            uretim_adedi_kullanilan: string | null;
+            /** Uretim Adedi Kaynagi */
+            uretim_adedi_kaynagi: ("elle" | "satis_gecmisi") | null;
+            /** Guncel Stok Maliyeti */
+            guncel_stok_maliyeti: string | null;
+            /** Bu Yil Maliyet */
+            bu_yil_maliyet: string | null;
+            /** Ortalama Maliyet */
+            ortalama_maliyet: string | null;
+            /** Stok Payi */
+            stok_payi: string | null;
+            /** Stok Etkisi */
+            stok_etkisi: boolean;
+            /** Aciklama */
+            aciklama: string | null;
+            /** Ad */
+            ad: string;
+        };
+        /** StokDevriUygula */
+        StokDevriUygula: {
+            /** Eklenen */
+            eklenen: number;
+            /** Guncellenen */
+            guncellenen: number;
+            /** Ayni */
+            ayni: number;
+        };
         /** TeklifCikis */
         TeklifCikis: {
             /** Id */
@@ -6626,6 +7129,8 @@ export interface components {
             aktif: boolean;
             /** Gecici Kod */
             gecici_kod: boolean;
+            /** Marka */
+            marka?: string | null;
             uretim_hedefi?: components["schemas"]["UretimHedefiCikis"] | null;
             /** Senaryoda */
             senaryoda?: boolean | null;
@@ -6654,6 +7159,8 @@ export interface components {
              * @enum {string}
              */
             pazar: "Yurtiçi" | "Yurtdışı";
+            /** Marka */
+            marka?: string | null;
         };
         /** UrunKarsilastirmaCikis */
         UrunKarsilastirmaCikis: {
@@ -6756,6 +7263,245 @@ export interface components {
             eski: string;
             /** Yeni */
             yeni: string;
+        };
+        /** YonetimAcikTeklif */
+        YonetimAcikTeklif: {
+            /** Teklif Id */
+            teklif_id: number;
+            /** Urun Kodu */
+            urun_kodu: string;
+            /** Urun Ad */
+            urun_ad: string;
+            /** Musteri */
+            musteri: string | null;
+            /** Durum */
+            durum: string;
+            /** Tur No */
+            tur_no: number;
+            /** Tarih */
+            tarih: string | null;
+            /** Hesap Tarihi */
+            hesap_tarihi: string;
+            /** Fiyat Tl */
+            fiyat_tl: string;
+        };
+        /** YonetimBaslik */
+        YonetimBaslik: {
+            /** Senaryo Id */
+            senaryo_id: number;
+            /** Sezon Ad */
+            sezon_ad: string;
+            /** Ad */
+            ad: string;
+            /** Tur */
+            tur: string;
+            /** Kilitli */
+            kilitli: boolean;
+            /** Hesap Tarihi */
+            hesap_tarihi: string;
+            /** Uretim Zamani */
+            uretim_zamani: string;
+        };
+        /** YonetimHedefAlti */
+        YonetimHedefAlti: {
+            /** Esik */
+            esik: string;
+            /** Toplam */
+            toplam: number;
+            /** Kayitlar */
+            kayitlar: components["schemas"]["YonetimHedefAltiSatiri"][];
+        };
+        /** YonetimHedefAltiSatiri */
+        YonetimHedefAltiSatiri: {
+            /** Kod */
+            kod: string;
+            /** Ad */
+            ad: string;
+            /** Kar Orani */
+            kar_orani: string;
+            /** Maliyet */
+            maliyet: string | null;
+            /** Satis */
+            satis: string | null;
+        };
+        /** YonetimKontrolSorunu */
+        YonetimKontrolSorunu: {
+            /** Kod */
+            kod: string;
+            /** Baslik */
+            baslik: string;
+            /** Durum */
+            durum: string;
+            /** Sayi */
+            sayi: number;
+        };
+        /** YonetimKurRiski */
+        YonetimKurRiski: {
+            /** Oran */
+            oran: string;
+            /** Kurlar */
+            kurlar: {
+                [key: string]: string;
+            };
+            /** Doviz Payi Yuzde */
+            doviz_payi_yuzde: string | null;
+            /** Yillik Etki Tl */
+            yillik_etki_tl: string;
+            /** Yillik Maliyet Tl */
+            yillik_maliyet_tl: string;
+            /** Adetsiz Urun */
+            adetsiz_urun: number;
+            /** Hatali */
+            hatali: number;
+            /** En Riskli */
+            en_riskli: components["schemas"]["YonetimKurRiskiSatiri"][];
+        };
+        /** YonetimKurRiskiSatiri */
+        YonetimKurRiskiSatiri: {
+            /** Kod */
+            kod: string;
+            /** Ad */
+            ad: string;
+            /** Maliyet */
+            maliyet: string | null;
+            /** Birim Etki */
+            birim_etki: string | null;
+            /** Yillik Etki */
+            yillik_etki: string | null;
+            /** Doviz Payi Yuzde */
+            doviz_payi_yuzde: string | null;
+        };
+        /** YonetimMaliyetKalemi */
+        YonetimMaliyetKalemi: {
+            /** Toplam Tl */
+            toplam_tl: string;
+            /** Pay Yuzde */
+            pay_yuzde: string | null;
+            /** Urun Basina Tl */
+            urun_basina_tl: string | null;
+        };
+        /**
+         * YonetimMaliyetYapisi
+         * @description Hesaplanan ürünlerin birim maliyet toplamı ve kalem payları (malzeme / uretim / faaliyet / finansman; toplamı %100).
+         */
+        YonetimMaliyetYapisi: {
+            /** Urun Sayisi */
+            urun_sayisi: number;
+            /** Toplam Tl */
+            toplam_tl: string;
+            /** Urun Basina Tl */
+            urun_basina_tl: string | null;
+            /** Kalemler */
+            kalemler: {
+                [key: string]: components["schemas"]["YonetimMaliyetKalemi"];
+            };
+        };
+        /**
+         * YonetimMarj
+         * @description Oranlar 0,20 = %20. agirlikli_ortalama: geçen yıl satış adediyle ağırlıklı (adedi bilinen ürün yoksa null).
+         */
+        YonetimMarj: {
+            /** Ortalama */
+            ortalama: string | null;
+            /** Agirlikli Ortalama */
+            agirlikli_ortalama: string | null;
+            /** Adetli Urun */
+            adetli_urun: number;
+            /** Hedef */
+            hedef: string | null;
+            /** Marj Esigi */
+            marj_esigi: string;
+            /** Adet Kaynagi */
+            adet_kaynagi: string;
+        };
+        /** YonetimOzetiCikis */
+        YonetimOzetiCikis: {
+            baslik: components["schemas"]["YonetimBaslik"];
+            urunler: components["schemas"]["YonetimUrunSayilari"];
+            marj: components["schemas"]["YonetimMarj"];
+            maliyet_yapisi: components["schemas"]["YonetimMaliyetYapisi"];
+            hedef_alti: components["schemas"]["YonetimHedefAlti"];
+            kur_riski: components["schemas"]["YonetimKurRiski"];
+            teklifler: components["schemas"]["YonetimTeklifler"];
+            veri_kontrolu: components["schemas"]["YonetimVeriKontrolu"];
+            /** En Pahali */
+            en_pahali: components["schemas"]["YonetimPahaliSatiri"][];
+            stok_etkisi?: components["schemas"]["YonetimStokEtkisi"] | null;
+            /** Uyarilar */
+            uyarilar: components["schemas"]["YonetimUyari"][];
+        };
+        /** YonetimPahaliSatiri */
+        YonetimPahaliSatiri: {
+            /** Kod */
+            kod: string;
+            /** Ad */
+            ad: string;
+            /** Maliyet */
+            maliyet: string;
+            /** Satis */
+            satis: string;
+        };
+        /**
+         * YonetimStokEtkisi
+         * @description Stok devri kaydı olan çalışmada; toplam_etki_tl = Σ stok adedi x (güncel stok maliyeti - bu yılın maliyeti).
+         */
+        YonetimStokEtkisi: {
+            /** Kayit Sayisi */
+            kayit_sayisi: number;
+            /** Etkili Urun */
+            etkili_urun: number;
+            /** Stok Adedi */
+            stok_adedi: string;
+            /** Toplam Etki Tl */
+            toplam_etki_tl: string;
+            /** Satis Ortalama Maliyetten */
+            satis_ortalama_maliyetten: boolean;
+        };
+        /** YonetimTeklifler */
+        YonetimTeklifler: {
+            /** Toplam */
+            toplam: number;
+            /** Durumlar */
+            durumlar: {
+                [key: string]: number;
+            };
+            /** Acik Sayi */
+            acik_sayi: number;
+            /** Acik Toplam Tl */
+            acik_toplam_tl: string;
+            /** En Eski Acik */
+            en_eski_acik: components["schemas"]["YonetimAcikTeklif"][];
+        };
+        /** YonetimUrunSayilari */
+        YonetimUrunSayilari: {
+            /** Toplam */
+            toplam: number;
+            /** Hesaplanan */
+            hesaplanan: number;
+            /** Hatali */
+            hatali: number;
+        };
+        /** YonetimUyari */
+        YonetimUyari: {
+            /** Kod */
+            kod: string;
+            /** Ad */
+            ad: string;
+            /** Mesaj */
+            mesaj: string;
+        };
+        /** YonetimVeriKontrolu */
+        YonetimVeriKontrolu: {
+            /** Hata */
+            hata: number;
+            /** Dikkat */
+            dikkat: number;
+            /** Bilgi */
+            bilgi: number;
+            /** Tamam */
+            tamam: number;
+            /** Sorunlar */
+            sorunlar: components["schemas"]["YonetimKontrolSorunu"][];
         };
         /** ZamEtkisiCikis */
         ZamEtkisiCikis: {
@@ -9525,6 +10271,139 @@ export interface operations {
             };
         };
     };
+    hedef_fiyat_xlsx_api_v1_disa_aktar_hedef_fiyat_xlsx_get: {
+        parameters: {
+            query: {
+                /** @description Hedef marj (0.15 = %15); boşsa marj eşiği */
+                marj?: number | string | null;
+                /** @description Yalnız bu kârlılık bölgesi */
+                bolge?: ("yuksek_adet_yuksek_marj" | "yuksek_adet_dusuk_marj" | "dusuk_adet_yuksek_marj" | "dusuk_adet_dusuk_marj") | null;
+                /** @description Yalnız gereken zamı > 0 olanlar */
+                yalniz_zam?: boolean;
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excel dosyası (.xlsx) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    karlilik_xlsx_api_v1_disa_aktar_karlilik_xlsx_get: {
+        parameters: {
+            query: {
+                /** @description Yalnız bu kârlılık bölgesi */
+                bolge?: ("yuksek_adet_yuksek_marj" | "yuksek_adet_dusuk_marj" | "dusuk_adet_yuksek_marj" | "dusuk_adet_dusuk_marj") | null;
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excel dosyası (.xlsx) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    kur_riski_xlsx_api_v1_disa_aktar_kur_riski_xlsx_get: {
+        parameters: {
+            query: {
+                /** @description Kurlardaki artış (0.1 = %10) */
+                oran?: number | string;
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excel dosyası (.xlsx) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
     listele_api_v1_uretim_kapasitesi_get: {
         parameters: {
             query: {
@@ -11219,8 +12098,12 @@ export interface operations {
     calisma_api_v1_liste_calismasi_get: {
         parameters: {
             query: {
-                /** @description Kaydetmeden denemek için bölen */
+                /** @description yurtici | yurtdisi */
+                pazar?: "yurtici" | "yurtdisi";
+                /** @description Kaydetmeden denemek için bölen (seçili pazar) */
                 bolen?: number | string | null;
+                /** @description Kaydetmeden denemek için yuvarlama adımı (TL) */
+                yuvarlama?: number | string | null;
                 senaryo: number;
             };
             header?: never;
@@ -11260,7 +12143,10 @@ export interface operations {
     };
     kaydet_api_v1_liste_fiyatlari_put: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Bölen girilmezse bu senaryonun bugünkü geçerli böleni yazılır (yoksa varsayılan) */
+                senaryo?: number | null;
+            };
             header?: {
                 "x-kullanici"?: string | null;
             };
@@ -11304,7 +12190,9 @@ export interface operations {
     };
     sil_api_v1_liste_fiyatlari__urun_kodu___yil__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                pazar?: "yurtici" | "yurtdisi";
+            };
             header?: {
                 "x-kullanici"?: string | null;
             };
@@ -11345,7 +12233,10 @@ export interface operations {
     };
     yukle_api_v1_liste_fiyatlari_yukle_post: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Satırlara bu senaryonun bugünkü geçerli bölenleri yazılır (yoksa varsayılan) */
+                senaryo?: number | null;
+            };
             header?: {
                 "x-kullanici"?: string | null;
             };
@@ -13371,6 +14262,401 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    getir_api_v1_urunler__kod__stok_devri_get: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: never;
+            path: {
+                kod: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StokDevriCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    kaydet_api_v1_urunler__kod__stok_devri_put: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path: {
+                kod: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StokDevriGiris"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StokDevriCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    sil_api_v1_urunler__kod__stok_devri_delete: {
+        parameters: {
+            query: {
+                neden: string;
+                senaryo: number;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path: {
+                kod: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    listele_api_v1_stok_devri_get: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StokDevriListesi"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    sablon_api_v1_aktarim_stok_devri_sablon_xlsx_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Yükleme şablonu (.xlsx) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+        };
+    };
+    onizle_api_v1_aktarim_stok_devri_onizle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_onizle_api_v1_aktarim_stok_devri_onizle_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StokDevriOnizle"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    uygula_api_v1_aktarim_stok_devri_uygula_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_uygula_api_v1_aktarim_stok_devri_uygula_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StokDevriUygula"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    fiyat_egilimi_api_v1_analiz_fiyat_egilimi_get: {
+        parameters: {
+            query: {
+                /** @description Pencere uzunluğu (ay) */
+                ay?: number;
+                /** @description 1: yalnız enflasyonu aşan malzemeler */
+                yalniz_asan?: boolean;
+                /** @description Pencere sonu; boşsa bugün */
+                tarih?: string | null;
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiyatEgilimiCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    yonetim_ozeti_api_v1_yonetim_ozet_get: {
+        parameters: {
+            query: {
+                tarih?: string | null;
+                yenile?: boolean;
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YonetimOzetiCikis"];
                 };
             };
             /** @description Not Found */

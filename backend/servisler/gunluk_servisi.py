@@ -26,7 +26,7 @@ _TABLO_TUR = {"urun": "urun", "uretim_hedefi": "hedef", "gider_havuzu": "havuz",
 _TABLO_ETIKET = {"urun": "Ürün kartı", "uretim_hedefi": "Üretim hedefi", "gider_havuzu": "Gider havuzu", "ambalaj_sinifi": "Ambalaj sınıfları",
                  "uretim_kapasitesi": "Üretim kapasitesi", "satis_gecmisi": "Satış geçmişi", "malzeme": "Malzeme kartı", "recete": "Reçete",
                  "senaryo": "Senaryo", "teklif": "Teklif turu", "liste_fiyati": "Liste fiyatı", "smm_donem": "SMM dönemi",
-                 "smm_recete": "SMM reçeteleri"}
+                 "smm_recete": "SMM reçeteleri", "stok_devri": "Stokta kalan"}
 _ISLEM_ETIKET = {"guncelle": "güncellendi", "olustur": "oluşturuldu", "ekle": "eklendi", "sil": "silindi", "pasiflestir": "pasifleştirildi",
                  "aile_degistir": "ailesi değişti", "kod_degistir": "kodu değişti", "toplu_yukle": "toplu yüklendi", "etkinlestir": "sürümü etkinleştirildi",
                  "kilitle": "kilitlendi", "kilit_ac": "kilidi açıldı", "kopyala": "kopyalanarak oluşturuldu",
@@ -195,6 +195,10 @@ def _degisiklik_satirlari(s: Session, senaryo: int | None, urunler: dict[int, m.
         elif t == "liste_fiyati":
             veri = k.yeni if isinstance(k.yeni, dict) else k.eski
             urun_kodu = veri.get("urun_kodu") if isinstance(veri, dict) else None
+        elif t == "stok_devri":   # ürün ve çalışma içerikte saklıdır (silinen kayıtta da)
+            veri = k.yeni if isinstance(k.yeni, dict) and "urun_kodu" in k.yeni else k.eski
+            if isinstance(veri, dict):
+                urun_kodu, sen_id = veri.get("urun_kodu"), veri.get("senaryo_id")
         elif t == "teklif" and isinstance(k.eski, dict):   # silinmiş tur: ürün ve senaryo içerikte saklıdır
             urun_kodu, sen_id = k.eski.get("urun_kodu"), k.eski.get("senaryo_id")
         if senaryo is not None and sen_id is not None and sen_id != senaryo:

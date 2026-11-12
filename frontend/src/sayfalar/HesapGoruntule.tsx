@@ -1,7 +1,9 @@
 import { Link, useParams } from "react-router-dom";
+import { Printer } from "lucide-react";
 import { hataMetni } from "@/api/istemci";
 import { useHesap } from "@/api/sorgular/hesaplar";
 import { Badge } from "@/bilesenler/ui/badge";
+import { Button } from "@/bilesenler/ui/button";
 import { goster } from "@/yardimcilar/tarih";
 import { GiderKalemleri } from "./urun/GiderKalemleri";
 import { ReceteTablosu } from "./urun/ReceteTablosu";
@@ -23,7 +25,9 @@ export default function HesapGoruntule() {
     return (
       <section className="p-4">
         <SayfaBasligi baslik="Kayıtlı hesap" />
-        <p role="alert" className="mt-2 text-destructive">Geçersiz hesap numarası</p>
+        <p role="alert" className="mt-2 text-destructive">
+          Geçersiz hesap numarası
+        </p>
       </section>
     );
   }
@@ -51,9 +55,17 @@ export default function HesapGoruntule() {
   const urunBaglantisi = `/urunler/${encodeURIComponent(g.urun_kodu)}?senaryo=${h.senaryo_id}`;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-yazdir="" className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <SayfaBasligi baslik={`Kayıtlı hesap #${h.id} · ${goster(h.hesap_tarihi)} · ${h.olusturan}`} />
+        <SayfaBasligi
+          baslik={`Kayıtlı hesap #${h.id} · ${goster(h.hesap_tarihi)} · ${h.olusturan}`}
+          eylemler={
+            <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer aria-hidden />
+              Yazdır
+            </Button>
+          }
+        />
         <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <Badge variant="outline">{g.urun_kodu}</Badge>
           <span>Bu hesap kaydedildiği andaki değerleri gösterir; salt okunurdur.</span>
@@ -64,7 +76,10 @@ export default function HesapGoruntule() {
       </header>
 
       {g.uyarilar.length > 0 && (
-        <ul aria-label="Hesap uyarıları" className="flex flex-col gap-1 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-200">
+        <ul
+          aria-label="Hesap uyarıları"
+          className="flex flex-col gap-1 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-200"
+        >
           {g.uyarilar.map((u) => (
             <li key={u}>{u}</li>
           ))}
@@ -72,7 +87,10 @@ export default function HesapGoruntule() {
       )}
 
       {degisiklikler.length > 0 && (
-        <section aria-label="Kayıt anındaki değişiklikler" className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+        <section
+          aria-label="Kayıt anındaki değişiklikler"
+          className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm"
+        >
           <h2 className="font-medium">Kayıt anındaki değişiklikler</h2>
           <p className="text-xs text-muted-foreground">Bu hesap, aşağıdaki değerlerle (kalıcı olarak yazılmadan) hesaplanmıştır.</p>
           <ul className="flex flex-col gap-1">
@@ -101,12 +119,7 @@ export default function HesapGoruntule() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <GiderKalemleri
-          satirlar={g.satirlar}
-          toplamlar={g.toplamlar}
-          parametreler={g.kullanilan_parametreler}
-          uretim={g.uretim}
-        />
+        <GiderKalemleri satirlar={g.satirlar} toplamlar={g.toplamlar} parametreler={g.kullanilan_parametreler} uretim={g.uretim} />
         <ToplamlarKarti
           toplamlar={g.toplamlar}
           toplamlarFiresiz={g.toplamlar_firesiz ?? null}

@@ -295,6 +295,14 @@ def _medyan(xs: list[Decimal]) -> Decimal | None:
     return xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2
 
 
+def analiz_maliyeti(c) -> tuple[Decimal, str]:
+    """(maliyet, kaynak): `satis_ortalama_maliyetten` = 1 ve stokta kalan etkisi varsa ortalama maliyet ("ortalama"), yoksa bu yılın
+    finansman dahil maliyeti ("bu_yil"). Karar hesap_servisi.hesapla'da verilir (HesapCiktisi.satis_ortalamadan)."""
+    if c.satis_ortalamadan and c.stok_devri and c.stok_devri.get("ortalama_maliyet") is not None:
+        return c.stok_devri["ortalama_maliyet"], "ortalama"
+    return c.sonuc.finansman_dahil_maliyet_tl, "bu_yil"
+
+
 def _karlilik_satirlari(s: Session, sen: m.Senaryo, t: date) -> tuple[list[dict], Decimal, Decimal | None]:
     """Kârlılık satırları (Decimal, sıralanmamış, bölgeleri dolu), marj eşiği ve adet eşiği (medyan). Satırlarda iç alanlar
     `_gecen_yil_fiyat` (geçen yıl adet ağırlıklı TL fiyat; yoksa None) ve `_hesap_fiyati` (çalışmanın satış fiyatı) da vardır."""
@@ -310,15 +318,16 @@ def _karlilik_satirlari(s: Session, sen: m.Senaryo, t: date) -> tuple[list[dict]
         u = urunler[kod]
         adet = adetler.get(kod)
         r = {"kod": kod, "ad": u.ad, "aile": u.aile or aile_servisi.aile_turet(u.ad), "adet": adet, "maliyet": None, "satis_fiyati": None,
-             "marj": None, "fiyat_kaynagi": None, "yillik_kar": None, "bolge": None, "hata": None, "_gecen_yil_fiyat": None, "_hesap_fiyati": None}
+             "marj": None, "fiyat_kaynagi": None, "yillik_kar": None, "bolge": None, "hata": None, "maliyet_kaynagi": None,
+             "_gecen_yil_fiyat": None, "_hesap_fiyati": None}
         if isinstance(c, Exception):
             r["hata"] = str(getattr(c, "mesaj", None) or c)
             satirlar.append(r)
             continue
-        maliyet = c.sonuc.finansman_dahil_maliyet_tl
+        maliyet, maliyet_kaynagi = analiz_maliyeti(c)
         gy = _gecen_yil_tl_fiyat(gecen.get(u.id), kurlar)
         satis, kaynak = (gy, "satis_gecmisi") if gy is not None else (c.sonuc.satis_fiyati_tl, "hesap")
-        r.update(maliyet=maliyet, satis_fiyati=satis, fiyat_kaynagi=kaynak, marj=(satis / maliyet - 1) if maliyet else None,
+        r.update(maliyet=maliyet, maliyet_kaynagi=maliyet_kaynagi, satis_fiyati=satis, fiyat_kaynagi=kaynak, marj=(satis / maliyet - 1) if maliyet else None,
                  yillik_kar=(satis - maliyet) * adet if adet is not None else None, _gecen_yil_fiyat=gy, _hesap_fiyati=c.sonuc.satis_fiyati_tl)
         satirlar.append(r)
     esik_adet = _medyan([r["adet"] for r in satirlar if r["adet"] is not None and r["hata"] is None])
@@ -333,7 +342,8 @@ def _ic_alanlari_at(r: dict) -> dict:
 
 
 def karlilik(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
-    """Kârlılık haritası (adet x marj). Maliyet = finansman dahil maliyet; satış fiyatı = geçen yıl satış geçmişindeki adet ağırlıklı TL fiyat
+    """Kârlılık haritası (adet x marj). Maliyet = finansman dahil maliyet (`satis_ortalama_maliyetten` = 1 ve stokta kalan varsa ortalama
+    maliyet; `maliyet_kaynagi`); satış fiyatı = geçen yıl satış geçmişindeki adet ağırlıklı TL fiyat
     (varsa; `fiyat_kaynagi` "satis_gecmisi"), yoksa çalışmanın hesapladığı satış fiyatı ("hesap"). marj = satış / maliyet - 1;
     adet = geçen yıl satış adedi; yıllık kâr = (satış - maliyet) x adet. Bölge: marj >= `marj_esigi` (vars. 0,10) yüksek marj,
     adet >= adet bilinen ürünlerin medyanı yüksek adet; adet ya da marj yoksa bölge null."""
@@ -352,25 +362,35 @@ def karlilik(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
 
 # ---------------------------------------------------------------- Marjı koruyan fiyat
 def hedef_fiyat(s: Session, senaryo_id: int, marj: Decimal | None = None, tarih: date | None = None) -> dict:
-    """Marjı koruyan fiyat: her ürün için hedef fiyat = maliyet x (1 + marj) (marj boşsa `marj_esigi`). Geçen yıl fiyatı (satış geçmişi,
+    """Marjı koruyan fiyat: her ürün için hedef fiyat = maliyet x (1 + marj) (marj boşsa `marj_esigi`). Maliyet kârlılıkla aynı
+    (`analiz_maliyeti`: ortalama ya da bu yıl; `maliyet_kaynagi`). Geçen yıl fiyatı (satış geçmişi,
     adet ağırlıklı TL) ile kıyas: mevcut marj = geçen / maliyet - 1, gereken zam = hedef / geçen - 1, yıllık ek gelir = (hedef - geçen) x adet
-    (negatif olabilir). Liste fiyatı = hedef / liste böleni (vars. 0,63). Geçen yıl fiyatı yoksa kıyas alanları null, ürün `fiyatsiz` sayılır.
+    (negatif olabilir). Liste fiyatları YALNIZ Berrak markalı ürünlerde: yurtiçi = hedef ÷ yurtiçi bölen (vars. 0,63), yurtdışı = hedef ÷
+    yurtdışı bölen (vars. 0,90), ikisi de `liste_yuvarlama` adımına en yakına yuvarlanır (KDV hariç); Berrak değilse null.
+    Geçen yıl fiyatı yoksa kıyas alanları null, ürün `fiyatsiz` sayılır.
     Sıralama: zam gerekenler yıllık ek gelir azalan (null sonda), sonra gereken zam azalan, sonra kod."""
     from . import liste_servisi   # yerel içe aktarma: döngüsel bağımlılık olmasın
+    from .liste_kurallari import berrak_mi, liste_fiyati
     sen = hs.senaryo_getir(s, senaryo_id)
     t = tarih or date.today()
     marj = marj_esigi(s, sen.id) if marj is None else _oran_dogrula("marj", marj)
-    bolen, _ = liste_servisi.bolen_gecerli(s, sen.id, t)
+    bolenler = liste_servisi.bolenler_gecerli(s, sen.id, t)
+    adim, _ = liste_servisi.yuvarlama_gecerli(s, sen.id, t)
     kaynak, _, _ = _karlilik_satirlari(s, sen, t)
+    markalar = dict(s.execute(select(m.Urun.kod, m.Urun.marka).where(m.Urun.kod.in_([k["kod"] for k in kaynak]))).all()) if kaynak else {}
     satirlar = []
     for k in kaynak:
-        r = {"kod": k["kod"], "ad": k["ad"], "aile": k["aile"], "adet": k["adet"], "maliyet": None, "hesap_fiyati": None, "gecen_yil_fiyat": None,
-             "mevcut_marj": None, "hedef_fiyat": None, "gereken_zam": None, "liste_fiyati": None, "yillik_ek_gelir": None, "bolge": k["bolge"],
-             "hata": k["hata"]}
+        marka = markalar.get(k["kod"]) or None
+        r = {"kod": k["kod"], "ad": k["ad"], "marka": marka, "aile": k["aile"], "adet": k["adet"], "maliyet": None, "hesap_fiyati": None,
+             "gecen_yil_fiyat": None, "mevcut_marj": None, "hedef_fiyat": None, "gereken_zam": None, "liste_fiyati_yurtici": None,
+             "liste_fiyati_yurtdisi": None, "yillik_ek_gelir": None, "bolge": k["bolge"], "hata": k["hata"], "maliyet_kaynagi": k["maliyet_kaynagi"]}
         if k["hata"] is None:
             maliyet, gy, adet = k["maliyet"], k["_gecen_yil_fiyat"], k["adet"]
             hedef = maliyet * (1 + marj)
-            r.update(maliyet=maliyet, hesap_fiyati=k["_hesap_fiyati"], gecen_yil_fiyat=gy, hedef_fiyat=hedef, liste_fiyati=hedef / bolen,
+            if berrak_mi(marka):
+                r.update(liste_fiyati_yurtici=liste_fiyati(hedef, bolenler["yurtici"], adim)[1],
+                         liste_fiyati_yurtdisi=liste_fiyati(hedef, bolenler["yurtdisi"], adim)[1])
+            r.update(maliyet=maliyet, hesap_fiyati=k["_hesap_fiyati"], gecen_yil_fiyat=gy, hedef_fiyat=hedef,
                      mevcut_marj=(gy / maliyet - 1) if (gy is not None and maliyet) else None,
                      gereken_zam=(hedef / gy - 1) if gy else None,
                      yillik_ek_gelir=(hedef - gy) * adet if (gy is not None and adet is not None) else None)
@@ -392,4 +412,5 @@ def hedef_fiyat(s: Session, senaryo_id: int, marj: Decimal | None = None, tarih:
             "hatali": sum(1 for r in satirlar if r["hata"]),
             "yillik_ek_gelir": sum((r["yillik_ek_gelir"] for r in satirlar if r["yillik_ek_gelir"] is not None and r["yillik_ek_gelir"] > 0), SIFIR),
             "ort_zam": fark / ciro if ciro else None}
-    return decimal_str({"marj": marj, "bolen": bolen, "adet_kaynagi": "satis_gecmisi", "ozet": ozet, "kayitlar": satirlar})
+    return decimal_str({"marj": marj, "bolen_yurtici": bolenler["yurtici"], "bolen_yurtdisi": bolenler["yurtdisi"], "yuvarlama": adim,
+                        "adet_kaynagi": "satis_gecmisi", "ozet": ozet, "kayitlar": satirlar})

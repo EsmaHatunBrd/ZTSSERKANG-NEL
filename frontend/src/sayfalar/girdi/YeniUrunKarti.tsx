@@ -31,6 +31,7 @@ const sema = z.object({
   taze_tursu_sinifi: z.string().trim().min(1, "Sınıf zorunlu"),
   suzme_kg: z.string().trim().min(1, "Süzme kg zorunlu").superRefine(sayiKurali()),
   pazar: z.enum(PAZARLAR),
+  marka: z.string().trim(),
 });
 type Form = z.infer<typeof sema>;
 
@@ -42,6 +43,7 @@ const BOS: Form = {
   taze_tursu_sinifi: SINIFLAR[1],
   suzme_kg: "",
   pazar: "Yurtiçi",
+  marka: "",
 };
 
 /**
@@ -75,6 +77,8 @@ export function YeniUrunKarti({ senaryoId, onMesaj }: { senaryoId: number; onMes
           taze_tursu_sinifi: v.taze_tursu_sinifi,
           suzme_kg: sayiApi(v.suzme_kg) ?? v.suzme_kg,
           pazar: v.pazar,
+          // Boş bırakılırsa sunucu marka bilgisini ürün adından türetir.
+          marka: v.marka.trim() || null,
         },
       },
       {
@@ -96,19 +100,42 @@ export function YeniUrunKarti({ senaryoId, onMesaj }: { senaryoId: number; onMes
       <form noValidate className="flex flex-col gap-3" aria-label="Yeni ürün" onSubmit={handleSubmit(gonder)}>
         <div className="grid grid-cols-2 gap-3">
           <Alan etiket="Ürün kodu" htmlFor={`${id}-kod`} hata={errors.kod?.message}>
-            <Girdi id={`${id}-kod`} placeholder="ERP ürün kodu (yoksa geçici bir kod, örn. YENI-2027-01)" aria-invalid={!!errors.kod} {...register("kod")} />
+            <Girdi
+              id={`${id}-kod`}
+              placeholder="ERP ürün kodu (yoksa geçici bir kod, örn. YENI-2027-01)"
+              aria-invalid={!!errors.kod}
+              {...register("kod")}
+            />
           </Alan>
           <Alan etiket="Ürün adı" htmlFor={`${id}-ad`} hata={errors.ad?.message}>
             <Girdi id={`${id}-ad`} placeholder="örn. Kornişon 720 ml" aria-invalid={!!errors.ad} {...register("ad")} />
           </Alan>
           <Alan etiket="Ambalaj hacmi (ml)" htmlFor={`${id}-hacim`} hata={errors.ambalaj_hacmi?.message}>
-            <Girdi id={`${id}-hacim`} inputMode="decimal" className="text-right tabular-nums" aria-invalid={!!errors.ambalaj_hacmi} {...register("ambalaj_hacmi")} />
+            <Girdi
+              id={`${id}-hacim`}
+              inputMode="decimal"
+              className="text-right tabular-nums"
+              aria-invalid={!!errors.ambalaj_hacmi}
+              {...register("ambalaj_hacmi")}
+            />
           </Alan>
           <Alan etiket="Süzme miktar (kg)" htmlFor={`${id}-suzme`} hata={errors.suzme_kg?.message}>
-            <Girdi id={`${id}-suzme`} inputMode="decimal" className="text-right tabular-nums" aria-invalid={!!errors.suzme_kg} {...register("suzme_kg")} />
+            <Girdi
+              id={`${id}-suzme`}
+              inputMode="decimal"
+              className="text-right tabular-nums"
+              aria-invalid={!!errors.suzme_kg}
+              {...register("suzme_kg")}
+            />
           </Alan>
           <Alan etiket="Hat" htmlFor={`${id}-hat`} hata={errors.hat?.message}>
-            <Girdi id={`${id}-hat`} list={`${id}-hatlar`} placeholder={hatlar.length ? "Listeden seçin ya da yazın" : "örn. Cam Hattı"} aria-invalid={!!errors.hat} {...register("hat")} />
+            <Girdi
+              id={`${id}-hat`}
+              list={`${id}-hatlar`}
+              placeholder={hatlar.length ? "Listeden seçin ya da yazın" : "örn. Cam Hattı"}
+              aria-invalid={!!errors.hat}
+              {...register("hat")}
+            />
             <datalist id={`${id}-hatlar`}>
               {hatlar.map((h) => (
                 <option key={h} value={h} />
@@ -123,6 +150,14 @@ export function YeniUrunKarti({ senaryoId, onMesaj }: { senaryoId: number; onMes
                 </option>
               ))}
             </select>
+          </Alan>
+          <Alan etiket="Marka" htmlFor={`${id}-marka`} hata={errors.marka?.message}>
+            <Girdi
+              id={`${id}-marka`}
+              placeholder="Boş bırakılırsa addan türetilir (ör. Berrak)"
+              title="Liste fiyatı yalnız Berrak ürünlerinde hesaplanır."
+              {...register("marka")}
+            />
           </Alan>
           <Alan etiket="Pazar" htmlFor={`${id}-pazar`} hata={errors.pazar?.message}>
             <select id={`${id}-pazar`} className={SELECT} {...register("pazar")}>

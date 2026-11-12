@@ -18,7 +18,7 @@ const YOLLAR = [
   "/uyarilar",
   "/veri-kontrolu",
   "/butce-gerceklesen",
-  "/yardim",
+  "/yardim", "/yonetim-ozeti", "/fiyat-egilimi",
 ];
 const BOYUTLAR = [
   { ad: "1280x800", width: 1280, height: 800 },

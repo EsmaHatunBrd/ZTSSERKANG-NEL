@@ -98,4 +98,5 @@ export const hesapYaniti: MaliyetSonucu = {
   },
   kullanilan_parametreler: { enflasyon: "0.25", "kur.USD": "50", "faiz.TL": "0.40", "stok_ay.TL": "6" },
   uyarilar: ["Kapak M-77 fiyat listesinde yok, 0 TL alındı"],
+  satis_ortalamadan: false,
 };

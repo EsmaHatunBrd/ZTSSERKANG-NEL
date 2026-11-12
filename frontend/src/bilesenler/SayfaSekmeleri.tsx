@@ -28,6 +28,7 @@ export const ANALIZ_SEKMELERI: Sekme[] = [
   { yol: "/karlilik", etiket: "Kârlılık haritası" },
   { yol: "/hedef-fiyat", etiket: "Marjı koruyan fiyat" },
   { yol: "/liste-calismasi", etiket: "Liste çalışması" },
+  { yol: "/fiyat-egilimi", etiket: "Fiyat eğilimi" },
 ];
 
 /** Birbirine yakın sayfaları tek menü öğesi altında toplayan sekme çubuğu; seçili senaryoyu `?senaryo=` ile taşır. */

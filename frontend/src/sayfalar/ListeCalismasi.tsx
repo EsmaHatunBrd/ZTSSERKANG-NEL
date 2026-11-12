@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Download, Scale, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { ApiHatasi, hataMetni, hataMetniVarsa } from "@/api/istemci";
 import { useListeCalismasi, useListeOrnekSil, useListeOrnekUret, useListeYukle } from "@/api/sorgular/liste";
 import { useParametreEkle } from "@/api/sorgular/parametreler";
-import type { ListeCalismaSatiri } from "@/api/tipler";
+import type { ListeCalismaSatiri, ListePazari } from "@/api/tipler";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
@@ -17,6 +18,7 @@ import { YuzdeHucresi } from "@/bilesenler/YuzdeHucresi";
 import { cn } from "@/lib/utils";
 import { Kart } from "@/sayfalar/dashboard/UstKartlar";
 import { GecmisListeCekmecesi } from "@/sayfalar/liste/GecmisListeCekmecesi";
+import { adimMetni, kutuMetni, PAZAR_ADI, PAZARLAR, yuvarlamaEtiketi } from "@/sayfalar/liste/listeYardimci";
 import { YillikArtisGrafigi } from "@/sayfalar/liste/YillikArtisGrafigi";
 import { D, paraBicimle, yuzdeBicimle } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
@@ -28,9 +30,6 @@ const SABLON_ADRESI = "/api/v1/liste-fiyatlari/sablon.xlsx";
 export function puanBicimle(fark: string | null): string {
   return fark === null ? "—" : `${paraBicimle(D(fark).times(100), "", 1)} puan`;
 }
-
-/** API sayı metni -> kutu metni ("0.63" -> "0,63"). */
-const kutuMetni = (x: string) => D(x).toFixed().replace(".", ",");
 
 interface YuklemeHatasi {
   satir_no: number;
@@ -58,16 +57,41 @@ function FarkHucresi({ fark }: { fark: string | null }) {
 }
 
 /**
- * Liste fiyatı çalışması (Berrak): liste fiyatı = satış fiyatı ÷ bölen (varsayılan 0,63). Bölen kutusu kaydetmeden dener;
- * "Bölen olarak kaydet" senaryo parametresine yazar. Geçmiş yılların liste fiyatı elle (ürün satırına tıklayınca) ya da Excel'den
- * girilir; gerçek veri yokken örnek veri üretilebilir (açıkça etiketli, tek tıkla silinir).
+ * Liste fiyatı çalışması (yalnız Berrak ürünleri, KDV hariç): her ürünün iki liste fiyatı var — yurtiçi (bölen vars. 0,63) ve
+ * yurtdışı (vars. 0,90). Liste fiyatı = satış fiyatı ÷ bölen, seçilen adıma en yakına yuvarlanır. Bölen kutusu ve yuvarlama
+ * seçimi kaydetmeden dener; "Ayarı kaydet" seçili pazarın bölenini ve/veya yuvarlamayı senaryo parametresine (geçmişli) yazar.
+ * Geçmiş yılların liste fiyatı pazar bazında elle (ürün satırına tıklayınca) ya da Excel'den girilir; gerçek veri yokken örnek
+ * veri üretilebilir (açıkça etiketli, tek tıkla silinir).
  */
 export default function ListeCalismasi() {
   const { senaryoId, kilitli } = useSenaryo();
-  const kayitli = useListeCalismasi(senaryoId);
+  const [params, setParams] = useSearchParams();
+  const pazar: ListePazari = params.get("pazar") === "yurtdisi" ? "yurtdisi" : "yurtici";
+  const kayitliSorgu = useListeCalismasi(senaryoId, { pazar });
+  // Pazar değişirken önceki pazarın verisi (placeholder) kayıtlı değer sayılmaz.
+  const kayitliVeri = kayitliSorgu.isPlaceholderData ? undefined : kayitliSorgu.data;
   const [bolenMetni, setBolenMetni] = useState<string | null>(null);
   const [deneme, setDeneme] = useState<string | undefined>(undefined);
-  const kayitliBolen = kayitli.data?.bolen;
+  const [yuvarlamaSecimi, setYuvarlamaSecimi] = useState<string | null>(null);
+  const kayitliBolen = kayitliVeri?.bolen;
+  const kayitliYuvarlama = kayitliVeri?.yuvarlama;
+  const yuvarlamaDeneme =
+    yuvarlamaSecimi !== null && kayitliYuvarlama && !D(yuvarlamaSecimi).eq(D(kayitliYuvarlama)) ? yuvarlamaSecimi : undefined;
+
+  function pazarSec(p: ListePazari) {
+    if (p === pazar) return;
+    setBolenMetni(null);
+    setDeneme(undefined);
+    setParams(
+      (eski) => {
+        const y = new URLSearchParams(eski);
+        if (p === "yurtici") y.delete("pazar");
+        else y.set("pazar", p);
+        return y;
+      },
+      { replace: true },
+    );
+  }
 
   // Kutu yazıldıkça 400 ms sonra kaydetmeden yeniden hesaplanır; kayıtlı değere eşitse deneme yok.
   useEffect(() => {
@@ -79,9 +103,20 @@ export default function ListeCalismasi() {
     return () => clearTimeout(t);
   }, [bolenMetni, kayitliBolen]);
 
-  const denenen = useListeCalismasi(senaryoId, deneme);
-  const sorgu = deneme ? denenen : kayitli;
+  const denemeVar = deneme !== undefined || yuvarlamaDeneme !== undefined;
+  const denenen = useListeCalismasi(senaryoId, { pazar, bolen: deneme, yuvarlama: yuvarlamaDeneme });
+  const sorgu = denemeVar ? denenen : kayitliSorgu;
   const veri = sorgu.data;
+  const yuvarlamaSecenekleri = useMemo(() => {
+    const s = kayitliVeri?.yuvarlama_secenekleri ?? [];
+    return kayitliYuvarlama && !s.some((x) => D(x).eq(D(kayitliYuvarlama))) ? [...s, kayitliYuvarlama] : s;
+  }, [kayitliVeri, kayitliYuvarlama]);
+  const seciliYuvarlama = (() => {
+    const hedef = yuvarlamaSecimi ?? kayitliYuvarlama;
+    if (!hedef) return "";
+    return yuvarlamaSecenekleri.find((x) => D(x).eq(D(hedef))) ?? hedef;
+  })();
+  const etkinYuvarlama = yuvarlamaDeneme ?? kayitliYuvarlama ?? veri?.yuvarlama;
   const [secili, setSecili] = useState<string | null>(null);
   const [yalnizGeride, setYalnizGeride] = useState(false);
   const [kaydetAcik, setKaydetAcik] = useState(false);
@@ -89,7 +124,7 @@ export default function ListeCalismasi() {
   const parametreEkle = useParametreEkle();
   const ornekUret = useListeOrnekUret();
   const ornekSil = useListeOrnekSil();
-  const yukle = useListeYukle();
+  const yukle = useListeYukle(senaryoId);
   const dosyaRef = useRef<HTMLInputElement>(null);
   const [dosya, setDosya] = useState<File | null>(null);
   const [yuklenen, setYuklenen] = useState<number | null>(null);
@@ -123,9 +158,17 @@ export default function ListeCalismasi() {
       { accessorKey: "maliyet_tl", header: "Maliyet", cell: (c) => <ParaHucresi deger={c.row.original.maliyet_tl} /> },
       { accessorKey: "satis_tl", header: "Satış", cell: (c) => <ParaHucresi deger={c.row.original.satis_tl} /> },
       {
-        accessorKey: "yeni_liste",
-        header: "Yeni liste",
-        cell: (c) => <ParaHucresi deger={c.row.original.yeni_liste} className="font-semibold" />,
+        id: "yeni_liste",
+        accessorFn: (r) => (r.yeni_liste === null ? null : Number(r.yeni_liste)),
+        header: "Yeni liste fiyatı",
+        cell: (c) => {
+          const ham = c.row.original.yeni_liste_ham;
+          return (
+            <span title={ham ? `Yuvarlamasız: ${paraBicimle(ham, "TL", 4)}` : undefined}>
+              <ParaHucresi deger={c.row.original.yeni_liste} className="font-semibold" />
+            </span>
+          );
+        },
       },
       {
         accessorKey: "onceki_liste",
@@ -162,13 +205,31 @@ export default function ListeCalismasi() {
   const ozet = veri?.ozet;
   const farkNegatif = ozet?.fark != null && D(ozet.fark).isNegative();
   const hatalar = yuklemeHatalari(yukle.error);
+  const pazarAdi = PAZAR_ADI[pazar];
+
+  async function ayarKaydet() {
+    if (senaryoId === null || !neden.trim()) return;
+    const ortak = { gecerlilik_basi: bugunIso(), neden: neden.trim(), kapsam_tipi: "genel" as const };
+    try {
+      if (deneme)
+        await parametreEkle.mutateAsync({ anahtar: `liste_bolen_${pazar}`, senaryo: senaryoId, govde: { deger: deneme, ...ortak } });
+      if (yuvarlamaDeneme)
+        await parametreEkle.mutateAsync({ anahtar: "liste_yuvarlama", senaryo: senaryoId, govde: { deger: yuvarlamaDeneme, ...ortak } });
+      setKaydetAcik(false);
+      setBolenMetni(null);
+      setDeneme(undefined);
+      setYuvarlamaSecimi(null);
+    } catch {
+      // Hata diyalogda `parametreEkle.error` ile gösterilir.
+    }
+  }
 
   return (
     <section className="flex flex-col gap-5">
       <SayfaSekmeleri etiket="Analiz türü" sekmeler={ANALIZ_SEKMELERI} />
       <SayfaBasligi
         baslik="Liste Çalışması"
-        altBaslik={`Liste fiyatı = satış fiyatı ÷ bölen (TL, KDV hariç). ${veri ? `${veri.yil} liste fiyatı önceki yıllarla ve maliyet artışıyla kıyaslanır.` : ""}`}
+        altBaslik={`${veri ? `${veri.yil} liste fiyatı önceki yıllarla ve maliyet artışıyla kıyaslanır. ` : ""}Her Berrak ürününün yurtiçi ve yurtdışı olmak üzere iki liste fiyatı vardır.`}
         eylemler={
           <a
             href={SABLON_ADRESI}
@@ -182,50 +243,115 @@ export default function ListeCalismasi() {
       />
       <KilitSeridi />
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4" aria-label="Bölen ayarı">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Bölen</span>
-          <Input
-            inputMode="decimal"
-            aria-label="Bölen"
-            className="w-28 text-right tabular-nums"
-            value={bolenMetni ?? (kayitliBolen ? kutuMetni(kayitliBolen) : "")}
-            onChange={(e) => setBolenMetni(e.target.value)}
-            aria-invalid={bolenGecersiz || undefined}
-          />
-        </label>
-        <p className="max-w-xl text-sm text-muted-foreground">
-          {kayitli.data &&
-            (kayitli.data.bolen_kayitli
-              ? `Kayıtlı bölen ${kutuMetni(kayitli.data.bolen)}.`
-              : `Varsayılan bölen ${kutuMetni(kayitli.data.varsayilan_bolen)} kullanılıyor.`)}{" "}
-          {deneme ? "Kutudaki değerle deneniyor; kaydetmeden kalıcı olmaz." : "Kutuya yazınca liste fiyatları anında yeniden hesaplanır."}
+      <div className="flex flex-col gap-3 rounded-xl border bg-card p-4" aria-label="Liste ayarı">
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Pazar</span>
+            <div role="group" aria-label="Pazar" className="flex gap-1 rounded-lg border bg-muted p-1">
+              {PAZARLAR.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  aria-pressed={pazar === p}
+                  onClick={() => pazarSec(p)}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    pazar === p ? "bg-background font-medium shadow-xs" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {PAZAR_ADI[p]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">{pazarAdi} böleni</span>
+            <Input
+              inputMode="decimal"
+              aria-label={`${pazarAdi} böleni`}
+              className="w-28 text-right tabular-nums"
+              value={bolenMetni ?? (kayitliBolen ? kutuMetni(kayitliBolen) : "")}
+              onChange={(e) => setBolenMetni(e.target.value)}
+              aria-invalid={bolenGecersiz || undefined}
+              title={kayitliVeri ? `Varsayılan: ${kutuMetni(kayitliVeri.varsayilan_bolen)}` : undefined}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Yuvarlama</span>
+            <select
+              aria-label="Yuvarlama"
+              value={seciliYuvarlama}
+              disabled={yuvarlamaSecenekleri.length === 0}
+              onChange={(e) => setYuvarlamaSecimi(e.target.value)}
+              className="h-8 rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              {yuvarlamaSecenekleri.map((x) => (
+                <option key={x} value={x}>
+                  {yuvarlamaEtiketi(x)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {denemeVar && (
+            <div className="ml-auto flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setBolenMetni(null);
+                  setDeneme(undefined);
+                  setYuvarlamaSecimi(null);
+                }}
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={kilitli || senaryoId === null || bolenGecersiz}
+                title={kilitli ? "Senaryo kilitli" : undefined}
+                onClick={() => {
+                  parametreEkle.reset();
+                  setNeden("");
+                  setKaydetAcik(true);
+                }}
+              >
+                Ayarı kaydet
+              </Button>
+            </div>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {kayitliVeri && (
+            <>
+              {kayitliVeri.bolen_kayitli
+                ? `Kayıtlı ${pazarAdi.toLocaleLowerCase("tr")} böleni ${kutuMetni(kayitliVeri.bolen)}`
+                : `Varsayılan ${pazarAdi.toLocaleLowerCase("tr")} böleni ${kutuMetni(kayitliVeri.varsayilan_bolen)} kullanılıyor`}
+              {" · "}
+              {kayitliVeri.yuvarlama_kayitli
+                ? `kayıtlı yuvarlama ${yuvarlamaEtiketi(kayitliVeri.yuvarlama).toLocaleLowerCase("tr")}`
+                : `varsayılan yuvarlama ${yuvarlamaEtiketi(kayitliVeri.varsayilan_yuvarlama).toLocaleLowerCase("tr")}`}
+              .{" "}
+            </>
+          )}
+          {denemeVar
+            ? "Seçilen değerlerle deneniyor; kaydetmeden kalıcı olmaz."
+            : "Değiştirince liste fiyatları anında yeniden hesaplanır."}
         </p>
         {bolenGecersiz && (
-          <p role="alert" className="w-full text-sm text-destructive">
+          <p role="alert" className="text-sm text-destructive">
             Bölen 0 ile 1 arasında bir sayı olmalı (ör. 0,63).
           </p>
         )}
-        {deneme && (
-          <div className="ml-auto flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setBolenMetni(null)}>
-              Vazgeç
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={kilitli || senaryoId === null}
-              title={kilitli ? "Senaryo kilitli" : undefined}
-              onClick={() => {
-                parametreEkle.reset();
-                setNeden("");
-                setKaydetAcik(true);
-              }}
-            >
-              Bölen olarak kaydet
-            </Button>
-          </div>
-        )}
+      </div>
+
+      <div className="flex flex-col gap-1 text-sm text-muted-foreground" aria-label="Hesap kuralı">
+        <p>
+          Yalnız Berrak ürünleri · KDV hariç · liste fiyatı = satış fiyatı ÷ bölen
+          {etkinYuvarlama ? `, en yakın ${adimMetni(etkinYuvarlama)} TL'ye yuvarlanır` : ""}
+        </p>
+        {veri && veri.berrak_disi > 0 && <p>{veri.berrak_disi} ürün Berrak olmadığı için listede yok.</p>}
       </div>
 
       {veri?.ornek_var && (
@@ -332,8 +458,8 @@ export default function ListeCalismasi() {
       <div className="flex flex-col gap-2 rounded-xl border bg-card p-4" aria-label="Excel'den yükleme">
         <h2 className="text-base font-semibold">Excel'den yükle</h2>
         <p className="text-sm text-muted-foreground">
-          Sütunlar: ürün kodu, yıl, liste fiyatı, birim maliyet (isteğe bağlı). Aynı ürün ve yıl tekrar yüklenirse eski değerin yerine
-          geçer; örnek veri gerçek değerle değiştirilir.
+          Sütunlar: ürün kodu, yıl, liste fiyatı, birim maliyet (isteğe bağlı), pazar (isteğe bağlı: Yurtiçi/Yurtdışı; boşsa Yurtiçi). Aynı
+          ürün, yıl ve pazar tekrar yüklenirse eski değerin yerine geçer; örnek veri gerçek değerle değiştirilir.
         </p>
         <div className="flex flex-wrap items-end gap-2">
           <Input
@@ -392,36 +518,40 @@ export default function ListeCalismasi() {
         </div>
       </div>
 
-      {veri && <GecmisListeCekmecesi satir={seciliSatir} yil={veri.yil} bolen={veri.bolen} onKapat={() => setSecili(null)} />}
+      {veri && (
+        <GecmisListeCekmecesi
+          satir={seciliSatir}
+          yil={veri.yil}
+          pazar={pazar}
+          bolen={veri.bolen}
+          yuvarlama={veri.yuvarlama}
+          onKapat={() => setSecili(null)}
+        />
+      )}
 
-      {kaydetAcik && deneme && senaryoId !== null && (
+      {kaydetAcik && denemeVar && senaryoId !== null && (
         <OnayDiyalogu
-          baslik="Bölen kaydedilsin mi?"
+          baslik="Liste ayarı kaydedilsin mi?"
           onayMetni="Kaydet"
           bekliyor={parametreEkle.isPending}
           hata={hataMetniVarsa(parametreEkle.error)}
-          onOnayla={() =>
-            neden.trim() &&
-            parametreEkle.mutate(
-              {
-                anahtar: "liste_bolen",
-                senaryo: senaryoId,
-                govde: { deger: deneme, gecerlilik_basi: bugunIso(), neden: neden.trim(), kapsam_tipi: "genel" },
-              },
-              {
-                onSuccess: () => {
-                  setKaydetAcik(false);
-                  setBolenMetni(null);
-                },
-              },
-            )
-          }
+          onOnayla={() => void ayarKaydet()}
           onVazgec={() => setKaydetAcik(false)}
         >
-          <p>
-            Bu çalışmada bölen {kayitliBolen ? kutuMetni(kayitliBolen) : "—"} yerine {kutuMetni(deneme)} olacak. Değişiklik Parametreler'de
-            geçmişiyle saklanır.
-          </p>
+          <ul className="list-disc pl-5">
+            {deneme && (
+              <li>
+                {pazarAdi} böleni {kayitliBolen ? kutuMetni(kayitliBolen) : "—"} yerine {kutuMetni(deneme)} olacak.
+              </li>
+            )}
+            {yuvarlamaDeneme && (
+              <li>
+                Yuvarlama {kayitliYuvarlama ? yuvarlamaEtiketi(kayitliYuvarlama).toLocaleLowerCase("tr") : "—"} yerine{" "}
+                {yuvarlamaEtiketi(yuvarlamaDeneme).toLocaleLowerCase("tr")} olacak.
+              </li>
+            )}
+          </ul>
+          <p>Değişiklik Parametreler'de geçmişiyle saklanır.</p>
           <label className="flex flex-col gap-1">
             <span className="text-muted-foreground">Neden (zorunlu)</span>
             <Input aria-label="Neden" value={neden} onChange={(e) => setNeden(e.target.value)} />

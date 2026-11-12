@@ -53,7 +53,8 @@ EKSIK_KOLONLAR = (("recete_satiri", "seviye", "INTEGER"), ("urun", "aile", "VARC
                  ("smm_donem", "asama_elle", "JSON"), ("smm_recete_satiri", "ozel", "JSON"), ("smm_kalem", "uretim_asamasi", "INTEGER"),
                  ("smm_kalem", "satis_miktar", "VARCHAR(48)"), ("smm_kalem", "sahit_miktar", "VARCHAR(48)"), ("smm_donem", "excel_ozet", "JSON"),
                  ("smm_donem", "recete_kaynagi", "VARCHAR(10) DEFAULT 'excel'"), ("smm_donem", "devir_donem_id", "INTEGER"),
-                 ("smm_donem", "veri_kaynaklari", "JSON"), ("smm_donem", "kilitli", "BOOLEAN DEFAULT 0"), ("smm_donem", "kilitleyen", "VARCHAR(64)"))
+                 ("smm_donem", "veri_kaynaklari", "JSON"), ("smm_donem", "kilitli", "BOOLEAN DEFAULT 0"), ("smm_donem", "kilitleyen", "VARCHAR(64)"),
+                 ("urun", "marka", "VARCHAR(64)"))
 
 
 def eksik_kolonlari_tamamla(engine: Engine) -> list[str]:
@@ -66,6 +67,42 @@ def eksik_kolonlari_tamamla(engine: Engine) -> list[str]:
                 c.execute(text(f"ALTER TABLE {tablo} ADD COLUMN {kolon} {tur}"))
                 eklenen.append(f"{tablo}.{kolon}")
     return eklenen
+
+
+def _benzersiz_kolonlar(c, tablo: str) -> list[set[str]]:
+    """Tablonun UNIQUE indekslerinin kolon kümeleri (UniqueConstraint SQLite'ta sqlite_autoindex olarak görünür)."""
+    out = []
+    for satir in c.execute(text(f"PRAGMA index_list({tablo})")):
+        if satir[2]:   # unique
+            out.append({k[2] for k in c.execute(text(f"PRAGMA index_info('{satir[1]}')"))})
+    return out
+
+
+def liste_fiyati_gocu(engine: Engine) -> bool:
+    """liste_fiyati tablosunu (urun_id, yil) benzersizliğinden (urun_id, yil, pazar) benzersizliğine taşır. SQLite kısıt değiştiremediği
+    için tablo yeniden kurulur: eski tablo adı değişir, ORM şemasıyla yeni tablo oluşur, satırlar pazar='yurtici' (bolen boş) ile kopyalanır,
+    eski tablo düşer. İdempotent: tablo yoksa ya da zaten yeni şemadaysa hiçbir şey yapmaz. Dönüş: göç yapıldı mı."""
+    from .modeller import ListeFiyati   # modeller bu modülü içe aktarır: döngü olmasın diye burada
+    with engine.begin() as c:
+        kolonlar = [satir[1] for satir in c.execute(text("PRAGMA table_info(liste_fiyati)"))]
+        if not kolonlar:
+            return False
+        benzersiz = _benzersiz_kolonlar(c, "liste_fiyati")
+        if "pazar" in kolonlar and {"urun_id", "yil", "pazar"} in benzersiz and {"urun_id", "yil"} not in benzersiz:
+            return False
+        c.execute(text("DROP TABLE IF EXISTS liste_fiyati_eski"))
+        c.execute(text("ALTER TABLE liste_fiyati RENAME TO liste_fiyati_eski"))
+        ListeFiyati.__table__.create(c)
+        yeni = [col.name for col in ListeFiyati.__table__.columns]
+       
+        ortak = [k for k in yeni if k in kolonlar and k not in ("pazar", "bolen")]
+        bos_ise = {"olusturma_zamani": "CURRENT_TIMESTAMP", "olusturan": "'sistem'", "ornek": "0"}   # NOT NULL kolonlarda boş eski değer
+        secim = [f"COALESCE({k}, {bos_ise[k]})" if k in bos_ise else k for k in ortak]
+        pazar = "COALESCE(pazar, 'yurtici')" if "pazar" in kolonlar else "'yurtici'"
+        bolen = "bolen" if "bolen" in kolonlar else "NULL"
+        c.execute(text(f"INSERT INTO liste_fiyati ({', '.join(ortak)}, pazar, bolen) SELECT {', '.join(secim)}, {pazar}, {bolen} FROM liste_fiyati_eski"))
+        c.execute(text("DROP TABLE liste_fiyati_eski"))
+    return True
 
 
 def oturum_fabrikasi(engine: Engine) -> sessionmaker:
@@ -88,12 +125,13 @@ def oturum_ver():
             logging.getLogger("fiyat").warning("otomatik yedek alınamadı: %s", e)
         _ENGINE = motor_olustur()
         Base.metadata.create_all(_ENGINE)
+        liste_fiyati_gocu(_ENGINE)
         eksik_kolonlari_tamamla(_ENGINE)
         _SESSION = oturum_fabrikasi(_ENGINE)
-        from ..tohum import parametreleri_tohumla   # döngüsel içe aktarmayı önlemek için burada; idempotent
+        from ..tohum import parametreleri_tohumla, markalari_doldur   # döngüsel içe aktarmayı önlemek için burada; idempotent
         from ..servisler.aile import aileleri_doldur
         with _SESSION() as ilk:
-            parametreleri_tohumla(ilk); aileleri_doldur(ilk); ilk.commit()
+            parametreleri_tohumla(ilk); aileleri_doldur(ilk); markalari_doldur(ilk); ilk.commit()
     s = _SESSION()
     try:
         yield s

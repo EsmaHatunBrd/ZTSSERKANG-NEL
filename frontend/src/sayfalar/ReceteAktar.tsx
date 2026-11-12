@@ -5,6 +5,7 @@ import { ReceteDosyaAktar } from "./aktar/ReceteDosyaAktar";
 import { GiderDagitimAktar } from "./aktar/GiderDagitimAktar";
 import { SatinAlmaAktar } from "./aktar/SatinAlmaAktar";
 import { SatisGecmisiYonlendirme } from "./aktar/SatisGecmisiYonlendirme";
+import { StokDevriAktar } from "./aktar/StokDevriAktar";
 import { TamKitapFormu } from "./aktar/TamKitapFormu";
 import { UretimAdetleriAktar } from "./aktar/UretimAdetleriAktar";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
@@ -17,6 +18,7 @@ const SEKMELER = [
   { kimlik: "gider", etiket: "Gider dağıtım" },
   { kimlik: "satis", etiket: "Satış geçmişi" },
   { kimlik: "recete", etiket: "Ürün reçetesi" },
+  { kimlik: "stok", etiket: "Stokta kalan" },
 ] as const;
 
 type Sekme = (typeof SEKMELER)[number]["kimlik"];
@@ -27,6 +29,7 @@ const PANELLER: Record<Sekme, ReactNode> = {
   uretim: <UretimAdetleriAktar />,
   gider: <GiderDagitimAktar />,
   satis: <SatisGecmisiYonlendirme />,
+  stok: <StokDevriAktar />,
   recete: (
     <div className="flex flex-col gap-8">
       <ReceteDosyaAktar />
@@ -62,7 +65,7 @@ export default function ReceteAktar() {
       <SayfaBasligi baslik="Veri Aktar" altBaslik="Excel'den veri yükleme ve elle reçete girişi" />
       <KilitSeridi />
 
-      <div role="tablist" aria-label="Aktarım türü" className="flex gap-1 border-b">
+      <div role="tablist" aria-label="Aktarım türü" className="flex gap-1 overflow-x-auto border-b">
         {SEKMELER.map((s, i) => (
           <button
             key={s.kimlik}
@@ -78,7 +81,7 @@ export default function ReceteAktar() {
             onClick={() => setAktif(s.kimlik)}
             onKeyDown={(e) => tusa(e, i)}
             className={cn(
-              "-mb-px rounded-t-md border-b-2 px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+              "-mb-px shrink-0 rounded-t-md border-b-2 px-3 py-2 text-sm whitespace-nowrap focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
               aktif === s.kimlik ? "border-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >

@@ -70,3 +70,69 @@ describe("Urunler (Faz 5c çalışma dışı anahtarı)", () => {
     expect(sorgular).toContain("true");
   });
 });
+
+describe("Urunler (favoriler ve son açılanlar)", () => {
+  const FAVORI = "fiyat-calismasi.favoriler";
+  const SON = "fiyat-calismasi.son-acilanlar";
+  const oku = (k: string) => JSON.parse(localStorage.getItem(k) ?? "null");
+
+  it("yıldız düğmesi favoriye ekler/çıkarır, localStorage'a yazar ve Favoriler bölümünde bağlantı gösterir", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Urunler />);
+    const satir = (await screen.findByText("Salatalık Turşusu 720 ml")).closest("tr") as HTMLElement;
+    expect(screen.queryByRole("region", { name: "Favoriler" })).not.toBeInTheDocument();
+    const yildiz = within(satir).getByRole("button", { name: "Favorilere ekle/çıkar" });
+    expect(yildiz).toHaveAttribute("aria-pressed", "false");
+    await u.click(yildiz);
+    expect(yildiz).toHaveAttribute("aria-pressed", "true");
+    expect(oku(FAVORI)).toEqual(["URUN-001"]);
+    const bolum = screen.getByRole("region", { name: "Favoriler" });
+    const bag = within(bolum).getByRole("link", { name: /Salatalık Turşusu 720 ml/ });
+    expect(bag).toHaveAttribute("href", "/urunler/URUN-001?senaryo=1");
+    expect(bag).toHaveTextContent("URUN-001");
+    await u.click(yildiz);
+    expect(yildiz).toHaveAttribute("aria-pressed", "false");
+    expect(oku(FAVORI)).toEqual([]);
+    expect(screen.queryByRole("region", { name: "Favoriler" })).not.toBeInTheDocument();
+  });
+
+  it("kayıtlı favoriler sayfa açılışında görünür", async () => {
+    localStorage.setItem(FAVORI, JSON.stringify(["URUN-002"]));
+    kurSayfa(<Urunler />);
+    const bolum = await screen.findByRole("region", { name: "Favoriler" });
+    expect(await within(bolum).findByRole("link", { name: /Biber Turşusu 370 ml/ })).toHaveAttribute("href", "/urunler/URUN-002?senaryo=1");
+    const satir = screen.getByRole("cell", { name: "Biber Turşusu 370 ml" }).closest("tr") as HTMLElement;
+    expect(within(satir).getByRole("button", { name: "Favorilere ekle/çıkar" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("satıra tıklama son açılanlara en başa ekler ve listeyi 8 ile sınırlar; bölüm bağlantıları doğru", async () => {
+    const u = userEvent.setup();
+    const eski = ["URUN-002", "K-3", "K-4", "K-5", "K-6", "K-7", "K-8", "K-9"];
+    localStorage.setItem(SON, JSON.stringify(eski));
+    kurSayfa(<Urunler />);
+    const bolum = await screen.findByRole("region", { name: "Son açılanlar" });
+    expect(within(bolum).getAllByRole("link")).toHaveLength(8);
+    expect(await within(bolum).findByRole("link", { name: /Biber Turşusu 370 ml/ })).toHaveAttribute("href", "/urunler/URUN-002?senaryo=1");
+    expect(within(bolum).getByRole("link", { name: "K-9" })).toHaveAttribute("href", "/urunler/K-9?senaryo=1");
+    await u.click(screen.getByText("Salatalık Turşusu 720 ml"));
+    expect(oku(SON)).toEqual(["URUN-001", "URUN-002", "K-3", "K-4", "K-5", "K-6", "K-7", "K-8"]);
+  });
+
+  it("aynı ürün yeniden açılınca listede tek kalır ve başa alınır; son açılan yoksa bölüm gizlidir", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Urunler />);
+    await screen.findByText("Salatalık Turşusu 720 ml");
+    expect(screen.queryByRole("region", { name: "Son açılanlar" })).not.toBeInTheDocument();
+    localStorage.setItem(SON, JSON.stringify(["URUN-002", "URUN-001"]));
+    await u.click(screen.getByText("Salatalık Turşusu 720 ml"));
+    expect(oku(SON)).toEqual(["URUN-001", "URUN-002"]);
+  });
+
+  it("yıldıza tıklamak satır gezinmesini tetiklemez (son açılanlara yazılmaz)", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Urunler />);
+    const satir = (await screen.findByText("Salatalık Turşusu 720 ml")).closest("tr") as HTMLElement;
+    await u.click(within(satir).getByRole("button", { name: "Favorilere ekle/çıkar" }));
+    expect(localStorage.getItem(SON)).toBeNull();
+  });
+});

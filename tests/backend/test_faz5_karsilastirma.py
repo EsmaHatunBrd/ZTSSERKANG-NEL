@@ -79,7 +79,7 @@ def test_eksik_kolon_aile_eklenir():
         c.execute(text("CREATE TABLE urun (id INTEGER PRIMARY KEY, kod TEXT)"))
         c.execute(text("CREATE TABLE recete_satiri (id INTEGER PRIMARY KEY, seviye INTEGER)"))
     # G3: elle yazılan görünen ad kolonu; 11.02.2026: reçete satırında elle Z/S ve para birimi (uretim_hedefi tablosu yok: atlanır)
-    assert eksik_kolonlari_tamamla(e) == ["urun.aile", "urun.aile_ad", "recete_satiri.zs_elle", "recete_satiri.para_birimi_elle"]
+    assert eksik_kolonlari_tamamla(e) == ["urun.aile", "urun.aile_ad", "recete_satiri.zs_elle", "recete_satiri.para_birimi_elle", "urun.marka"]
     assert eksik_kolonlari_tamamla(e) == []
 
 

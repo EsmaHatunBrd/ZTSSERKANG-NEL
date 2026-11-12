@@ -126,3 +126,13 @@ Excel'de olmayan, servis katmanının üstüne kolayca eklenebilecekler. Sırala
 | 13 | I sütunu sonradan yapılan güncellemeler; F eski değer, eskiyi görebilmek için sağa yazılıyor. (23.10) | Her revizyon fiyat geçmişine ayrı kayıt; hesap en günceli kullanır | Faz 5b G2: I okunur, "İlk bütçe / Revize" sütunları, süzgeç |
 | Gerçekleşen | Gerçekleşen Excel aynı düzende, yalnız değerler farklı. (23.10) | Faz 6 planı geçerli | Dosya bekleniyor |
 | D | | | |
+
+## E. Patrona sorulacak — stokta kalan ortalama maliyet (10.11.2026 isteği, 12.11.2026 eklendi)
+
+Uygulama varsayımlarla çalışıyor (ürün başına isteğe bağlı "stok devri" kaydı; güncel stok değeri = birim maliyet × (1 + enflasyon); ortalama = adetle ağırlıklı; satış fiyatı varsayılan olarak bütçe maliyetinden, `satis_ortalama_maliyetten` parametresi açılırsa ortalamadan). Teyit edilecekler:
+
+| # | Soru | Neden önemli |
+|---|---|---|
+| E1 | Stoktaki geçen yıl ürününün değeri hangi oranla güncellenecek: senaryonun enflasyon parametresi mi, ÜFE/TÜFE mi, yoksa elle girilen oran mı? | Güncel stok değeri ve ortalama maliyet doğrudan değişir |
+| E2 | Güncelleme tek yıllık oran mı, yoksa ay bazlı endeks mi (stok hangi ayda üretildiyse o aydan bugüne)? | Ay bazlıysa stok kaydına üretim ayı eklenmeli |
+| E3 | Satış fiyatı ağırlıklı ortalama maliyetten mi, yoksa yalnız bu yılın bütçe maliyetinden mi hesaplansın? | Teklif ve liste fiyatını etkiler; parametre var, varsayılan kapalı |

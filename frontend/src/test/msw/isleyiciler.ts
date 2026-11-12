@@ -26,6 +26,24 @@ function liste<K>(kayitlar: K[]) {
   return HttpResponse.json({ kayitlar, toplam: kayitlar.length });
 }
 
+/** Kaydı olmayan ürünün stok devri yanıtı (sözleşme: 200, alanlar null, stok_etkisi false). */
+export const bosStokDevri = (urun_kodu: string) => ({
+  urun_kodu,
+  adet: null,
+  birim_maliyet: null,
+  enflasyon: null,
+  uretim_adedi: null,
+  enflasyon_kullanilan: null,
+  uretim_adedi_kullanilan: null,
+  uretim_adedi_kaynagi: null,
+  guncel_stok_maliyeti: null,
+  bu_yil_maliyet: null,
+  ortalama_maliyet: null,
+  stok_payi: null,
+  stok_etkisi: false,
+  aciklama: null,
+});
+
 export const bulunamadi = (mesaj: string, alanlar: Record<string, unknown> = {}) =>
   HttpResponse.json({ hata: "bulunamadi", mesaj, alanlar }, { status: 404 });
 
@@ -33,6 +51,9 @@ export const dogrulamaHatasi = (alanlar: Record<string, unknown> = { ad: "zorunl
   HttpResponse.json({ hata: "dogrulama", mesaj: "istek gövdesi geçersiz", alanlar }, { status: 422 });
 
 export const isleyiciler = [
+  // Stokta kalan: varsayılan "kayıt yok" (ürün ekranı fazladan bir şey göstermez). Testler gerektiğinde `sunucu.use` ile ezer.
+  http.get(`${T}/urunler/:kod/stok-devri`, ({ params }) => HttpResponse.json(bosStokDevri(String(params.kod)))),
+  http.get(`${T}/stok-devri`, () => HttpResponse.json({ kayitlar: [] })),
   http.get(`${T}/senaryolar`, () => liste(senaryolar)),
   http.post(`${T}/senaryolar`, async ({ request }) => {
     const g = (await request.json()) as { sezon_ad: string; tur: string; ad: string };

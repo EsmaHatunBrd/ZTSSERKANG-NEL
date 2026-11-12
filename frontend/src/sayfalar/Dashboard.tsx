@@ -52,6 +52,11 @@ export const SUTUN_GRUPLARI = [
     aciklama: "Tüm fireler 0 iken maliyet",
   },
   {
+    anahtar: "ortalama",
+    etiket: "Ortalama maliyet",
+    aciklama: "Stokta kalanla ağırlıklı ortalama (stoku olmayan üründe boş)",
+  },
+  {
     anahtar: "doviz",
     etiket: "Maliyet USD / EUR",
     aciklama: "Senaryo kurlarıyla",
@@ -74,6 +79,7 @@ export const SUTUN_ANAHTARI = "fiyat-calismasi.dashboard.sutunlar";
 const VARSAYILAN_SUTUNLAR: SutunSecimi = {
   kirilim: false,
   firesiz: false,
+  ortalama: false,
   doviz: false,
   karsilastirma: false,
   uretim: true,
@@ -143,6 +149,7 @@ export default function Dashboard() {
   const [hat, setHat] = useState("");
   const [enflasyon, setEnflasyon] = useState("");
   const [yalnizHatali, setYalnizHatali] = useState(false);
+  const [yalnizStoklu, setYalnizStoklu] = useState(false);
   const [sutunSecimi, setSutunSecimi] = useState<SutunSecimi>(sutunSecimiOku);
 
   function sutunDegistir(g: SutunGrubu, acik: boolean) {
@@ -185,9 +192,10 @@ export default function Dashboard() {
         (!hat || s.hat === hat) &&
         (!enflasyon || s.enflasyon_durumu === enflasyon) &&
         (!yalnizHatali || !!s.hata) &&
+        (!yalnizStoklu || s.stok_etkisi) &&
         (!q || tr(s.kod).includes(q) || tr(s.ad).includes(q)),
     );
-  }, [satirlar, arama, hat, enflasyon, yalnizHatali]);
+  }, [satirlar, arama, hat, enflasyon, yalnizHatali, yalnizStoklu]);
 
   const enflasyonAltinda = urunler.data?.enflasyon_altinda_toplam ?? null;
 
@@ -209,7 +217,7 @@ export default function Dashboard() {
           <ParaHucresi deger={getValue() as string | null} paraBirimi={birim} basamak={basamak} />
         ),
       }) as SutunTanimi<DashboardSatiri>;
-    const { kirilim, firesiz, doviz, karsilastirma, uretim } = sutunSecimi;
+    const { kirilim, firesiz, ortalama, doviz, karsilastirma, uretim } = sutunSecimi;
     const grup = (acik: boolean, liste: SutunTanimi<DashboardSatiri>[]) => (acik ? liste : []);
     return [
       {
@@ -245,6 +253,7 @@ export default function Dashboard() {
       ]),
       para("maliyet_tl", "Maliyet TL"),
       ...grup(firesiz, [para("maliyet_tl_firesiz", "Maliyet TL (firesiz)")]),
+      ...grup(ortalama, [para("ortalama_maliyet_tl", "Ortalama maliyet TL")]),
       ...grup(doviz, [para("maliyet_usd", "Maliyet USD", "USD", 3), para("maliyet_eur", "Maliyet EUR", "EUR", 3)]),
       {
         accessorKey: "satis_tl",
@@ -391,12 +400,13 @@ export default function Dashboard() {
     );
   }
 
-  const suzgecVar = !!(arama.trim() || hat || enflasyon || yalnizHatali);
+  const suzgecVar = !!(arama.trim() || hat || enflasyon || yalnizHatali || yalnizStoklu);
   function suzgecleriTemizle() {
     setArama("");
     setHat("");
     setEnflasyon("");
     setYalnizHatali(false);
+    setYalnizStoklu(false);
   }
 
   return (
@@ -464,6 +474,10 @@ export default function Dashboard() {
               }}
             />
             Geçici kodlu
+          </label>
+          <label className="flex h-9 items-center gap-2 rounded-lg px-1 text-sm">
+            <input type="checkbox" checked={yalnizStoklu} onChange={(e) => setYalnizStoklu(e.target.checked)} />
+            Stokta kalanı olan
           </label>
           {yalnizHatali && (
             <Badge variant="destructive" className="h-7">

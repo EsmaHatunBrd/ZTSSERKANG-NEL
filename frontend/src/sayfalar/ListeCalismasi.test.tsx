@@ -1,11 +1,15 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { http, HttpResponse } from "msw";
 import { sunucu } from "@/test/msw/sunucu";
 import { kurSayfa } from "@/test/kur-ayarlar";
+import { SenaryoSaglayici } from "@/bilesenler/SenaryoSecici";
 import type { ListeCalismasi as ListeVerisi } from "@/api/tipler";
 import ListeCalismasi, { puanBicimle } from "./ListeCalismasi";
+import { yuvarlamaEtiketi } from "./liste/listeYardimci";
 
 beforeAll(() => {
   globalThis.ResizeObserver = class {
@@ -29,13 +33,48 @@ afterAll(() => sunucu.close());
 
 const T = "*/api/v1";
 
-function veri(bolen = "0.63", gecmisli = true): ListeVerisi {
-  const yeni = (Number("44.10") / Number(bolen)).toFixed(4);
+/** Sayfayı verilen adresle açar (ör. `?pazar=yurtdisi`). */
+function ciz(adres: string) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={[adres]}>
+        <SenaryoSaglayici>
+          <ListeCalismasi />
+        </SenaryoSaglayici>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+type Pazar = "yurtici" | "yurtdisi";
+
+interface VeriSecenekleri {
+  pazar?: Pazar;
+  bolen?: string;
+  yuvarlama?: string;
+  gecmisli?: boolean;
+  berrakDisi?: number;
+}
+
+function veri({ pazar = "yurtici", bolen, yuvarlama = "0.05", gecmisli = true, berrakDisi = 0 }: VeriSecenekleri = {}): ListeVerisi {
+  const varsayilan = pazar === "yurtici" ? "0.63" : "0.90";
+  const b = bolen ?? varsayilan;
+  const ham = (Number("44.10") / Number(b)).toFixed(4);
+  const adim = Number(yuvarlama);
+  const yeni = (Math.round(Number(ham) / adim) * adim).toFixed(2);
   return {
     yil: 2026,
-    bolen,
+    pazar,
+    bolen: b,
+    bolenler: { yurtici: pazar === "yurtici" ? b : "0.63", yurtdisi: pazar === "yurtdisi" ? b : "0.90" },
     bolen_kayitli: false,
-    varsayilan_bolen: "0.63",
+    varsayilan_bolen: varsayilan,
+    yuvarlama,
+    yuvarlama_kayitli: false,
+    varsayilan_yuvarlama: "0.05",
+    yuvarlama_secenekleri: ["0.01", "0.05", "0.10", "0.25", "0.50", "1", "5"],
+    berrak_disi: berrakDisi,
     ornek_var: gecmisli,
     ozet: gecmisli
       ? { liste_artis_ort: "0.4", maliyet_artis_ort: "0.5", fark: "-0.1", karsilastirilan: 2, urun_sayisi: 2, gerisinde: 1 }
@@ -50,12 +89,13 @@ function veri(bolen = "0.63", gecmisli = true): ListeVerisi {
         maliyet_tl: "36.75",
         satis_tl: "44.10",
         yeni_liste: yeni,
+        yeni_liste_ham: ham,
         onceki_yil: gecmisli ? 2025 : null,
         onceki_liste: gecmisli ? "50" : null,
         liste_artis: gecmisli ? "0.4" : null,
         maliyet_artis: gecmisli ? "0.5" : null,
         fark: gecmisli ? "-0.1" : null,
-        gecmis: gecmisli ? [{ yil: 2025, liste_fiyati: "50", birim_maliyet: "24.5", ornek: true }] : [],
+        gecmis: gecmisli ? [{ yil: 2025, pazar, liste_fiyati: "50", birim_maliyet: "24.5", bolen: "0.63", ornek: true }] : [],
       },
       {
         kod: "URUN-002",
@@ -64,15 +104,26 @@ function veri(bolen = "0.63", gecmisli = true): ListeVerisi {
         hata: null,
         maliyet_tl: "20",
         satis_tl: "24",
-        yeni_liste: "38.0952",
+        yeni_liste: "38.10",
+        yeni_liste_ham: "38.0952",
         onceki_yil: gecmisli ? 2025 : null,
         onceki_liste: gecmisli ? "27" : null,
         liste_artis: gecmisli ? "0.41" : null,
         maliyet_artis: gecmisli ? "0.3" : null,
         fark: gecmisli ? "0.11" : null,
-        gecmis: gecmisli ? [{ yil: 2025, liste_fiyati: "27", birim_maliyet: null, ornek: true }] : [],
+        gecmis: gecmisli ? [{ yil: 2025, pazar, liste_fiyati: "27", birim_maliyet: null, bolen: null, ornek: true }] : [],
       },
     ],
+  };
+}
+
+/** İstek adresindeki pazar/bölen/yuvarlama. */
+function sorguOku(request: Request) {
+  const q = new URL(request.url).searchParams;
+  return {
+    pazar: (q.get("pazar") ?? "yurtici") as Pazar,
+    bolen: q.get("bolen") ?? undefined,
+    yuvarlama: q.get("yuvarlama") ?? undefined,
   };
 }
 
@@ -82,11 +133,30 @@ describe("Liste Çalışması", () => {
     expect(puanBicimle(null)).toBe("—");
   });
 
-  it("varsayılan bölen, örnek veri uyarısı, kartlar; geride kalanlar süzülür", async () => {
-    sunucu.use(http.get(`${T}/liste-calismasi`, () => HttpResponse.json(veri())));
+  it("yuvarlama etiketleri", () => {
+    expect(yuvarlamaEtiketi("0.05")).toBe("En yakın 0,05 TL");
+    expect(yuvarlamaEtiketi("0.10")).toBe("En yakın 0,10 TL");
+    expect(yuvarlamaEtiketi("5")).toBe("En yakın 5 TL");
+  });
+
+  it("varsayılan bölen, hesap kuralı, örnek veri uyarısı, kartlar; geride kalanlar süzülür", async () => {
+    const pazarlar: Pazar[] = [];
+    sunucu.use(
+      http.get(`${T}/liste-calismasi`, ({ request }) => {
+        pazarlar.push(sorguOku(request).pazar);
+        return HttpResponse.json(veri());
+      }),
+    );
     kurSayfa(<ListeCalismasi />);
-    expect(await screen.findByDisplayValue("0,63")).toHaveAccessibleName("Bölen");
-    expect(screen.getByText(/Varsayılan bölen 0,63/)).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("0,63")).toHaveAccessibleName("Yurtiçi böleni");
+    expect(pazarlar[0]).toBe("yurtici");
+    expect(screen.getByText(/Varsayılan yurtiçi böleni 0,63/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Hesap kuralı")).toHaveTextContent(
+      "Yalnız Berrak ürünleri · KDV hariç · liste fiyatı = satış fiyatı ÷ bölen, en yakın 0,05 TL'ye yuvarlanır",
+    );
+    expect(screen.queryByText(/Berrak olmadığı için/)).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /Yeni liste fiyatı/ })).toBeInTheDocument();
+    expect(screen.getByText("70,00 TL").closest("[title]")).toHaveAttribute("title", "Yuvarlamasız: 70,0000 TL");
     expect(screen.getByRole("note")).toHaveTextContent("Örnek veri");
     expect(screen.getByText("-10,0 puan")).toBeInTheDocument(); // kart
     expect(screen.getByText("-10,0")).toBeInTheDocument(); // ürün satırı (sütun: Fark (puan))
@@ -96,58 +166,103 @@ describe("Liste Çalışması", () => {
     expect(screen.getByText("Biber Turşusu 370 ml")).toBeInTheDocument();
   });
 
-  it("bölen değişince kaydetmeden denenir; kaydet nedenle parametre yazar", async () => {
-    const sorgular: (string | null)[] = [];
-    let govde: unknown = null;
+  it("Berrak dışı ürün sayısı notu", async () => {
+    sunucu.use(http.get(`${T}/liste-calismasi`, () => HttpResponse.json(veri({ berrakDisi: 12 }))));
+    kurSayfa(<ListeCalismasi />);
+    expect(await screen.findByText("12 ürün Berrak olmadığı için listede yok.")).toBeInTheDocument();
+  });
+
+  it("pazar Yurtdışı seçilince istek pazar=yurtdisi ile gider ve yurtdışı böleni görünür", async () => {
+    const pazarlar: Pazar[] = [];
     sunucu.use(
       http.get(`${T}/liste-calismasi`, ({ request }) => {
-        const b = new URL(request.url).searchParams.get("bolen");
-        sorgular.push(b);
-        return HttpResponse.json(veri(b ?? "0.63"));
-      }),
-      http.post(`${T}/parametreler/liste_bolen/degerler`, async ({ request }) => {
-        govde = await request.json();
-        return HttpResponse.json({}, { status: 201 });
+        const q = sorguOku(request);
+        pazarlar.push(q.pazar);
+        return HttpResponse.json(veri(q));
       }),
     );
     kurSayfa(<ListeCalismasi />);
-    const kutu = await screen.findByDisplayValue("0,63");
-    await userEvent.clear(kutu);
-    await userEvent.type(kutu, "0,7");
-    await waitFor(() => expect(sorgular).toContain("0.7"), { timeout: 3000 });
-    await userEvent.click(await screen.findByRole("button", { name: "Bölen olarak kaydet" }));
-    const d = await screen.findByRole("dialog");
-    await userEvent.type(within(d).getByLabelText("Neden"), "yeni iskonto");
-    await userEvent.click(within(d).getByRole("button", { name: "Kaydet" }));
-    await waitFor(() => expect(govde).toMatchObject({ deger: "0.7", neden: "yeni iskonto", kapsam_tipi: "genel" }));
+    expect(await screen.findByDisplayValue("0,63")).toBeInTheDocument();
+    const grup = screen.getByRole("group", { name: "Pazar" });
+    expect(within(grup).getByRole("button", { name: "Yurtiçi" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(within(grup).getByRole("button", { name: "Yurtdışı" }));
+    await waitFor(() => expect(pazarlar).toContain("yurtdisi"));
+    expect(await screen.findByDisplayValue("0,9")).toHaveAccessibleName("Yurtdışı böleni");
+    expect(within(grup).getByRole("button", { name: "Yurtdışı" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("ürün satırına tıklayınca geçmiş çekmecesi açılır; örnek satır gerçek olarak kaydedilir, yeni yıl eklenir", async () => {
-    const yazilan: unknown[] = [];
+  it("bölen ve yuvarlama kaydetmeden denenir; kaydet nedenle seçili pazarın bölenini ve yuvarlamayı yazar", async () => {
+    const sorgular: ReturnType<typeof sorguOku>[] = [];
+    const yazilan: Record<string, unknown> = {};
     sunucu.use(
-      http.get(`${T}/liste-calismasi`, () => HttpResponse.json(veri())),
+      http.get(`${T}/liste-calismasi`, ({ request }) => {
+        const q = sorguOku(request);
+        sorgular.push(q);
+        return HttpResponse.json(veri(q));
+      }),
+      http.post(`${T}/parametreler/:anahtar/degerler`, async ({ request, params }) => {
+        yazilan[String(params.anahtar)] = await request.json();
+        return HttpResponse.json({}, { status: 201 });
+      }),
+    );
+    ciz("/?senaryo=1&pazar=yurtdisi");
+    const kutu = await screen.findByDisplayValue("0,9");
+    expect(screen.queryByRole("button", { name: "Ayarı kaydet" })).not.toBeInTheDocument();
+    await userEvent.clear(kutu);
+    await userEvent.type(kutu, "0,85");
+    await waitFor(() => expect(sorgular.some((q) => q.bolen === "0.85" && q.pazar === "yurtdisi")).toBe(true), { timeout: 3000 });
+    await userEvent.selectOptions(screen.getByLabelText("Yuvarlama"), "En yakın 0,10 TL");
+    await waitFor(() => expect(sorgular.some((q) => q.yuvarlama === "0.10" && q.bolen === "0.85")).toBe(true));
+    await userEvent.click(await screen.findByRole("button", { name: "Ayarı kaydet" }));
+    const d = await screen.findByRole("dialog");
+    expect(d).toHaveTextContent("Yurtdışı böleni 0,9 yerine 0,85 olacak.");
+    expect(d).toHaveTextContent("Yuvarlama en yakın 0,05 tl yerine en yakın 0,10 tl olacak.");
+    await userEvent.type(within(d).getByLabelText("Neden"), "yeni iskonto");
+    await userEvent.click(within(d).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(Object.keys(yazilan).sort()).toEqual(["liste_bolen_yurtdisi", "liste_yuvarlama"]));
+    expect(yazilan.liste_bolen_yurtdisi).toMatchObject({ deger: "0.85", neden: "yeni iskonto", kapsam_tipi: "genel" });
+    expect(yazilan.liste_yuvarlama).toMatchObject({ deger: "0.10", neden: "yeni iskonto", kapsam_tipi: "genel" });
+  });
+
+  it("geçmiş çekmecesi seçili pazarla çalışır: örnek satır gerçek olarak kaydedilir, yeni yıl eklenir, silinir", async () => {
+    const yazilan: unknown[] = [];
+    const silinen: string[] = [];
+    sunucu.use(
+      http.get(`${T}/liste-calismasi`, ({ request }) => HttpResponse.json(veri(sorguOku(request)))),
       http.put(`${T}/liste-fiyatlari`, async ({ request }) => {
         const g = (await request.json()) as Record<string, unknown>;
         yazilan.push(g);
         return HttpResponse.json({ ...g, ornek: false });
       }),
+      http.delete(`${T}/liste-fiyatlari/:kod/:yil`, ({ request, params }) => {
+        silinen.push(`${String(params.kod)}/${String(params.yil)}?${new URL(request.url).searchParams.toString()}`);
+        return new HttpResponse(null, { status: 204 });
+      }),
     );
-    kurSayfa(<ListeCalismasi />);
+    ciz("/?senaryo=1&pazar=yurtdisi");
     await userEvent.click(await screen.findByText("Biber Turşusu 370 ml"));
     const cekmece = await screen.findByRole("dialog");
+    expect(cekmece).toHaveTextContent("2026 yurtdışı liste fiyatı");
     expect(within(cekmece).getByLabelText("Liste fiyatı 2025")).toHaveValue("50");
+    expect(within(cekmece).getByText("Bölen 0,63")).toBeInTheDocument();
     await userEvent.click(within(cekmece).getByRole("button", { name: "Gerçek olarak kaydet" }));
-    await waitFor(() => expect(yazilan[0]).toEqual({ urun_kodu: "URUN-001", yil: 2025, liste_fiyati: "50", birim_maliyet: "24.5" }));
+    await waitFor(() =>
+      expect(yazilan[0]).toEqual({ urun_kodu: "URUN-001", yil: 2025, pazar: "yurtdisi", liste_fiyati: "50", birim_maliyet: "24.5" }),
+    );
     expect(within(cekmece).getByLabelText("Yıl")).toHaveValue("2024");
     await userEvent.type(within(cekmece).getByLabelText("Yeni liste fiyatı"), "35,9");
     await userEvent.click(within(cekmece).getByRole("button", { name: "Ekle" }));
-    await waitFor(() => expect(yazilan[1]).toEqual({ urun_kodu: "URUN-001", yil: 2024, liste_fiyati: "35.9", birim_maliyet: null }));
+    await waitFor(() =>
+      expect(yazilan[1]).toEqual({ urun_kodu: "URUN-001", yil: 2024, pazar: "yurtdisi", liste_fiyati: "35.9", birim_maliyet: null }),
+    );
+    await userEvent.click(within(cekmece).getByRole("button", { name: "Sil" }));
+    await waitFor(() => expect(silinen).toEqual(["URUN-001/2025?pazar=yurtdisi"]));
   });
 
   it("geçmiş yoksa örnek veriyle göster düğmesi örnek üretir", async () => {
     let uretildi = false;
     sunucu.use(
-      http.get(`${T}/liste-calismasi`, () => HttpResponse.json(veri("0.63", uretildi))),
+      http.get(`${T}/liste-calismasi`, () => HttpResponse.json(veri({ gecmisli: uretildi }))),
       http.post(`${T}/liste-calismasi/ornek`, () => {
         uretildi = true;
         return HttpResponse.json({ yazilan: 6 });

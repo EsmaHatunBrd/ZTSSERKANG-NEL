@@ -9,7 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from fiyat_motoru.modeller import GIDER_ELLE_ALANLARI
-from . import analiz_servisi, gider_servisi, hesap_servisi as hs, senaryo_servisi
+from . import aile as aile_servisi, analiz_servisi, gider_servisi, hesap_servisi as hs, senaryo_servisi
+from . import fiyat_egilimi_servisi
 from .hatalar import HEDEF_YOK, PARAMETRE_EKSIK
 
 OGE_SINIRI = 200
@@ -17,6 +18,35 @@ _FIYATSIZ = re.compile(r"^(?P<kod>\S+) \((?P<ad>.*)\): (fiyat listesinde yok|bir
 _HAT = ("üretim hattı bulunamadı", "taze/turşu sınıfı bulunamadı", "dağıtım tablosunda yok")
 _KART = re.compile(r"^(?P<kod>\S+) \((?P<ad>.*)\): (?P<mesaj>(para birimi tanımsız|Z/S bayrağı tanımsız|Ziraat kaynaklı ama döviz fiyatlı).*)$")
 _PARAMETRE = ("kuru tanımsız", "USD kuru yok", "faiz/stok süresi", "TL finansman parametresi yok", "vardiya saati 0")
+AMBALAJ_TOLERANSI = Decimal("0.01")   # büyük boy, küçük boyun litre/kg fiyatını %1'den fazla aşarsa uyarı (yuvarlama gürültüsü elenir)
+
+
+def _tl(x: Decimal, basamak: int = 2) -> str:
+    return f"{x.quantize(Decimal(1).scaleb(-basamak)):f}".replace(".", ",")
+
+
+def ambalaj_tutarsizliklari(satirlar: list[dict], tolerans: Decimal = AMBALAJ_TOLERANSI) -> list[dict]:
+    """Analiz önerisi 19 (ambalaj boyu tutarlılığı): aynı ailede ambalaj hacmine göre sıralı ürünlerde bir büyük boyun litre/kg başı satış
+    fiyatı bir önceki küçük boyunkinden tolerans üstünde yüksekse öge döner. `satirlar`: {kod, ad, aile, ambalaj_ml, satis_tl}; aile, hacim
+    veya satış fiyatı boş/0 olan satırlar atlanır; eşit hacimli boylar birbiriyle kıyaslanmaz. Saf fonksiyon (test edilebilir)."""
+    gruplar: dict[str, list[dict]] = {}
+    for r in satirlar:
+        if not r.get("aile") or not r.get("ambalaj_ml") or r["ambalaj_ml"] <= 0 or r.get("satis_tl") is None or r["satis_tl"] <= 0:
+            continue
+        gruplar.setdefault(r["aile"], []).append(r)
+    out: list[dict] = []
+    for aile, rs in sorted(gruplar.items()):
+        onceki: dict | None = None
+        for r in sorted(rs, key=lambda x: (x["ambalaj_ml"], x["kod"])):
+            birim = r["satis_tl"] / r["ambalaj_ml"] * 1000   # TL / litre (ya da kg)
+            if onceki and r["ambalaj_ml"] > onceki["ml"] and birim > onceki["birim"] * (1 + tolerans):
+                fark = (birim / onceki["birim"] - 1) * 100
+                out.append({"etiket": f"{r['kod']} · {r['ad']}",
+                            "aciklama": f"litre/kg başı satış {_tl(birim)} TL; bir küçük boy ({onceki['kod']}) {_tl(onceki['birim'])} TL: "
+                                        f"büyük boy %{_tl(fark, 1)} daha pahalı",
+                            "yol": f"/karsilastirma?aile={quote(aile, safe='')}"})
+            onceki = {"kod": r["kod"], "ml": r["ambalaj_ml"], "birim": birim}
+    return out
 
 
 def _urun_yolu(kod: str) -> str:
@@ -60,6 +90,7 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
     sonuclar = hs.toplu_hesapla(s, sen.id, tarih)
 
     hesaplanamayan, parametre_eksik, fiyatsiz, hat, param_uyari, kart, elle = [], [], {}, [], [], {}, []
+    ambalaj_satirlari: list[dict] = []
     urun_fiyatsiz: list[tuple[str, object, set[str]]] = []
     for kod, c in sonuclar:
         u = urunler[kod]
@@ -86,6 +117,9 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
             urun_fiyatsiz.append((kod, c, bu_urun))
         if (ozet := _elle_hucreler(c.girdi)):
             elle.append({"etiket": f"{kod} · {u.ad}", "aciklama": ozet, "yol": _urun_yolu(kod)})
+        ambalaj_satirlari.append({"kod": kod, "ad": u.ad, "aile": u.aile or aile_servisi.aile_turet(u.ad),
+                                  "ambalaj_ml": aile_servisi.ambalaj_ml(u.ad, u.ambalaj_hacmi) if u.ambalaj_hacmi is not None else None,
+                                  "satis_tl": c.sonuc.satis_fiyati_tl})
         if c.girdi.uretim.vardiya_uretim_adedi == 0:
             hat.append({"etiket": f"{kod} · {u.ad}", "aciklama": "vardiya üretim adedi 0: saniye bazlı giderler 0 alınıyor", "yol": _urun_yolu(kod)})
 
@@ -146,6 +180,10 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
                  ("Ürün ekranında kodu değiştir", "/urunler"), gecici),
         _kontrol("uretim_adetleri", "Üretim Adetleri'nde eşleşmeyen kod", "Üretim Adetleri kaydındaki kod hiçbir ürünle eşleşmiyor; "
                  "hedef adetle maliyet hesaplanamaz.", ("Üretim Adetleri", "/uretim-adetleri"), eslesmeyen),
+        _kontrol("ambalaj_tutarsiz", "Ambalaj boyu tutarsız fiyat", "Aynı ürünün büyük boyunun litre/kg başı satış fiyatı küçük boyundan pahalı; genelde reçete ya da gider dağıtımında bir hata vardır.", ("Karşılaştırma · ürün aileleri", "/karsilastirma"),
+                 ambalaj_tutarsizliklari(ambalaj_satirlari)),
+        _kontrol("fiyat_egilimi", "Enflasyonu aşan fiyat artışı", "Son 12 ayda yıllık artışı senaryo enflasyonunu aşan malzemeler (dövizde her artış).",
+                 ("Analiz · Fiyat eğilimi", "/fiyat-egilimi"), fiyat_egilimi_servisi.kontrol_ogeleri(s, sen.id, tarih), bilgi=True),
         _kontrol("elle_hucre", "Elle girilmiş hücre", "Formül yerine elle yazılmış değerler (Excel'den geldiği gibi ya da ürün ekranında "
                  "girilmiş). Hata değildir; formüle dönmek için ürün ekranında hücredeki ↺ düğmesi.", ("Ürün Maliyeti", "/urunler"), elle,
                  bilgi=True),

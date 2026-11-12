@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useGiderHavuzlari } from "@/api/sorgular/gider";
 import type { UretimBilgisi } from "@/api/tipler";
+import { Input } from "@/bilesenler/ui/input";
 import { cn } from "@/lib/utils";
 import { goster } from "@/yardimcilar/tarih";
 import { sayiApi } from "@/yardimcilar/sayi";
@@ -62,6 +63,8 @@ interface Props {
   onTaslak: (yama: TaslakYamasi) => void;
   /** Sunucu tabanı parametreleri (anahtar -> API değeri): "Eski değer" ipucu için. */
   taban?: Record<string, string>;
+  /** Kayıtlı ürün kartının markası (boşsa sunucu addan türetir). */
+  marka?: string | null;
 }
 
 function Alan({ etiket, children }: { etiket: string; children: React.ReactNode }) {
@@ -74,7 +77,7 @@ function Alan({ etiket, children }: { etiket: string; children: React.ReactNode 
 }
 
 /** Ürünün üretim girdileri: her alan hücreye yazılır, hesaba hemen girer ve tek "Kaydet" ile kalıcı yazılır. */
-export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, taslak, onTaslak, taban }: Props) {
+export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, taslak, onTaslak, taban, marka }: Props) {
   const havuzlar = useGiderHavuzlari(senaryoId);
   const seciliHat = taslak.urun.hat ?? uretim.hat;
 
@@ -83,7 +86,7 @@ export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, ta
   const ov = taslak.hedef;
   const etkinHedef = (a: HedefAnahtari): string => ov[a] ?? uretim[a];
   const etkinPazarlama = ov.pazarlama_yonetim_uygula ?? uretim.pazarlama_yonetim_uygula;
-  const etkinUrun = (a: UrunAnahtari): string => taslak.urun[a] ?? uretim[a];
+  const etkinUrun = (a: Exclude<UrunAnahtari, "marka">): string => taslak.urun[a] ?? uretim[a];
   const urunTaslagi = (a: UrunAnahtari, deger: string | null) => onTaslak({ urun: { [a]: deger ?? undefined } });
   const hedefKaldir = (a: HedefAnahtari | "pazarlama_yonetim_uygula") => onTaslak({ hedef: { [a]: undefined } });
 
@@ -169,6 +172,21 @@ export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, ta
               </option>
             ))}
           </select>
+        </Alan>
+        <Alan etiket="Marka">
+          <Input
+            aria-label="Marka"
+            aria-description="Boş bırakılırsa ürün adından türetilir (ör. adında Berrak geçiyorsa Berrak)."
+            title={
+              taslak.urun.marka !== undefined
+                ? `Eski değer: ${marka || "—"}`
+                : "Boş bırakılırsa ürün adından türetilir. Liste fiyatı yalnız Berrak ürünlerinde hesaplanır."
+            }
+            placeholder="addan türetilir"
+            value={taslak.urun.marka ?? marka ?? ""}
+            onChange={(e) => onTaslak({ urun: { marka: e.target.value } })}
+            className={cn("h-7 w-36 text-sm", taslak.urun.marka !== undefined && "border-primary")}
+          />
         </Alan>
         <Alan etiket="Vardiya saati">
           <ParametreGirdisi

@@ -13,7 +13,8 @@ test("yeni çalışma: boş çalışma aç → Veri Girişi'nden yeni ürün →
   request,
 }) => {
   // Fiyatı olan (kartı var, fiyatsız değil) bir malzeme kodu.
-  const yanit = await request.get("http://127.0.0.1:8010/api/v1/malzemeler?senaryo=1&boyut=100");
+  // Sabit port yok: baseURL (Vite) üzerinden vekil; e2e backend portu E2E_API_PORT ile değişebilir.
+  const yanit = await request.get("/api/v1/malzemeler?senaryo=1&boyut=100");
   expect(yanit.ok()).toBeTruthy();
   const { kayitlar } = (await yanit.json()) as { kayitlar: { kod: string; fiyatsiz?: boolean; kart_yok?: boolean }[] };
   const malzeme = kayitlar.find((m) => !m.fiyatsiz && !m.kart_yok);

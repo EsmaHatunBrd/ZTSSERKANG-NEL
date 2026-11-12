@@ -19,7 +19,7 @@ test("kur: ürün ekranında USD kurunu değiştir -> Senaryo geneli -> Kaydet -
   const eski = Number((await usd.inputValue()).replace(",", "."));
   const yeni = String(Math.floor(eski) + 3);
   await usd.fill(yeni);
-  await expect(page.getByText("1 değişiklik")).toBeVisible();
+  await expect(page.getByText("1 alanda değişiklik")).toBeVisible();
 
   // Diyalog: kur senaryo genelidir, tüm ürünleri etkiler.
   await page.getByRole("button", { name: "Kaydet" }).click();

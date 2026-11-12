@@ -207,6 +207,59 @@ describe("VeriGirisi", () => {
     expect(within(kart("Hat kapasitesi (Üretim Adetleri)")).getByLabelText("Kayıt")).toBeDisabled();
   });
 
+  it("stokta kalan kartı: ürün seç → boş form → değerler + neden → PUT; altta kaydı olan ürünler listelenir", async () => {
+    let govde: Record<string, unknown> | null = null;
+    sunucu.use(
+      http.get("*/api/v1/stok-devri", () =>
+        HttpResponse.json({
+          kayitlar: [
+            {
+              urun_kodu: "URUN-002",
+              ad: "Biber Turşusu 370 ml",
+              adet: "300",
+              birim_maliyet: "8",
+              enflasyon: null,
+              uretim_adedi: null,
+              enflasyon_kullanilan: "0.25",
+              uretim_adedi_kullanilan: "900",
+              uretim_adedi_kaynagi: "satis_gecmisi",
+              guncel_stok_maliyeti: "10",
+              bu_yil_maliyet: "12",
+              ortalama_maliyet: "11.5",
+              stok_payi: "0.25",
+              stok_etkisi: true,
+              aciklama: null,
+            },
+          ],
+        }),
+      ),
+      http.put("*/api/v1/urunler/:kod/stok-devri", async ({ request }) => {
+        govde = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({});
+      }),
+    );
+    const u = userEvent.setup();
+    kurSayfa(<VeriGirisi />);
+    const k = await screen.findByRole("region", { name: "Stokta kalan" });
+    const liste = await within(k).findByRole("table", { name: "Stokta kalanı olan ürünler" });
+    expect(within(liste).getByText(/Biber Turşusu 370 ml/)).toBeInTheDocument();
+    expect(within(liste).getByText("11,50 TL")).toBeInTheDocument();
+
+    await u.selectOptions(await within(k).findByLabelText("Ürün"), "URUN-001");
+    const adet = await within(k).findByLabelText("Stok adedi");
+    expect(adet).toHaveValue("");
+    await u.type(adet, "500");
+    await u.type(within(k).getByLabelText("Stok birim maliyeti (TL)"), "9");
+    await u.type(within(k).getByLabelText("Bu yıl üretim adedi"), "2000");
+    await u.click(within(k).getByRole("button", { name: "Kaydet" }));
+    expect(within(k).getByText("Neden zorunlu")).toBeInTheDocument();
+    expect(govde).toBeNull();
+    await u.type(within(k).getByLabelText("Neden (zorunlu)"), "Sayım");
+    await u.click(within(k).getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(govde).toEqual({ adet: "500", birim_maliyet: "9", enflasyon: null, uretim_adedi: "2000", neden: "Sayım" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("URUN-001 için stokta kalan kaydedildi.");
+  });
+
   it("menüde VERİ grubunun başında ve rota ağacında /veri-girisi vardır", () => {
     const veri = MENU_GRUPLARI.find((g) => g.grup === "Veri girişi");
     expect(veri?.ogeler[0]).toMatchObject({
@@ -248,6 +301,8 @@ describe("VeriGirisi — Yeni ürün kartı (Faz 5c)", () => {
     await u.type(within(k).getByLabelText("Ambalaj hacmi (ml)"), "720");
     await u.type(within(k).getByLabelText("Süzme miktar (kg)"), "0,45");
     await u.type(within(k).getByLabelText("Hat"), "Hat A");
+    expect(within(k).getByLabelText("Marka")).toHaveAttribute("placeholder", "Boş bırakılırsa addan türetilir (ör. Berrak)");
+    await u.type(within(k).getByLabelText("Marka"), "Berrak");
     expect(within(k).getByText(/Özet: "URUN-001" kodlu "Kornişon 720 ml" kartı açılacak/)).toBeInTheDocument();
     await u.click(within(k).getByRole("button", { name: "Ürünü kaydet" }));
     expect(await within(k).findByRole("alert")).toHaveTextContent("Bu kod zaten kayıtlı: Salatalık Turşusu 720 ml");
@@ -267,12 +322,14 @@ describe("VeriGirisi — Yeni ürün kartı (Faz 5c)", () => {
         taze_tursu_sinifi: "Taze/Turşu",
         suzme_kg: "0.45",
         pazar: "Yurtiçi",
+        marka: "Berrak",
       },
     });
     const durum = await within(k).findByRole("status");
     expect(durum).toHaveTextContent("YENI-01 · Kornişon 720 ml kaydedildi.");
     expect(within(durum).getByRole("link", { name: "Reçeteyi kur" })).toHaveAttribute("href", "/urunler/YENI-01?senaryo=1");
     expect(within(k).getByLabelText("Ürün kodu")).toHaveValue("");
+    expect(within(k).getByLabelText("Marka")).toHaveValue("");
     expect(screen.getByText(/YENI-01 ürün kartı açıldı; reçetesi kaydedilince çalışmaya dahil olur/)).toBeInTheDocument();
   });
 

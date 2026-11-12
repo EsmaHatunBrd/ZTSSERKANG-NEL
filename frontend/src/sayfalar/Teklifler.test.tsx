@@ -252,6 +252,21 @@ describe("Teklifler", () => {
     vi.unstubAllGlobals();
   });
 
+  it("boş listede 'Ürün seç' bağlantısı seçili senaryoyla ürün seçiciye götürür", async () => {
+    sunucu.use(...tekliflerIsleyicileri(istekler, []));
+    kur();
+    const bolum = await listeHazir();
+    // Senaryo listesi yüklenince bağlantı seçili senaryoyu taşır.
+    await waitFor(() => expect(within(bolum).getByRole("link", { name: "Ürün seç" })).toHaveAttribute("href", "/urunler?senaryo=1"));
+    expect(bolum).toHaveTextContent("Bu senaryoda teklif yok");
+  });
+
+  it("dolu listede 'Ürün seç' bağlantısı yoktur", async () => {
+    kur();
+    await within(await listeHazir()).findByText("Başka Müşteri");
+    expect(screen.queryByRole("link", { name: "Ürün seç" })).not.toBeInTheDocument();
+  });
+
   it("liste hata verirse uyarı gösterir", async () => {
     sunucu.use(
       http.get("*/api/v1/teklifler", () =>

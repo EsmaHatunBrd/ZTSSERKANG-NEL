@@ -10,7 +10,7 @@ import { ayarlarIsleyicileri, yeniKayit, type YazimKaydi } from "@/test/msw/isle
 import { kurSayfa } from "@/test/kur-ayarlar";
 import { bugunIso } from "@/yardimcilar/tarih";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import MalzemeFiyatlari from "./MalzemeFiyatlari";
+import MalzemeFiyatlari, { tipKisa } from "./MalzemeFiyatlari";
 
 /** Testte URL arama dizesini görünür kılar. */
 function KonumGoster() {
@@ -155,6 +155,37 @@ describe("MalzemeFiyatlari", () => {
     const satir = (await screen.findByText("M-099")).closest("tr") as HTMLElement;
     expect(within(satir).getByText("Kart yok")).toBeInTheDocument();
     expect(within(satir).getByRole("button", { name: /Fiyat değiştir M-099/ })).toBeDisabled();
+  });
+
+  it("D1: süzgeç satırı arama + iki süzgeç + sayaç taşır; sayaç toplamı yazar", async () => {
+    kurSayfa(<MalzemeFiyatlari />);
+    await screen.findByText("Pet Şişe 500 ml");
+    const bar = screen.getByRole("group", { name: "Süzgeçler" });
+    expect(within(bar).getByLabelText("Malzeme ara (kod ya da ad)")).toBeInTheDocument();
+    expect(within(bar).getByRole("checkbox", { name: /Yalnız fiyatsız/ })).toBeInTheDocument();
+    expect(within(bar).getByRole("checkbox", { name: /Yalnız revize edilenler/ })).toBeInTheDocument();
+    expect(within(bar).getByText(/^\d+ malzeme$/)).toBeInTheDocument();
+  });
+
+  it("D1: fiyatsız satırda fiyat hücresinde yalnız rozet vardır (0,0000 yazmaz); Tip kısaltılır, tam ad ipucunda", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<MalzemeFiyatlari />);
+    await screen.findByText("Pet Şişe 500 ml");
+    const basliklar = within(screen.getByRole("table"))
+      .getAllByRole("columnheader")
+      .map((h) => (h.textContent ?? "").trim());
+    const t = basliklar.indexOf("Tip");
+    const f = basliklar.indexOf("Geçerli fiyat");
+    const kapak = (screen.getByText("Kapak 38 mm").closest("tr") as HTMLElement).querySelectorAll("td");
+    expect(within(kapak[f] as HTMLElement).getByText("Fiyatsız")).toBeInTheDocument();
+    expect(kapak[f]).not.toHaveTextContent("0,0000");
+    expect(kapak[t].querySelector("[title]")?.getAttribute("title")).toBe("ambalaj");
+    expect(tipKisa("0001-Hammadde")).toBe("Hammadde");
+    expect(tipKisa("0004-Ticari Malzeme")).toBe("Ticari Malzeme");
+    expect(tipKisa("ambalaj")).toBe("ambalaj");
+    await u.click(screen.getByRole("checkbox", { name: /fiyatsız/i }));
+    const satir = (await screen.findByText("M-099")).closest("tr") as HTMLElement;
+    expect(satir).not.toHaveTextContent("0,0000");
   });
 
   it("neden boşsa fiyat gönderilmez", async () => {

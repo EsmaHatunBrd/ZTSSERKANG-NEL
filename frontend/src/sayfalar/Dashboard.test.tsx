@@ -324,4 +324,24 @@ describe("Dashboard varsayılan sade tablo", () => {
     await userEvent.click(screen.getByRole("button", { name: /Süzgeçleri temizle/ }));
     expect(within(screen.getByRole("table")).getByText("Salatalık Turşusu 720 ml")).toBeInTheDocument();
   });
+
+  it("'Stokta kalanı olan' süzgeci yalnız stok etkili ürünleri bırakır; 'Ortalama maliyet' sütunu menüden açılır", async () => {
+    sunucu.use(
+      http.get("*/api/v1/urunler", () => {
+        const k = dashboardSatirlari.map((s, i) => ({ ...s, stok_etkisi: i === 1, ortalama_maliyet_tl: i === 1 ? "19.5" : null }));
+        return HttpResponse.json({ kayitlar: k, toplam: k.length, enflasyon_altinda_toplam: 0 });
+      }),
+    );
+    kur();
+    await yuklendi();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Stokta kalanı olan" }));
+    expect(within(screen.getByRole("table")).queryByText("Salatalık Turşusu 720 ml")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Biber Turşusu 370 ml")).toBeInTheDocument();
+    expect(screen.getByText("1 / 3 ürün")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText(/^Sütunlar/));
+    await userEvent.click(screen.getByRole("checkbox", { name: /^Ortalama maliyet/ }));
+    expect(screen.getByRole("columnheader", { name: /Ortalama maliyet TL/ })).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("19,50 TL")).toBeInTheDocument();
+  });
 });

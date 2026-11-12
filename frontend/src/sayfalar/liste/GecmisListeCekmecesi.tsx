@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { hataMetni } from "@/api/istemci";
 import { useListeFiyatiKaydet, useListeFiyatiSil } from "@/api/sorgular/liste";
-import type { ListeCalismaSatiri } from "@/api/tipler";
+import { useSenaryo } from "@/bilesenler/SenaryoSecici";
+import type { ListeCalismaSatiri, ListePazari } from "@/api/tipler";
 import { Button } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/bilesenler/ui/sheet";
 import { D, paraBicimle } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
+import { adimMetni, PAZAR_ADI } from "./listeYardimci";
 
 /** API sayı metni -> giriş kutusu metni ("54.9" -> "54,9"); boş -> "". */
 function kutuMetni(x: string | null | undefined): string {
@@ -16,14 +18,16 @@ function kutuMetni(x: string | null | undefined): string {
 interface SatirProps {
   kod: string;
   yil: number;
+  pazar: ListePazari;
   liste: string;
   maliyet: string | null;
+  bolen: string | null | undefined;
   ornek: boolean;
 }
 
 /** Tek yılın satırı: liste fiyatı ve birim maliyet düzenlenir; Kaydet yalnız değişince açılır. */
-function YilSatiri({ kod, yil, liste, maliyet, ornek }: SatirProps) {
-  const kaydet = useListeFiyatiKaydet();
+function YilSatiri({ kod, yil, pazar, liste, maliyet, bolen, ornek }: SatirProps) {
+  const kaydet = useListeFiyatiKaydet(useSenaryo().senaryoId);
   const sil = useListeFiyatiSil();
   const [l, setL] = useState(kutuMetni(liste));
   const [mal, setMal] = useState(kutuMetni(maliyet));
@@ -35,7 +39,10 @@ function YilSatiri({ kod, yil, liste, maliyet, ornek }: SatirProps) {
   return (
     <li className="flex flex-col gap-2 rounded-lg border p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold tabular-nums">{yil}</span>
+        <span className="flex items-baseline gap-2">
+          <span className="font-semibold tabular-nums">{yil}</span>
+          {bolen && <span className="text-xs text-muted-foreground">Bölen {kutuMetni(bolen)}</span>}
+        </span>
         {ornek && <span className="rounded-full bg-sari px-2 py-0.5 text-xs font-medium text-foreground">Örnek veri</span>}
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -55,14 +62,20 @@ function YilSatiri({ kod, yil, liste, maliyet, ornek }: SatirProps) {
         </label>
       </div>
       <div className="flex justify-end gap-2">
-        <Button type="button" size="sm" variant="outline" disabled={sil.isPending} onClick={() => sil.mutate({ urun_kodu: kod, yil })}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={sil.isPending}
+          onClick={() => sil.mutate({ urun_kodu: kod, yil, pazar })}
+        >
           Sil
         </Button>
         <Button
           type="button"
           size="sm"
           disabled={(!degisti && !ornek) || !gecerli || kaydet.isPending}
-          onClick={() => kaydet.mutate({ urun_kodu: kod, yil, liste_fiyati: lApi as string, birim_maliyet: malApi })}
+          onClick={() => kaydet.mutate({ urun_kodu: kod, yil, pazar, liste_fiyati: lApi as string, birim_maliyet: malApi })}
         >
           {ornek && !degisti ? "Gerçek olarak kaydet" : "Kaydet"}
         </Button>
@@ -77,8 +90,8 @@ function YilSatiri({ kod, yil, liste, maliyet, ornek }: SatirProps) {
 }
 
 /** Yeni yıl ekleme formu (varsayılan yıl: listedeki en eski yılın bir öncesi ya da çalışma yılının bir öncesi). */
-function YilEkle({ kod, varsayilanYil }: { kod: string; varsayilanYil: number }) {
-  const kaydet = useListeFiyatiKaydet();
+function YilEkle({ kod, pazar, varsayilanYil }: { kod: string; pazar: ListePazari; varsayilanYil: number }) {
+  const kaydet = useListeFiyatiKaydet(useSenaryo().senaryoId);
   const [yil, setYil] = useState(String(varsayilanYil));
   const [l, setL] = useState("");
   const [mal, setMal] = useState("");
@@ -94,7 +107,7 @@ function YilEkle({ kod, varsayilanYil }: { kod: string; varsayilanYil: number })
     if (mal.trim() !== "" && (malApi === null || !D(malApi).gt(0))) return setUyari("Birim maliyet 0'dan büyük bir sayı olmalı");
     setUyari(null);
     kaydet.mutate(
-      { urun_kodu: kod, yil: y, liste_fiyati: lApi, birim_maliyet: malApi },
+      { urun_kodu: kod, yil: y, pazar, liste_fiyati: lApi, birim_maliyet: malApi },
       {
         onSuccess: () => {
           setL("");
@@ -107,7 +120,7 @@ function YilEkle({ kod, varsayilanYil }: { kod: string; varsayilanYil: number })
 
   return (
     <form onSubmit={gonder} aria-label="Yıl ekle" className="flex flex-col gap-2 rounded-lg border border-dashed p-3">
-      <span className="text-sm font-medium">Yıl ekle</span>
+      <span className="text-sm font-medium">Yıl ekle ({PAZAR_ADI[pazar].toLocaleLowerCase("tr")} liste fiyatı)</span>
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted-foreground">Yıl</span>
@@ -145,13 +158,19 @@ function YilEkle({ kod, varsayilanYil }: { kod: string; varsayilanYil: number })
 interface Props {
   satir: ListeCalismaSatiri | null;
   yil: number;
+  /** Seçili pazar: çekmece yalnız bu pazarın kayıtlarını gösterir ve yazar. */
+  pazar: ListePazari;
   bolen: string;
+  /** Yuvarlama adımı ("0.05"); yoksa gösterilmez. */
+  yuvarlama?: string;
   onKapat: () => void;
 }
 
-/** Bir ürünün geçmiş yıllardaki liste fiyatları ve birim maliyetleri: elle girme, düzeltme, silme. */
-export function GecmisListeCekmecesi({ satir, yil, bolen, onKapat }: Props) {
-  const enEski = satir?.gecmis.length ? Math.min(...satir.gecmis.map((g) => g.yil)) : yil;
+/** Bir ürünün seçili pazardaki geçmiş liste fiyatları ve birim maliyetleri: elle girme, düzeltme, silme. */
+export function GecmisListeCekmecesi({ satir, yil, pazar, bolen, yuvarlama, onKapat }: Props) {
+  const gecmis = (satir?.gecmis ?? []).filter((g) => g.pazar === undefined || g.pazar === pazar);
+  const enEski = gecmis.length ? Math.min(...gecmis.map((g) => g.yil)) : yil;
+  const pazarAdi = PAZAR_ADI[pazar];
   return (
     <Sheet open={satir !== null} onOpenChange={(a) => !a && onKapat()}>
       <SheetContent side="right" className="sm:max-w-md">
@@ -160,22 +179,36 @@ export function GecmisListeCekmecesi({ satir, yil, bolen, onKapat }: Props) {
             <SheetHeader>
               <SheetTitle>{satir.ad}</SheetTitle>
               <SheetDescription>
-                {satir.kod} · {yil} liste fiyatı{" "}
-                {satir.yeni_liste ? `${paraBicimle(satir.yeni_liste)} (satış ÷ ${kutuMetni(bolen)})` : "hesaplanamadı"}. Önceki yılların
-                liste fiyatını ve isterseniz o yılın birim maliyetini girin; artışlar buna göre hesaplanır.
+                {satir.kod} · {yil} {pazarAdi.toLocaleLowerCase("tr")} liste fiyatı{" "}
+                {satir.yeni_liste
+                  ? `${paraBicimle(satir.yeni_liste)} (satış ÷ ${kutuMetni(bolen)}${yuvarlama ? `, en yakın ${adimMetni(yuvarlama)} TL` : ""})`
+                  : "hesaplanamadı"}
+                . Önceki yılların {pazarAdi.toLocaleLowerCase("tr")} liste fiyatını ve isterseniz o yılın birim maliyetini girin; artışlar
+                buna göre hesaplanır.
               </SheetDescription>
             </SheetHeader>
             <div className="flex flex-col gap-3 overflow-y-auto px-4 pb-4">
-              <YilEkle key={`${satir.kod}-${enEski}`} kod={satir.kod} varsayilanYil={satir.gecmis.length ? enEski - 1 : yil - 1} />
+              <YilEkle
+                key={`${satir.kod}-${pazar}-${enEski}`}
+                kod={satir.kod}
+                pazar={pazar}
+                varsayilanYil={gecmis.length ? enEski - 1 : yil - 1}
+              />
               <ul className="flex flex-col gap-2" aria-label="Geçmiş liste fiyatları">
-                {satir.gecmis.length === 0 && <li className="text-sm text-muted-foreground">Bu ürün için geçmiş liste fiyatı yok.</li>}
-                {satir.gecmis.map((g) => (
+                {gecmis.length === 0 && (
+                  <li className="text-sm text-muted-foreground">
+                    Bu ürün için geçmiş {pazarAdi.toLocaleLowerCase("tr")} liste fiyatı yok.
+                  </li>
+                )}
+                {gecmis.map((g) => (
                   <YilSatiri
-                    key={`${g.yil}-${g.liste_fiyati}-${g.birim_maliyet}-${g.ornek}`}
+                    key={`${pazar}-${g.yil}-${g.liste_fiyati}-${g.birim_maliyet}-${g.ornek}`}
                     kod={satir.kod}
                     yil={g.yil}
+                    pazar={pazar}
                     liste={g.liste_fiyati}
                     maliyet={g.birim_maliyet}
+                    bolen={g.bolen}
                     ornek={g.ornek}
                   />
                 ))}

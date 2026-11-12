@@ -164,6 +164,46 @@
     }
 }
 
+/* Yatay kaydırmada solda sabit kalan hücreler (Excel "bölmeleri dondur"): zemin opak, satır şeridi ve vurgu korunur. */
+@layer components {
+  .hucre-sabit {
+    position: sticky;
+    z-index: 1;
+    background: var(--card);
+    }
+  tr:nth-child(odd) > .hucre-sabit {
+    background: color-mix(in oklab, var(--muted) 40%, var(--card));
+    }
+  tr[data-ara] > .hucre-sabit {
+    background: color-mix(in oklab, var(--muted) 50%, var(--card));
+    }
+  tr:hover > .hucre-sabit {
+    background: color-mix(in oklab, var(--accent) 70%, var(--card));
+    }
+  thead .hucre-sabit {
+    z-index: 2;
+    background: var(--secondary);
+    }
+  tfoot .hucre-sabit,
+  tfoot tr:nth-child(odd) > .hucre-sabit {
+    background: color-mix(in oklab, var(--muted) 50%, var(--card));
+    }
+  /* Alt toplam satırları kaydırmada görünür kalır; zemin hücrelere verilir (yapışık tfoot'un kendi zemini çizilmiyor). */
+  .altbilgi-sabit {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    }
+  .altbilgi-sabit td {
+    background: color-mix(in oklab, var(--muted) 50%, var(--card));
+    border-top: 1px solid var(--border);
+    }
+  /* Kısa görünür başlık: tam ad ekran okuyucu metni olarak kalır (data-kisa görünen metin). */
+  .kisa-baslik::before {
+    content: attr(data-kisa);
+    }
+}
+
 /* Sayfa açılışında kısa, sakin beliriş (hareket azaltma tercihinde kapalı). */
 @media (prefers-reduced-motion: no-preference) {
   .sayfa-belir {
@@ -173,4 +213,121 @@
 @keyframes sayfa-belir {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: none; }
+}
+
+/* Kayıtlı hesap görünümü yazdırma (yalnız kökünde [data-yazdir] olan sayfa; Teklifler'in kendi print bloğu etkilenmez). */
+@media print {
+  body:has([data-yazdir]) aside,
+  body:has([data-yazdir]) header:not([data-yazdir] header),
+  body:has([data-yazdir]) button,
+  body:has([data-yazdir]) [role="status"] {
+    display: none !important;
+  }
+  body:has([data-yazdir]),
+  body:has([data-yazdir]) main {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  body:has([data-yazdir]) main {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  body:has([data-yazdir]) [data-yazdir] {
+    gap: 12pt;
+  }
+  body:has([data-yazdir]) [data-yazdir] .bg-card,
+  body:has([data-yazdir]) [data-yazdir] .rounded-xl,
+  body:has([data-yazdir]) [data-yazdir] .rounded-lg {
+    background: #fff !important;
+    border: 1px solid #999 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  /* Gider kalemleri / Toplamlar ızgarası kâğıtta alt alta: yan yana kalınca geniş tablo komşu karta taşıyor. */
+  body:has([data-yazdir]) [data-yazdir] > .grid {
+    grid-template-columns: 1fr !important;
+  }
+  body:has([data-yazdir]) [data-yazdir] table {
+    width: 100%;
+    font-size: 9pt;
+    border-collapse: collapse;
+  }
+  body:has([data-yazdir]) [data-yazdir] th,
+  body:has([data-yazdir]) [data-yazdir] td {
+    padding: 2pt 3pt;
+    border-bottom: 1px solid #ccc;
+    white-space: normal !important;
+  }
+  /* Sayılar ve tutarlar bölünmez ("28,49 TL" tek parça). */
+  body:has([data-yazdir]) [data-yazdir] .tabular-nums {
+    white-space: nowrap !important;
+  }
+  /* Ekrandaki sabit sütun genişlikleri (w-14, w-40…) kâğıtta serbest: tablo sayfaya sığsın. */
+  body:has([data-yazdir]) [data-yazdir] .hucre-sabit {
+    width: auto !important;
+    min-width: 0 !important;
+  }
+  body:has([data-yazdir]) [data-yazdir] tr {
+    break-inside: avoid;
+  }
+  body:has([data-yazdir]) [data-yazdir] thead {
+    display: table-header-group;
+  }
+  body:has([data-yazdir]) [data-yazdir] .overflow-auto,
+  body:has([data-yazdir]) [data-yazdir] .overflow-x-auto,
+  body:has([data-yazdir]) [data-yazdir] [class*="max-h-"] {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body:has([data-yazdir]) [data-yazdir] .hucre-sabit,
+  body:has([data-yazdir]) [data-yazdir] .altbilgi-sabit,
+  body:has([data-yazdir]) [data-yazdir] thead,
+  body:has([data-yazdir]) [data-yazdir] th {
+    position: static !important;
+  }
+  body:has([data-yazdir]) [data-yazdir] .hucre-sabit,
+  body:has([data-yazdir]) [data-yazdir] .altbilgi-sabit td,
+  body:has([data-yazdir]) [data-yazdir] thead .hucre-sabit {
+    background: #fff !important;
+  }
+}
+
+/* Yönetim Özeti (data-yazdir="yonetim"): A4 dikeyde 1-2 sayfa; kartlar bölünmez, iki sütun tek sütuna iner. */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+  body:has([data-yazdir="yonetim"]) [data-yazdir="yonetim"] {
+    font-size: 11pt;
+    gap: 8pt;
+  }
+  body:has([data-yazdir="yonetim"]) [data-yazdir="yonetim"] h1 {
+    font-size: 16pt;
+  }
+  body:has([data-yazdir="yonetim"]) [data-yazdir="yonetim"] h2 {
+    font-size: 12pt;
+  }
+  body:has([data-yazdir="yonetim"]) [data-yazdir="yonetim"] .grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8pt !important;
+  }
+  body:has([data-yazdir="yonetim"]) [data-yazdir="yonetim"] section,
+  body:has([data-yazdir="yonetim"]) [data-yazdir="yonetim"] [role="group"] {
+    break-inside: avoid;
+    padding: 6pt 8pt !important;
+  }
+  body:has([data-yazdir="yonetim"]) [data-yazdir="yonetim"] table {
+    font-size: 9pt;
+  }
+  body:has([data-yazdir="yonetim"]) [data-yazdir="yonetim"] a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+  body:has([data-yazdir="yonetim"]) [data-yazdir="yonetim"] .animate-spin {
+    animation: none !important;
+  }
 }

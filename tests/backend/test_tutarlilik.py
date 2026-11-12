@@ -9,7 +9,7 @@ from backend.servisler import import_servisi as ims, tutarlilik_servisi as ts
 from backend.uygulama import uygulama_olustur
 
 KODLAR = ["hesaplanamayan", "parametre_eksik", "fiyatsiz", "eksik_fiyat_etkisi", "hedef_alti", "malzeme_karti", "pay", "hat", "parametre_uyari", "recetesiz", "gecici_kod",
-          "uretim_adetleri", "elle_hucre"]
+          "uretim_adetleri", "ambalaj_tutarsiz", "fiyat_egilimi", "elle_hucre"]
 
 
 @pytest.fixture(scope="module")
@@ -20,6 +20,22 @@ def ortam(excel_yolu):
     s.commit()
     yield s, sid
     s.close()
+
+
+def test_ambalaj_tutarsizliklari_saf():
+    D = __import__("decimal").Decimal
+    satir = lambda kod, ml, tl, aile="turşu": {"kod": kod, "ad": f"Turşu {ml} ml", "aile": aile, "ambalaj_ml": D(ml), "satis_tl": D(tl)}
+    # 370 ml 10 TL (27,03/lt), 720 ml 25 TL (34,72/lt) → büyük boy pahalı; 1700 ml 50 TL (29,41/lt) → bir öncekinden ucuz, uyarı yok
+    out = ts.ambalaj_tutarsizliklari([satir("B", 720, 25), satir("A", 370, 10), satir("C", 1700, 50)])
+    assert [o["etiket"].split(" · ")[0] for o in out] == ["B"]
+    assert "34,72 TL" in out[0]["aciklama"] and "(A) 27,03 TL" in out[0]["aciklama"] and "%28,5" in out[0]["aciklama"]
+    assert out[0]["yol"] == "/karsilastirma?aile=tur%C5%9Fu"
+    # tolerans: %1 içindeki fark uyarı değil; eşit hacim kıyaslanmaz; aile/fiyat/hacim boş satırlar atlanır
+    assert ts.ambalaj_tutarsizliklari([satir("A", 370, 10), satir("B", 740, D("20.1"))]) == []
+    assert ts.ambalaj_tutarsizliklari([satir("A", 370, 10), satir("B", 370, 12)]) == []
+    assert ts.ambalaj_tutarsizliklari([satir("A", 370, 10), {"kod": "X", "ad": "x", "aile": None, "ambalaj_ml": D(720), "satis_tl": D(99)},
+                                       {"kod": "Y", "ad": "y", "aile": "turşu", "ambalaj_ml": None, "satis_tl": D(99)},
+                                       {"kod": "Z", "ad": "z", "aile": "turşu", "ambalaj_ml": D(720), "satis_tl": None}]) == []
 
 
 def _k(d: dict) -> dict:

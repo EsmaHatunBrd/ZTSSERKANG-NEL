@@ -77,3 +77,29 @@ export function useHedefFiyat(senaryo: number | null | undefined, marj: string |
       ) as Promise<HedefFiyatSonucu>,
   });
 }
+
+/** Dışa aktarma adresi: boş/null parametreler atlanır. */
+function xlsxAdresi(dosya: string, parametreler: Record<string, string | number | null | undefined>): string {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(parametreler)) {
+    if (v === null || v === undefined || v === "") continue;
+    p.set(k, String(v));
+  }
+  const q = p.toString();
+  return `/api/v1/disa-aktar/${dosya}${q ? `?${q}` : ""}`;
+}
+
+/** Marjı koruyan fiyat Excel'i: ekranda uygulanan marj, seçili bölge ve "yalnız zam gerekenler" süzgeciyle. */
+export function hedefFiyatXlsxAdresi(senaryo: number, marj: string | null, bolge: string | null, yalnizZam: boolean): string {
+  return xlsxAdresi("hedef-fiyat.xlsx", { senaryo, marj, bolge, yalniz_zam: yalnizZam ? "1" : null });
+}
+
+/** Kârlılık haritası Excel'i: seçili bölge varsa yalnız o bölge. */
+export function karlilikXlsxAdresi(senaryo: number, bolge: string | null): string {
+  return xlsxAdresi("karlilik.xlsx", { senaryo, bolge });
+}
+
+/** Kur riski Excel'i: uygulanan kur artış oranıyla ("0.1" = %10). */
+export function kurRiskiXlsxAdresi(senaryo: number, oran: string): string {
+  return xlsxAdresi("kur-riski.xlsx", { senaryo, oran });
+}

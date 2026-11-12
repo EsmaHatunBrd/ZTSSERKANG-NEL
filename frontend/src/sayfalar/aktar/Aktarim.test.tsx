@@ -19,6 +19,7 @@ import {
 import { SenaryoSaglayici, SenaryoSecici } from "@/bilesenler/SenaryoSecici";
 import { http, HttpResponse } from "msw";
 import ReceteAktar from "../ReceteAktar";
+import type { AktarimOnizleStokDevri, AktarimUygulaStokDevri } from "@/api/tipler";
 
 beforeAll(() => sunucu.listen({ onUnhandledFrame: "error" }));
 let form: ReturnType<typeof formAlanlariniYakala> | null = null;
@@ -64,7 +65,7 @@ async function dosyaVeOnizle() {
 }
 
 describe("Veri Aktar sayfası", () => {
-  it("başlık ve altı sekme", async () => {
+  it("başlık ve yedi sekme", async () => {
     kur();
     expect(screen.getByRole("heading", { name: "Veri Aktar" })).toBeInTheDocument();
     expect(screen.getByText("Excel'den veri yükleme ve elle reçete girişi")).toBeInTheDocument();
@@ -75,6 +76,7 @@ describe("Veri Aktar sayfası", () => {
       "Gider dağıtım",
       "Satış geçmişi",
       "Ürün reçetesi",
+      "Stokta kalan",
     ]);
   });
 
@@ -140,7 +142,11 @@ describe("Veri Aktar - üretim adetleri", () => {
   });
 
   it("422 hatasını gösterir; yanlış uzantıyı reddeder", async () => {
-    sunucu.use(aktarimHatasi("uretim-adetleri", "onizle", "Üretim Adetleri sayfası bulunamadı; tek sayfalık dosyada ilk sayfa kullanılır", { sayfa: "Üretim Adetleri" }));
+    sunucu.use(
+      aktarimHatasi("uretim-adetleri", "onizle", "Üretim Adetleri sayfası bulunamadı; tek sayfalık dosyada ilk sayfa kullanılır", {
+        sayfa: "Üretim Adetleri",
+      }),
+    );
     kur();
     await sekme("Üretim adetleri");
     await userEvent.upload(screen.getByLabelText("Excel dosyası"), new File(["x"], "a.csv", { type: "text/csv" }), { applyAccept: false });
@@ -154,10 +160,7 @@ describe("Veri Aktar - üretim adetleri", () => {
   });
 
   it("uygulama 422 verirse hata listelenir ve özet görünmez", async () => {
-    sunucu.use(
-      aktarimIsleyici("uretim-adetleri", "onizle", uretimOnizle),
-      aktarimHatasi("uretim-adetleri", "uygula", "neden zorunlu"),
-    );
+    sunucu.use(aktarimIsleyici("uretim-adetleri", "onizle", uretimOnizle), aktarimHatasi("uretim-adetleri", "uygula", "neden zorunlu"));
     kur();
     await sekme("Üretim adetleri");
     await dosyaVeOnizle();
@@ -171,10 +174,7 @@ describe("Veri Aktar - üretim adetleri", () => {
 describe("Veri Aktar - satın alma fiyat listesi", () => {
   it("geçerlilik tarihi ve kartları güncelle gövdede gider; fark tabloları ve özet", async () => {
     form = formAlanlariniYakala();
-    sunucu.use(
-      aktarimIsleyici("satin-alma", "onizle", satinAlmaOnizle),
-      aktarimIsleyici("satin-alma", "uygula", satinAlmaUygula),
-    );
+    sunucu.use(aktarimIsleyici("satin-alma", "onizle", satinAlmaOnizle), aktarimIsleyici("satin-alma", "uygula", satinAlmaUygula));
     kur();
     await sekme("Satın alma fiyat listesi");
     fireTarih(await screen.findByLabelText("Geçerlilik tarihi"), "2026-09-01");
@@ -233,10 +233,7 @@ describe("Veri Aktar - satın alma fiyat listesi", () => {
 describe("Veri Aktar - gider dağıtım", () => {
   it("yalnız değişen havuzları ve ambalaj farkını gösterir; uygular", async () => {
     form = formAlanlariniYakala();
-    sunucu.use(
-      aktarimIsleyici("gider-dagitim", "onizle", giderOnizle),
-      aktarimIsleyici("gider-dagitim", "uygula", giderUygula),
-    );
+    sunucu.use(aktarimIsleyici("gider-dagitim", "onizle", giderOnizle), aktarimIsleyici("gider-dagitim", "uygula", giderUygula));
     kur();
     await sekme("Gider dağıtım");
     expect(screen.queryByLabelText("Geçerlilik tarihi")).not.toBeInTheDocument();
@@ -290,5 +287,82 @@ describe("Veri Aktar - senaryo değişimi", () => {
     await waitFor(() => expect(screen.queryByRole("region", { name: "Önizleme" })).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Uygula" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Önizle" })).toBeEnabled();
+  });
+});
+
+describe("Veri Aktar - stokta kalan", () => {
+  const satir = { ad: "Salatalık Turşusu 720 ml", enflasyon: null, uretim_adedi: null };
+  const onizle: AktarimOnizleStokDevri = {
+    sutunlar: {
+      urun_kodu: "urun_kodu",
+      stok_adet: "stok_adet",
+      stok_birim_maliyet: "stok_birim_maliyet",
+      enflasyon: null,
+      uretim_adedi: "uretim_adedi",
+    },
+    satirlar: [
+      { ...satir, satir_no: 2, urun_kodu: "URUN-001", adet: "1200", birim_maliyet: "10.5", durum: "yeni", eski: null },
+      {
+        ...satir,
+        satir_no: 3,
+        urun_kodu: "URUN-002",
+        adet: "350",
+        birim_maliyet: "8",
+        durum: "degisen",
+        eski: { adet: "300", birim_maliyet: "8" },
+      },
+      { ...satir, satir_no: 4, urun_kodu: "URUN-003", adet: "10", birim_maliyet: "1", durum: "ayni", eski: null },
+    ],
+    hatalar: [],
+    yeni: 1,
+    degisen: 1,
+    ayni: 1,
+  };
+  const uygula: AktarimUygulaStokDevri = { eklenen: 1, guncellenen: 1, ayni: 1 };
+
+  it("şablon bağlantısı, sayılar, yeni/değişen tabloları, neden zorunlu ve uygula gövdesi", async () => {
+    const istek: AktarimIstegi[] = [];
+    form = formAlanlariniYakala();
+    sunucu.use(aktarimIsleyici("stok-devri", "onizle", onizle, istek), aktarimIsleyici("stok-devri", "uygula", uygula, istek));
+    kur();
+    await sekme("Stokta kalan");
+    expect(screen.getByRole("link", { name: /Şablonu indir/ })).toHaveAttribute("href", "/api/v1/aktarim/stok-devri/sablon.xlsx");
+    const onizleme = await dosyaVeOnizle();
+    expect(form.alanlar.senaryo).toBe("1");
+    expect(within(onizleme).getByText(/Dosyada bulunamayan sütunlar: enflasyon/)).toBeInTheDocument();
+
+    const yeni = within(onizleme).getByRole("region", { name: "Yeni kayıtlar" });
+    expect(within(yeni).getByText("1.200")).toBeInTheDocument();
+    expect(within(yeni).getByText("10,50")).toBeInTheDocument();
+    expect(within(yeni).getByText("parametre")).toBeInTheDocument();
+    expect(within(yeni).getByText("geçen yıl satışı")).toBeInTheDocument();
+    const degisen = within(onizleme).getByRole("region", { name: "Değişen kayıtlar" });
+    expect(within(degisen).getByText("300")).toHaveClass("line-through");
+    expect(within(degisen).getByText("350")).toBeInTheDocument();
+    expect(within(onizleme).queryByText("URUN-003")).not.toBeInTheDocument();
+
+    const uygulaDugmesi = screen.getByRole("button", { name: "Uygula" });
+    expect(uygulaDugmesi).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Neden"), "Yıl sonu sayımı");
+    await userEvent.click(uygulaDugmesi);
+    const ozet = await screen.findByRole("region", { name: "Aktarım özeti" });
+    const kart = (ad: string) => within(ozet).getByText(ad, { selector: "[data-kart-baslik]" }).parentElement as HTMLElement;
+    expect(within(kart("Eklenen")).getByText("1")).toBeInTheDocument();
+    expect(within(kart("Güncellenen")).getByText("1")).toBeInTheDocument();
+    expect(istek.map((i) => i.asama)).toEqual(["onizle", "uygula"]);
+    expect(form.alanlar.neden).toBe("Yıl sonu sayımı");
+  });
+
+  it("hatalı satır varsa satır numarasıyla listelenir ve uygulanamaz", async () => {
+    sunucu.use(aktarimIsleyici("stok-devri", "onizle", { ...onizle, hatalar: [{ satir_no: 5, mesaj: "Ürün bulunamadı: YOK-1" }] }));
+    kur();
+    await sekme("Stokta kalan");
+    const onizleme = await dosyaVeOnizle();
+    const hatali = within(onizleme).getByRole("region", { name: "Hatalı satırlar" });
+    expect(within(hatali).getByText("5")).toBeInTheDocument();
+    expect(within(hatali).getByText("Ürün bulunamadı: YOK-1")).toBeInTheDocument();
+    expect(within(onizleme).getByRole("alert")).toHaveTextContent("Hatalı satırlar düzeltilmeden uygulanamaz.");
+    await userEvent.type(screen.getByLabelText("Neden"), "x");
+    expect(screen.getByRole("button", { name: "Uygula" })).toBeDisabled();
   });
 });

@@ -35,4 +35,4 @@ motor.dispose()
 
 import uvicorn  # noqa: E402
 
-uvicorn.run("backend.uygulama:app", host="127.0.0.1", port=8010, log_level="warning")
+uvicorn.run("backend.uygulama:app", host="127.0.0.1", port=int(os.environ.get("E2E_API_PORT", "8010")), log_level="warning")

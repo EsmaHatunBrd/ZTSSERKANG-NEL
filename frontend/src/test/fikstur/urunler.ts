@@ -38,6 +38,7 @@ const bos: Omit<DashboardSatiri, "id" | "kod" | "ad" | "ambalaj_hacmi" | "hat" |
   maliyet_usd_firesiz: null,
   uyari_sayisi: null,
   hata: null,
+  stok_etkisi: false,
 };
 
 /** Dashboard: 3 ürün, biri hatalı. */
@@ -68,6 +69,7 @@ export const dashboardSatirlari: DashboardSatiri[] = [
     enflasyon_durumu: "altinda",
     enflasyon_fark_yuzde: "-6.691626825119851",
     hedef_adet_maliyet_tl: "36.100000",
+    stok_etkisi: false,
   },
   {
     id: 2,
@@ -95,6 +97,7 @@ export const dashboardSatirlari: DashboardSatiri[] = [
     enflasyon_durumu: "ustunde",
     enflasyon_fark_yuzde: "4.2",
     hedef_adet_maliyet_tl: "27.450000",
+    stok_etkisi: false,
   },
   {
     ...bos,
@@ -121,8 +124,32 @@ export const calismaDisiSatir: DashboardSatiri = {
 };
 
 export const malzemeler: Malzeme[] = [
-  { kod: "M-001", ad: "Pet Şişe 500 ml", tip: "ambalaj", birim: "adet", para_birimi: "TL", zs: "S", fiyat: "5.9", fiyatsiz: false, gecerlilik_basi: "2026-09-01", kaynak: "import", ilk_fiyat: "5.2", revize: true },
-  { kod: "M-002", ad: "Kapak 38 mm", tip: "ambalaj", birim: "adet", para_birimi: "TL", zs: "Z", fiyat: "0", fiyatsiz: true, ilk_fiyat: null, revize: false },
+  {
+    kod: "M-001",
+    ad: "Pet Şişe 500 ml",
+    tip: "ambalaj",
+    birim: "adet",
+    para_birimi: "TL",
+    zs: "S",
+    fiyat: "5.9",
+    fiyatsiz: false,
+    gecerlilik_basi: "2026-09-01",
+    kaynak: "import",
+    ilk_fiyat: "5.2",
+    revize: true,
+  },
+  {
+    kod: "M-002",
+    ad: "Kapak 38 mm",
+    tip: "ambalaj",
+    birim: "adet",
+    para_birimi: "TL",
+    zs: "Z",
+    fiyat: "0",
+    fiyatsiz: true,
+    ilk_fiyat: null,
+    revize: false,
+  },
   { kod: "M-099", ad: null, kart_yok: true },
 ];
 

@@ -39,5 +39,13 @@ export const anahtar = {
   tutarlilik: (senaryo: Kimlik) => ["tutarlilik", senaryo ?? null] as const,
   yaOlursa: (senaryo: Kimlik, v: object) => ["analiz", "ya-olursa", senaryo ?? null, v] as const,
   zamEtkisi: (senaryo: Kimlik, malzeme: string, oran: string) => ["analiz", "zam", senaryo ?? null, malzeme, oran] as const,
-  listeCalismasi: (senaryo: Kimlik, bolen?: string) => ["liste-calismasi", senaryo ?? null, bolen ?? null] as const,
+  listeCalismasi: (senaryo: Kimlik, pazar: string, bolen?: string, yuvarlama?: string) =>
+    ["liste-calismasi", senaryo ?? null, pazar, bolen ?? null, yuvarlama ?? null] as const,
+  /** Stokta kalan (stok devri): `stok-devri` öneki hem ürün kaydını hem çalışma listesini yeniler. */
+  stokDevri: (kod: string, senaryo: Kimlik) => ["stok-devri", "urun", kod, senaryo ?? null] as const,
+  stokDevriListesi: (senaryo: Kimlik) => ["stok-devri", "liste", senaryo ?? null] as const,
+  /** Fiyat eğilimi (analiz 9): `analiz` öneki. */
+  fiyatEgilimi: (senaryo: Kimlik, ay: number, yalnizAsan: boolean) => ["analiz", "fiyat-egilimi", senaryo ?? null, ay, yalnizAsan] as const,
+  /** Yönetim Özeti (analiz 15): `surum` "Yenile" ile artar (sunucu önbelleğini atlar). */
+  yonetimOzeti: (senaryo: Kimlik, surum: number) => ["yonetim", "ozet", senaryo ?? null, surum] as const,
 };

@@ -11,7 +11,8 @@ from fiyat_motoru.modeller import (GIDER_ELLE_ALANLARI, GIDER_KALEMLERI, GiderEl
                                    Parametreler, UretimBilgisi, UrunGirdisi)
 from fiyat_motoru.para import SIFIR
 from ..depo import modeller as m
-from . import aile, fiyat_servisi, gider_servisi, parametre_servisi, recete_servisi
+from fiyat_motoru.fiyat import satis_fiyati, suzme_kg_fiyati, yuzdeleri_doldur
+from . import aile, fiyat_servisi, gider_servisi, liste_kurallari, parametre_servisi, recete_servisi, stok_devri_servisi
 from .donusum import decimal_str
 from .hatalar import HEDEF_YOK, BulunamadiHatasi, DogrulamaHatasi, KilitliHatasi, ServisHatasi
 
@@ -33,6 +34,8 @@ class HesapCiktisi:
     override: dict | None = None
     seviyeler: list[int | None] = field(default_factory=list)   # reçete satırı seviyeleri (satır sırasıyla); yalnız gösterim
     notlar: list[str] = field(default_factory=list)   # metin parametrelerden (satış fiyatı notu); snapshot'a yazılır
+    stok_devri: dict | None = None    # stokta kalan özeti (stok_devri_servisi.ozet, Decimal değerli); kayıt yoksa None
+    satis_ortalamadan: bool = False   # satış fiyatı ortalama maliyetten hesaplandı (`satis_ortalama_maliyetten` = 1 ve stok etkisi var)
 
 
 def urun_getir(s: Session, kod: str) -> m.Urun:
@@ -102,15 +105,22 @@ def uretim_hedefi_getir(s: Session, urun_id: int, senaryo_id: int) -> m.UretimHe
     return h
 
 
+MARKA_VERILMEDI = object()   # urun_kaydet: marka parametresi verilmedi (yeni üründe addan türetilir, var olanda korunur)
+
+
 def urun_kaydet(s: Session, kod: str, ad: str, ambalaj_hacmi: Decimal, hat: str, taze_tursu_sinifi: str, suzme_kg: Decimal,
-                pazar: str = "Yurtiçi", kullanici: str = "sistem", neden: str | None = None) -> m.Urun:
+                pazar: str = "Yurtiçi", kullanici: str = "sistem", neden: str | None = None, marka=MARKA_VERILMEDI) -> m.Urun:
+    """`marka`: verilmezse yeni üründe addan türetilir ("berrak" geçiyorsa "Berrak"), var olan üründe değişmez. None ya da "" bilerek boş."""
     yeni = {"ad": ad, "ambalaj_hacmi": ambalaj_hacmi, "hat": hat, "taze_tursu_sinifi": taze_tursu_sinifi, "suzme_kg": suzme_kg, "pazar": pazar}
     u = s.scalar(select(m.Urun).where(m.Urun.kod == kod))
     if u is None:
-        u = m.Urun(kod=kod, **yeni, aile=aile.aile_turet(ad), olusturan=kullanici); s.add(u); s.flush()
+        mk = liste_kurallari.marka_turet(ad) if marka is MARKA_VERILMEDI else liste_kurallari.marka_normalle(marka)
+        u = m.Urun(kod=kod, **yeni, marka=mk, aile=aile.aile_turet(ad), olusturan=kullanici); s.add(u); s.flush()
         return u
     if u.aile is None:   # eski kayıt (aile kolonu sonradan eklendi): türet; kullanıcı değeri asla ezilmez
         u.aile = aile.aile_turet(u.ad)
+    if marka is not MARKA_VERILMEDI:
+        yeni["marka"] = liste_kurallari.marka_normalle(marka)
     eski = {k: getattr(u, k) for k in yeni}
     if eski != yeni:
         for k, v in yeni.items():
@@ -355,11 +365,32 @@ def hesapla(s: Session, urun_kodu: str, senaryo_id: int, tarih: date | None = No
     gider_elle = gider_elle_motor(gider_elle_normalle(override["gider_elle"]) if "gider_elle" in override else hedef.gider_elle)
     girdi = UrunGirdisi(kod=u.kod, ad=u.ad, recete=tuple(satirlar), uretim=uretim, gider_elle=gider_elle)
     sonuc = urun_maliyeti(girdi, malzemeler, oranlar, p)
-    return HesapCiktisi(girdi=girdi, parametreler=p, oranlar=oranlar, sonuc=sonuc, fire_kaynaklari=kaynaklar, kullanilan_parametreler=kullanilan,
+    stok = stok_devri_servisi.hesap_ozeti(s, sen, u, sonuc.finansman_dahil_maliyet_tl, p.enflasyon, b)
+    satis_ortalamadan = bool(stok and stok["stok_etkisi"] and kullanilan.get(stok_devri_servisi.PARAMETRE, SIFIR) == 1)
+    if satis_ortalamadan:
+        sonuc = satisi_maliyetten_hesapla(sonuc, stok["ortalama_maliyet"], p, uretim)
+    return HesapCiktisi(stok_devri=stok, satis_ortalamadan=satis_ortalamadan,
+                        girdi=girdi, parametreler=p, oranlar=oranlar, sonuc=sonuc, fire_kaynaklari=kaynaklar, kullanilan_parametreler=kullanilan,
                         recete_id=recete.id, recete_versiyon=recete.versiyon,
                         malzemeler={r.malzeme_kodu: malzemeler[r.malzeme_kodu] for r in recete.satirlar if r.malzeme_kodu in malzemeler},
                         override=override or None, seviyeler=[r.seviye for r in recete.satirlar],
                         notlar=list(b.al(("notlar", senaryo_id, tarih), lambda: [k.deger for k in parametre_servisi.metin_gecerli(s, senaryo_id, tarih)])))
+
+
+def satisi_maliyetten_hesapla(sonuc: MaliyetSonucu, maliyet_tl: Decimal, p: Parametreler, uretim: UretimBilgisi) -> MaliyetSonucu:
+    """Satış fiyatlarını verilen TL maliyet tabanından (ortalama maliyet) motorun formülüyle yeniden hesaplar: satış TL = maliyet x (1 + kâr),
+    döviz satışları döviz maliyetleri aynı oranda (maliyet / bu yılın maliyeti) ölçeklenerek, süzme kg fiyatı ve satırların fiyat yüzdeleri.
+    Maliyet alanları (bu yılın maliyeti), teklifler ve firesiz blok değişmez. Yeni nesne döner; satırlar kopyalanır."""
+    bu_yil = sonuc.finansman_dahil_maliyet_tl
+    oran = (maliyet_tl / bu_yil) if bu_yil else Decimal(1)
+    satis_tl = satis_fiyati(maliyet_tl, p.satis_kar_orani)
+    doviz = {pb: v * oran for pb, v in sonuc.doviz_maliyet.items()}
+    satis_doviz = {pb: satis_fiyati(v, p.satis_kar_orani) for pb, v in doviz.items()}
+    satirlar = [replace(x) for x in sonuc.satirlar]
+    yuzdeleri_doldur(satirlar, uretim.pazar, bu_yil, satis_tl, p.kurlar.get("USD", SIFIR), sonuc.doviz_maliyet.get("USD", SIFIR),
+                     satis_doviz.get("USD", SIFIR))
+    return replace(sonuc, satirlar=satirlar, satis_fiyati_tl=satis_tl, satis_fiyati_doviz=satis_doviz,
+                   suzme_kg_fiyati_tl=suzme_kg_fiyati(satis_tl, uretim.suzme_kg))
 
 
 def kaydet(s: Session, cikti: HesapCiktisi, urun_kodu: str, senaryo_id: int, tarih: date, kullanici: str = "sistem", neden: str | None = None) -> m.MaliyetHesabi:
@@ -371,6 +402,8 @@ def kaydet(s: Session, cikti: HesapCiktisi, urun_kodu: str, senaryo_id: int, tar
                                         "malzemeler": decimal_str(cikti.malzemeler or {}),
                                         "recete": {"id": cikti.recete_id, "versiyon": cikti.recete_versiyon, "seviyeler": list(cikti.seviyeler)},
                                         "notlar": list(cikti.notlar), "neden": neden,
+                                        "stok_devri": decimal_str(cikti.stok_devri) if cikti.stok_devri else None,
+                                        "satis_ortalamadan": cikti.satis_ortalamadan,
                                         "override": decimal_str(cikti.override) if cikti.override else None},
                         sonuc_snapshot=decimal_str(cikti.sonuc), uyarilar=list(cikti.sonuc.uyarilar), olusturan=kullanici)
     s.add(h); s.flush()
@@ -446,7 +479,8 @@ def toplu_kaydet(s: Session, kod: str, g, kullanici: str = "sistem") -> dict:
         raise DogrulamaHatasi("gider havuzu listesinde tekrar")
 
     if g.urun is not None:
-        u = urun_kaydet(s, kod, g.urun.ad, g.urun.ambalaj_hacmi, g.urun.hat, g.urun.taze_tursu_sinifi, g.urun.suzme_kg, g.urun.pazar, kullanici, g.neden)
+        u = urun_kaydet(s, kod, g.urun.ad, g.urun.ambalaj_hacmi, g.urun.hat, g.urun.taze_tursu_sinifi, g.urun.suzme_kg, g.urun.pazar, kullanici, g.neden,
+                        **({"marka": g.urun.marka} if "marka" in g.urun.model_fields_set else {}))
         yazilan["urun"] = 1
     elle_var = "gider_elle" in g.model_fields_set
     if g.uretim_hedefi is not None or elle_var:

@@ -1,13 +1,7 @@
 import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Inbox } from "lucide-react";
 import { flexRender } from "@tanstack/react-table";
-import {
-  getCoreRowModel,
-  getSortedRowModel,
-  useLegacyTable,
-  type LegacyColumnDef,
-  type LegacyRow,
-} from "@tanstack/react-table/legacy";
+import { getCoreRowModel, getSortedRowModel, useLegacyTable, type LegacyColumnDef, type LegacyRow } from "@tanstack/react-table/legacy";
 import type { SortingState } from "@tanstack/react-table";
 import Decimal from "decimal.js";
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
@@ -29,6 +23,8 @@ export interface VeriTablosuProps<T> {
   bosMetin?: string;
   /** Boş tabloda metnin altında görünen yönlendirme (örn. "Henüz kayıt yok — Veri Aktar ile yükleyin"). */
   bosAciklama?: string;
+  /** Boş tabloda açıklamanın altında görünen eylem (örn. bir sayfaya götüren düğme). */
+  bosEylem?: ReactNode;
   /** Metin aramasının bakacağı alan. */
   aramaAlani?: keyof T;
   satirTikla?: (t: T) => void;
@@ -60,6 +56,7 @@ export function VeriTablosu<T>({
   hata,
   bosMetin = "Kayıt yok",
   bosAciklama,
+  bosEylem,
   aramaAlani,
   satirTikla,
   className,
@@ -79,10 +76,7 @@ export function VeriTablosu<T>({
     );
   }, [veri, arama, aramaAlani]);
 
-  const sutunlarSiralamali = useMemo(
-    () => sutunlar.map((s) => ({ sortFn: sirala, ...s }) as SutunTanimi<T>),
-    [sutunlar],
-  );
+  const sutunlarSiralamali = useMemo(() => sutunlar.map((s) => ({ sortFn: sirala, ...s }) as SutunTanimi<T>), [sutunlar]);
 
   const tablo = useLegacyTable<T>({
     data: suzulmus,
@@ -95,6 +89,25 @@ export function VeriTablosu<T>({
 
   const satirlar = tablo.getRowModel().rows;
   const gorunenSutunlar = tablo.getVisibleLeafColumns();
+  /** Sağa yaslı sütunlar: `meta.hiza` ("sag"/"sol") verilmişse o; yoksa ilk dolu değeri sayıysa sağ (başlık sayıların üstüne denk gelsin). */
+  const sagSutunlar = useMemo(() => {
+    const sag = new Set<string>();
+    for (const s of gorunenSutunlar) {
+      const hiza = (s.columnDef.meta as { hiza?: "sag" | "sol" } | undefined)?.hiza;
+      if (hiza) {
+        if (hiza === "sag") sag.add(s.id);
+        continue;
+      }
+      if (!s.accessorFn) continue;
+      for (const r of satirlar) {
+        const v = r.getValue(s.id);
+        if (v === null || v === undefined || v === "") continue;
+        if (typeof v === "number" || (typeof v === "string" && SAYI.test(v))) sag.add(s.id);
+        break;
+      }
+    }
+    return sag;
+  }, [gorunenSutunlar, satirlar]);
   const toplam = toplamSatiri && satirlar.length > 0 ? toplamSatiri(suzulmus) : null;
 
   function tusa(e: KeyboardEvent<HTMLTableRowElement>, i: number, t: T) {
@@ -133,6 +146,8 @@ export function VeriTablosu<T>({
   }
 
   const sutunSayisi = Math.max(gorunenSutunlar.length, 1);
+  /** Sütun tanımındaki `meta.sinif` başlık ve hücreye birlikte uygulanır (örn. yatay kaydırmada solda sabit kalan sütun). */
+  const sinif = (id: string) => (gorunenSutunlar.find((s) => s.id === id)?.columnDef.meta as { sinif?: string } | undefined)?.sinif;
 
   return (
     <div ref={kapRef} className={cn("flex flex-col gap-2", className)}>
@@ -157,9 +172,8 @@ export function VeriTablosu<T>({
                   <TableHead
                     key={h.id}
                     colSpan={h.colSpan}
-                    aria-sort={
-                      siralanabilir ? (yon === "asc" ? "ascending" : yon === "desc" ? "descending" : "none") : undefined
-                    }
+                    className={cn(sagSutunlar.has(h.column.id) && "text-right", sinif(h.column.id))}
+                    aria-sort={siralanabilir ? (yon === "asc" ? "ascending" : yon === "desc" ? "descending" : "none") : undefined}
                   >
                     {h.isPlaceholder ? null : siralanabilir ? (
                       <button
@@ -212,6 +226,7 @@ export function VeriTablosu<T>({
                   <Inbox className="size-8 text-marka" aria-hidden />
                   <span>{bosMetin}</span>
                   {bosAciklama && <span className="text-xs">{bosAciklama}</span>}
+                  {bosEylem && <div className="mt-1">{bosEylem}</div>}
                 </div>
               </TableCell>
             </TableRow>
@@ -237,7 +252,9 @@ export function VeriTablosu<T>({
                 )}
               >
                 {satir.getVisibleCells().map((c) => (
-                  <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>
+                  <TableCell key={c.id} className={cn(sagSutunlar.has(c.column.id) && "text-right", sinif(c.column.id))}>
+                    {flexRender(c.column.columnDef.cell, c.getContext())}
+                  </TableCell>
                 ))}
               </TableRow>
             ))
@@ -247,7 +264,7 @@ export function VeriTablosu<T>({
           <TableFooter>
             <TableRow>
               {gorunenSutunlar.map((s) => (
-                <TableCell key={s.id} className="font-medium tabular-nums">
+                <TableCell key={s.id} className={cn("font-medium tabular-nums", sagSutunlar.has(s.id) && "text-right", sinif(s.id))}>
                   {toplam[s.id] ?? null}
                 </TableCell>
               ))}

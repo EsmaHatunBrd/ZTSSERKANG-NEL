@@ -1,11 +1,12 @@
 import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { TriangleAlert } from "lucide-react";
+import { LoaderCircle, TriangleAlert } from "lucide-react";
 import { Link, UNSAFE_DataRouterContext, useBlocker, useParams } from "react-router-dom";
 import { HATA_KODU, hataMetni, type ApiHatasi } from "@/api/istemci";
 import { useHesapla, useTopluKaydet } from "@/api/sorgular/hesaplar";
 import { useGiderHavuzlari } from "@/api/sorgular/gider";
 import { useRecete, useUrun, useUrunler } from "@/api/sorgular/urunler";
 import type { HesapYaniti, Sema } from "@/api/tipler";
+import { DegisiklikCubugu } from "@/bilesenler/DegisiklikCubugu";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
@@ -13,7 +14,8 @@ import { Badge } from "@/bilesenler/ui/badge";
 import { Button } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { UyariRozeti } from "@/bilesenler/UyariRozeti";
-import { DegisiklikSeridi, type KayitDurumu } from "./urun/DegisiklikSeridi";
+import { AYRILMA_UYARISI, useAyrilmaUyarisi } from "@/yardimcilar/ayrilmaUyarisi";
+import { sonAcilaniKaydet } from "@/yardimcilar/sonAcilanlar";
 import { FinansmanTablosu } from "./urun/FinansmanTablosu";
 import { GiderKalemleri } from "./urun/GiderKalemleri";
 import { KaydetDiyalogu, type KaydetSecimi } from "./urun/KaydetDiyalogu";
@@ -22,6 +24,7 @@ import { KarsilastirmaKarti } from "./urun/KarsilastirmaKarti";
 import { KurlarBlogu } from "./urun/KurlarBlogu";
 import { ReceteTablosu } from "./urun/ReceteTablosu";
 import { SonucSeridi } from "./urun/SonucSeridi";
+import { StokEtkisiKarti } from "./urun/StokEtkisiKarti";
 import {
   degisiklikListesi,
   dusenFireSatirlari,
@@ -35,6 +38,7 @@ import {
   type TaslakYamasi,
 } from "./urun/Taslak";
 import { TeklifPaneli } from "./urun/TeklifPaneli";
+import { HesapGecmisi } from "./urun/HesapGecmisi";
 import { ToplamlarKarti } from "./urun/ToplamlarKarti";
 import { UretimBilgileri } from "./urun/UretimBilgileri";
 import { parametreGorunumu } from "./urun/yardimci";
@@ -56,21 +60,80 @@ const YuzdeGrafigi = lazy(() => import("./urun/YuzdeGrafigi").then((m) => ({ def
 
 const DEBOUNCE_MS = 300;
 
-/** Taslak doluyken sayfadan ayrılmayı engeller (yalnız veri yönlendiricisinde çalışır). */
-function GecisEngeli({ sayi }: { sayi: number }) {
+export interface KayitDurumu {
+  hesapId: number | null;
+  /** "ürün kartı, 3 reçete satırı ..." gibi yazılan kayıtların özeti. */
+  ozet: string;
+  /** Sunucunun kayıt sırasında döndürdüğü uyarılar. */
+  uyarilar: string[];
+}
+
+/** Taslak doluyken uygulama içi gezinmeyi engeller (yalnız veri yönlendiricisinde çalışır); tarayıcı diyaloğu `useAyrilmaUyarisi`'nda. */
+function GecisEngeli({ aktif }: { aktif: boolean }) {
   const blok = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      sayi > 0 && currentLocation.pathname + currentLocation.search !== nextLocation.pathname + nextLocation.search,
+      aktif && currentLocation.pathname + currentLocation.search !== nextLocation.pathname + nextLocation.search,
   );
   return blok.state === "blocked" ? (
-    <OnayDiyalogu baslik="Sayfadan ayrılıyorsunuz" onayMetni="Çık" onOnayla={() => blok.proceed()} onVazgec={() => blok.reset()}>
-      <p>{`Kaydedilmemiş ${sayi} değişiklik var. Çıkılsın mı?`}</p>
+    <OnayDiyalogu baslik="Sayfadan ayrılıyorsunuz" onayMetni="Ayrıl" onOnayla={() => blok.proceed()} onVazgec={() => blok.reset()}>
+      <p>{AYRILMA_UYARISI}</p>
     </OnayDiyalogu>
   ) : null;
 }
 
+/** Değişiklik çubuğu için taslak özeti: değişen satır, fire override'lı satır ve satır dışı alan sayıları. */
+function taslakOzeti(t: Taslak) {
+  const satirlar = Object.values(t.satirlar);
+  const satirAlan = satirlar.reduce((n, s) => n + Object.values(s).filter((v) => v !== undefined).length, 0);
+  return {
+    satirSayisi: satirlar.filter((s) => Object.values(s).some((v) => v !== undefined)).length,
+    fireSayisi: satirlar.filter((s) => s.fire !== undefined).length,
+    alanSayisi: taslakSayisi(t) - satirAlan,
+  };
+}
+
+/** Hesap durumu satırı: yeniden hesap sürüyor, hesap hatası (çubuk yokken) ve son kaydın özeti. */
+function HesapDurumu({ hesaplaniyor, hata, kayit }: { hesaplaniyor: boolean; hata: string | null; kayit: KayitDurumu | null }) {
+  if (!hesaplaniyor && !hata && !kayit) return null;
+  return (
+    <div aria-live="polite" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      {hesaplaniyor && (
+        <span role="status" aria-label="Hesaplanıyor" className="flex items-center gap-1.5 text-muted-foreground">
+          <LoaderCircle className="size-4 animate-spin" aria-hidden />
+          Hesaplanıyor
+        </span>
+      )}
+      {hata && (
+        <span role="alert" className="text-destructive">
+          {hata}
+        </span>
+      )}
+      {kayit && (
+        <span
+          role="status"
+          aria-label="Kayıt durumu"
+          className="rounded-md bg-green-50 px-2.5 py-1 text-green-900 dark:bg-green-950/40 dark:text-green-200"
+        >
+          {`Kaydedildi${kayit.hesapId !== null ? ` · Hesap #${kayit.hesapId}` : ""}${kayit.ozet ? ` · ${kayit.ozet}` : ""}`}
+        </span>
+      )}
+      {kayit && kayit.uyarilar.length > 0 && (
+        <ul className="basis-full text-xs text-muted-foreground" aria-label="Kayıt uyarıları">
+          {kayit.uyarilar.map((u) => (
+            <li key={u}>{u}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function UrunMaliyeti() {
   const { kod = "" } = useParams();
+  // Ürün seçicideki "Son açılanlar": doğrudan adres/hızlı arama ile açılan ürünler de listeye girsin.
+  useEffect(() => {
+    if (kod) sonAcilaniKaydet(kod);
+  }, [kod]);
   const { senaryoId, senaryo, kilitli } = useSenaryo();
   const urun = useUrun(kod, senaryoId);
   const recete = useRecete(kod, senaryoId);
@@ -97,7 +160,11 @@ export default function UrunMaliyeti() {
   const havuzlar = useGiderHavuzlari(senaryoId).data?.kayitlar;
 
   const receteSatirlari = useMemo(() => recete.data?.satirlar ?? [], [recete.data]);
-  const sunucu = useMemo(() => sunucuDegerleri(taban, receteSatirlari), [taban, receteSatirlari]);
+  const kayitliMarka = urun.data?.marka ?? null;
+  const sunucu = useMemo(
+    () => ({ ...sunucuDegerleri(taban, receteSatirlari), marka: kayitliMarka }),
+    [taban, receteSatirlari, kayitliMarka],
+  );
   const sunucuRef = useRef(sunucu);
   sunucuRef.current = sunucu;
 
@@ -144,9 +211,16 @@ export default function UrunMaliyeti() {
     setTaslak((t) => (Object.keys(t.satirlar).length === 0 ? t : { ...t, satirlar: {} }));
   }, [receteSurumu]);
 
+  // Hesap gövdesi içerik olarak aynıysa yeniden koşma: her başarılı hesap `taban`ı yeniler, `sunucu` ve dolayısıyla
+  // `govde` nesnesi yeni kimlik alır; kimliğe bağlı effect sonsuz hesapla döngüsüne giriyordu (sayfa "titriyor").
+  const govdeAnahtari = useMemo(() => (govde ? JSON.stringify(govde) : null), [govde]);
+  const govdeRef = useRef(govde);
+  govdeRef.current = govde;
+
   // Her değişiklikte hesabı yeniden koş (ilk çalıştırma hemen, sonrakiler 300 ms debounce). Reçete yeni versiyona geçince de yenilenir.
   useEffect(() => {
-    if (!govde || !kod || !receteHazir || receteYok) return;
+    const govde = govdeRef.current;
+    if (!govdeAnahtari || !govde || !kod || !receteHazir || receteYok) return;
     const bekle = ilkCalisma.current ? 0 : DEBOUNCE_MS;
     ilkCalisma.current = false;
     const taslaksiz = !govde.override;
@@ -162,18 +236,11 @@ export default function UrunMaliyeti() {
       );
     }, bekle);
     return () => clearTimeout(zamanlayici);
-  }, [govde, kod, receteHazir, receteYok, receteSurumu, hesapTetik, hesaplaCalistir]);
+  }, [govdeAnahtari, kod, receteHazir, receteYok, receteSurumu, hesapTetik, hesaplaCalistir]);
 
   const sayi = taslakSayisi(taslak);
-  useEffect(() => {
-    if (sayi === 0) return;
-    const engel = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", engel);
-    return () => window.removeEventListener("beforeunload", engel);
-  }, [sayi]);
+  const ozet = useMemo(() => taslakOzeti(taslak), [taslak]);
+  useAyrilmaUyarisi(sayi > 0);
 
   const parametreler = useMemo(() => (sonuc ? parametreGorunumu(sonuc) : null), [sonuc]);
   const uyarilar = sonuc?.uyarilar ?? [];
@@ -256,7 +323,7 @@ export default function UrunMaliyeti() {
 
   return (
     <div className="flex flex-col gap-6">
-      {veriYonlendirici && <GecisEngeli sayi={sayi} />}
+      {veriYonlendirici && <GecisEngeli aktif={sayi > 0} />}
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">{baslikAdi}</h1>
@@ -333,18 +400,11 @@ export default function UrunMaliyeti() {
       )}
 
       {!receteYok && (
-        <DegisiklikSeridi
-          sayi={sayi}
+        <HesapDurumu
           hesaplaniyor={hesapla.isPending}
-          hata={hesaplaHatasi ? hataMetni(hesaplaHatasi) : null}
-          onKaydet={kaydetAc}
-          onVazgec={() => {
-            setTaslak(taslakBos());
-            setKayit(null);
-          }}
-          kaydetKapali={kaydetKapali}
-          kaydetNedeni={kaydetNedeni}
-          kayit={kayit}
+          // Taslak varken hesap hatası alttaki çubukta, Kaydet'in yanında gösterilir.
+          hata={hesaplaHatasi && sayi === 0 ? hataMetni(hesaplaHatasi) : null}
+          kayit={sayi === 0 ? kayit : null}
         />
       )}
 
@@ -473,6 +533,7 @@ export default function UrunMaliyeti() {
                 taslak={taslak}
                 onTaslak={onTaslak}
                 taban={taban ? sunucu.parametreler : undefined}
+                marka={kayitliMarka}
               />
             )}
             <KurlarBlogu
@@ -485,9 +546,22 @@ export default function UrunMaliyeti() {
         </div>
       )}
 
+      {/* Stokta kalan: ürün ekranının taslak/tek Kaydet akışından ayrı, anında kaydedilir; kayıt sonrası hesap yeniden koşar. */}
+      {!receteYok && (
+        <StokEtkisiKarti
+          key={`${kod}-${senaryoId}`}
+          kod={kod}
+          senaryoId={senaryoId}
+          kilitli={kilitli}
+          onDegisti={() => setHesapTetik((t) => t + 1)}
+        />
+      )}
+
       {!receteYok && <KarsilastirmaKarti kod={kod} senaryoId={senaryoId} tarih={tarih} />}
 
       {!receteYok && <TeklifPaneli kod={kod} senaryoId={senaryoId} sonKayitId={kayit?.hesapId ?? null} />}
+
+      {!receteYok && <HesapGecmisi kod={kod} senaryoId={senaryoId} />}
 
       {sonuc && (
         <Suspense
@@ -501,6 +575,24 @@ export default function UrunMaliyeti() {
             <YuzdeGrafigi satirlar={sonuc.satirlar} />
           </div>
         </Suspense>
+      )}
+
+      {/* Yalnız taslakta değişiklik varken görünür; reçete/ne-olur taslağının tek Kaydet'i (Stok etkisi kartı kendi düğmeleriyle kaydeder). */}
+      {!receteYok && (
+        <DegisiklikCubugu
+          satirSayisi={ozet.satirSayisi}
+          fireSayisi={ozet.fireSayisi}
+          alanSayisi={ozet.alanSayisi}
+          kaydediyor={topluKaydet.isPending}
+          kaydetKapali={kaydetKapali}
+          kaydetNedeni={kaydetNedeni}
+          hata={hesaplaHatasi ? hataMetni(hesaplaHatasi) : null}
+          onKaydet={kaydetAc}
+          onVazgec={() => {
+            setTaslak(taslakBos());
+            setKayit(null);
+          }}
+        />
       )}
 
       <KaydetDiyalogu

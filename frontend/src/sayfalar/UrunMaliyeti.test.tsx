@@ -99,7 +99,7 @@ describe("UrunMaliyeti", () => {
     const user = userEvent.setup();
     await user.clear(fire);
     await user.type(fire, "5");
-    expect(await screen.findByText("1 değişiklik")).toBeInTheDocument();
+    expect(await screen.findByText("1 satırda değişiklik · 1 fire")).toBeInTheDocument();
     const kaydet = screen.getByRole("button", { name: "Kaydet" });
     expect(kaydet).toBeDisabled();
     expect(kaydet).toHaveAttribute("title", "Senaryo kilitli");
@@ -109,6 +109,13 @@ describe("UrunMaliyeti", () => {
     kur();
     await tabloHazir();
     expect(screen.queryByText(KILIT_METNI)).not.toBeInTheDocument();
+  });
+
+  it("stokta kalan kaydı yoksa yalnız sade 'Stokta kalan ekle' düğmesi; taslak sayısını etkilemez", async () => {
+    kur();
+    await tabloHazir();
+    expect(await screen.findByRole("button", { name: /Stokta kalan ekle/ })).toBeEnabled();
+    expect(screen.queryByRole("region", { name: "Stok etkisi" })).not.toBeInTheDocument();
   });
 
   it("tek tabloda iki tutar sütununu ve iki malzeme toplamını gösterir", async () => {
@@ -174,7 +181,7 @@ describe("UrunMaliyeti", () => {
       expect(g.override.fire).toEqual({ "1": "0.05" });
     });
     // şerit değişiklik sayısını gösterir
-    expect(screen.getByText("1 değişiklik")).toBeInTheDocument();
+    expect(screen.getByText("1 satırda değişiklik · 1 fire")).toBeInTheDocument();
   });
 
   it("Vazgeç taslağı temizler ve hesabı yeniden koşar", async () => {
@@ -188,9 +195,9 @@ describe("UrunMaliyeti", () => {
     expect(screen.getByRole("button", { name: "Kaydet" })).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "Vazgeç" }));
     await waitFor(() => expect(JSON.stringify(son(istekler.hesapla))).not.toContain('"0.05"'));
-    expect(screen.getByText("Değişiklik yok")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Kaydet" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Vazgeç" })).toBeDisabled();
+    expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Kaydet" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Vazgeç" })).not.toBeInTheDocument();
   });
 
   it("Kaydet: diyalogda eski → yeni ve etki gösterilir; neden boşken onay pasiftir; gövde doğru gider, başarıdan sonra taslak sıfırlanır", async () => {
@@ -206,7 +213,7 @@ describe("UrunMaliyeti", () => {
     const usd = screen.getByLabelText("Kur USD");
     await user.clear(usd);
     await user.type(usd, "52");
-    await waitFor(() => expect(screen.getByText("3 değişiklik")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("1 satırda ve 2 alanda değişiklik · 1 fire")).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Kaydet" }));
     const diyalog = await screen.findByRole("dialog");
     const liste = within(diyalog).getByRole("table", { name: "Değişiklik listesi" });
@@ -250,7 +257,7 @@ describe("UrunMaliyeti", () => {
     expect(durum).toHaveTextContent("Kaydedildi · Hesap #7");
     expect(durum).toHaveTextContent("3 reçete satırı");
     expect(durum).toHaveTextContent("2 parametre");
-    expect(screen.getByText("Değişiklik yok")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -286,7 +293,7 @@ describe("UrunMaliyeti", () => {
     birak();
     const durum = await screen.findByRole("status", { name: "Kayıt durumu" });
     expect(durum).toHaveTextContent("Kaydedildi · Hesap #7");
-    expect(screen.getByText("Değişiklik yok")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(istek).toBe(1);
   });
@@ -378,26 +385,8 @@ describe("UrunMaliyeti", () => {
     expect(await within(diyalog).findByRole("alert")).toHaveTextContent("Parametre değeri geçersiz");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByLabelText("Faiz TL (%)")).toHaveValue("50");
-    expect(screen.getByText("1 değişiklik")).toBeInTheDocument();
+    expect(screen.getByText("1 alanda değişiklik")).toBeInTheDocument();
     expect(screen.queryByRole("status", { name: "Kayıt durumu" })).not.toBeInTheDocument();
-  });
-
-  it("taslak doluyken sayfadan ayrılmak onay ister; Kal taslağı korur, Çık çıkarır", async () => {
-    kur();
-    const tablo = await tabloHazir();
-    const user = userEvent.setup();
-    const fire = within(tablo).getByLabelText(/Fire % .*Pet Şişe/);
-    await user.clear(fire);
-    await user.type(fire, "5");
-    await sonYon.navigate("/baska");
-    const diyalog = await screen.findByRole("dialog");
-    expect(diyalog).toHaveTextContent("Kaydedilmemiş 1 değişiklik var. Çıkılsın mı?");
-    await user.click(within(diyalog).getByRole("button", { name: "Vazgeç" }));
-    expect(sonYon.state.location.pathname).toBe("/urunler/URUN-001");
-    expect(screen.getByText("1 değişiklik")).toBeInTheDocument();
-    await sonYon.navigate("/baska");
-    await user.click(await within(await screen.findByRole("dialog")).findByRole("button", { name: "Çık" }));
-    await waitFor(() => expect(screen.getByText("Başka sayfa")).toBeInTheDocument());
   });
 
   it("taslak yokken sayfadan ayrılırken engel çıkmaz", async () => {
@@ -565,14 +554,16 @@ describe("UrunMaliyeti düzeltme turu 1", () => {
     await user.type(fire, "9");
     expect(await screen.findByText("Güncel değil — son geçerli sonuç")).toBeInTheDocument();
     // Şeritte kırmızı hata metni; Kaydet kapalı (nedenle birlikte)
-    expect(within(screen.getByRole("region", { name: "Değişiklik şeridi" })).getByRole("alert")).toHaveTextContent("Geçersiz fire");
+    expect(within(screen.getByRole("region", { name: "Kaydedilmemiş değişiklikler" })).getByRole("alert")).toHaveTextContent(
+      "Geçersiz fire",
+    );
     const kaydet = screen.getByRole("button", { name: "Kaydet" });
     expect(kaydet).toBeDisabled();
     expect(kaydet).toHaveAttribute("title", "Hesap hatası var: önce değişikliği düzeltin");
     expect(within(tablo).getByText("Pet Şişe 500 ml")).toBeInTheDocument();
     await user.clear(fire);
     await waitFor(() => expect(screen.queryByText("Güncel değil — son geçerli sonuç")).not.toBeInTheDocument());
-    expect(screen.getByText("Değişiklik yok")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument();
   });
 
   it("kayıtlı hesap listesinde son tur, kâr ve durum özetini gösterir", async () => {
@@ -727,10 +718,10 @@ describe("UrunMaliyeti son tur", () => {
     const surumAyarla = surumluRecete();
     const tablo = await tabloHazir();
     await fireYaz(tablo, /Fire % .*Pet Şişe/, "5");
-    await waitFor(() => expect(screen.getByText("1 değişiklik")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("1 satırda değişiklik · 1 fire")).toBeInTheDocument());
     surumAyarla(11);
     await sonQc.invalidateQueries({ queryKey: ["recete"] });
-    await waitFor(() => expect(screen.getByText("Değişiklik yok")).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument());
   });
 
   it("I2: kayıtlı hesap seçimi salt okunur hesap görünümüne bağlanır", async () => {
@@ -738,6 +729,17 @@ describe("UrunMaliyeti son tur", () => {
     await tabloHazir();
     const bag = await screen.findByRole("link", { name: "Kayıtlı hesabı görüntüle" });
     expect(bag).toHaveAttribute("href", "/hesaplar/5");
+  });
+
+  it("H1: Geçmiş hesaplar bölümü Teklif turlarının altında kayıtlı hesabı listeler", async () => {
+    kur();
+    await tabloHazir();
+    const bolum = await screen.findByRole("region", { name: "Geçmiş hesaplar" });
+    expect(within(bolum).getByRole("heading", { name: "Geçmiş hesaplar" })).toBeInTheDocument();
+    expect(await within(bolum).findByRole("link", { name: "#5" })).toHaveAttribute("href", "/hesaplar/5?senaryo=1");
+    expect(within(bolum).getByRole("checkbox", { name: "Kıyas için seç: 21.10.2026 #5" })).toBeInTheDocument();
+    const teklif = screen.getByRole("region", { name: "Teklif turları" });
+    expect(teklif.compareDocumentPosition(bolum) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -1019,10 +1021,10 @@ describe("U1 üretim bilgileri bloğu", () => {
       expect(g.override.parametreler).toEqual({ vardiya_saati: "8" });
       expect(g.override.urun).toEqual({ pazar: "Yurtdışı" });
     });
-    expect(screen.getByText("5 değişiklik")).toBeInTheDocument();
+    expect(screen.getByText("5 alanda değişiklik")).toBeInTheDocument();
     // sunucudaki değere dönmek taslağı düşürür
     await user.click(within(b).getByLabelText("Pazarlama/yönetim payı uygula"));
-    expect(screen.getByText("4 değişiklik")).toBeInTheDocument();
+    expect(screen.getByText("4 alanda değişiklik")).toBeInTheDocument();
   });
 
   it("Kaydet: ürün kartı ve üretim hedefi tek gövdede tam kayıt olarak gider (PUT'lar çağrılmaz)", async () => {
@@ -1071,9 +1073,39 @@ describe("U1 üretim bilgileri bloğu", () => {
     expect(sonExcel.urunKaydet).toHaveLength(0);
     expect(sonExcel.hedefKaydet).toHaveLength(0);
     expect(await screen.findByRole("status", { name: "Kayıt durumu" })).toHaveTextContent("ürün kartı, üretim hedefi");
-    expect(screen.getByText("Değişiklik yok")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument();
     // Taslak sıfırlandı: hesap taslaksız yeniden koşar.
     await waitFor(() => expect(son(istekler.hesapla)).not.toHaveProperty("override"));
+  });
+
+  it("Marka: üretim bilgilerinde yazılır, hesaba (override) gitmez; Kaydet ürün kartına marka ile yazar", async () => {
+    const istekler = excelKur();
+    await tabloHazir();
+    const b = blok();
+    const user = userEvent.setup();
+    const marka = within(b).getByLabelText("Marka");
+    expect(marka).toHaveValue("");
+    expect(marka).toHaveAttribute("placeholder", "addan türetilir");
+    await user.type(marka, "Berrak");
+    await waitFor(() => expect(screen.getByText("1 alanda değişiklik")).toBeInTheDocument());
+    expect(son(istekler.hesapla)).not.toHaveProperty("override.urun");
+    await user.click(screen.getByRole("button", { name: "Kaydet" }));
+    const diyalog = await screen.findByRole("dialog");
+    const markaSatiri = diyalog.querySelector('[data-alan="urun.marka"]') as HTMLElement;
+    expect(markaSatiri).toHaveTextContent("Marka");
+    expect(markaSatiri).toHaveTextContent("Berrak");
+    await user.type(within(diyalog).getByLabelText("Neden"), "Marka girildi");
+    await user.click(within(diyalog).getByRole("button", { name: "Onayla ve kaydet" }));
+    await waitFor(() => expect(sonExcel.topluKaydet).toHaveLength(1));
+    expect(sonExcel.topluKaydet[0].govde.urun).toEqual({
+      ad: "Salatalık Turşusu 720 ml",
+      ambalaj_hacmi: "720",
+      hat: "Niko",
+      taze_tursu_sinifi: "Taze/Turşu",
+      suzme_kg: "0.45",
+      pazar: "Yurtiçi",
+      marka: "Berrak",
+    });
   });
 });
 
@@ -1148,9 +1180,9 @@ describe("Faz 4c U2: hücreye yaz", () => {
     );
     expect(miktar).toHaveAttribute("data-degisti", "true");
     expect(miktar).toHaveAttribute("title", "Eski değer: 1");
-    expect(screen.getByText("1 değişiklik")).toBeInTheDocument();
+    expect(screen.getByText("1 satırda değişiklik")).toBeInTheDocument();
     await user.clear(miktar);
-    await waitFor(() => expect(screen.getByText("Değişiklik yok")).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument());
   });
 
   it("brüt boşaltılınca kurala bırakılır, birim fiyat boşaltılınca listeye dönülür; kayıtta null gider", async () => {
@@ -1178,7 +1210,7 @@ describe("Faz 4c U2: hücreye yaz", () => {
     const miktar = within(tablo).getByLabelText(/Miktar — Pet Şişe/);
     await user.clear(miktar);
     await user.type(miktar, "abc");
-    expect(screen.getByText("Değişiklik yok")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument();
     expect(istekler.hesapla.every((g) => !JSON.stringify(g).includes("override"))).toBe(true);
     expect(within(tablo).getByLabelText(/Fire % .*Salamura/)).toHaveAttribute("title", "elle brüt: fire uygulanmaz");
   });
@@ -1392,7 +1424,7 @@ describe("UrunMaliyeti — reçetesiz ürün (Faz 5c)", () => {
     expect(screen.queryByLabelText("Ürün kodu")).not.toBeInTheDocument();
     expect(screen.getByRole("form", { name: "Elle reçete girişi" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Satır ekle" })).toBeInTheDocument();
-    expect(screen.queryByText("Değişiklik yok")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Teklif turları" })).not.toBeInTheDocument();
     expect(istekler.hesapla).toHaveLength(0);
 
@@ -1505,5 +1537,89 @@ describe("UrunMaliyeti — reçetesiz ürün (Faz 5c)", () => {
     const not = await screen.findByRole("note");
     expect(not).toHaveTextContent("Hesap için parametre değerleri gerekli");
     expect(within(not).getByRole("link", { name: "Parametreler" })).toHaveAttribute("href", "/parametreler?senaryo=1");
+  });
+});
+
+describe("Dalga 2-C: yapışkan değişiklik çubuğu", () => {
+  const cubuk = () => screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" });
+
+  it("değişiklik yokken çubuk, Kaydet ve Vazgeç yoktur", async () => {
+    kur();
+    await tabloHazir();
+    expect(cubuk()).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Kaydet" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Vazgeç" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Değişiklik yok")).not.toBeInTheDocument();
+  });
+
+  it("bir hücre değişince '1 satırda değişiklik' ile Kaydet/Vazgeç görünür; Vazgeç çubuğu kaldırır", async () => {
+    kur();
+    const tablo = await tabloHazir();
+    const user = userEvent.setup();
+    const miktar = within(tablo).getByLabelText(/Miktar — Pet Şişe/);
+    await user.clear(miktar);
+    await user.type(miktar, "2,5");
+    const b = await screen.findByRole("region", { name: "Kaydedilmemiş değişiklikler" });
+    expect(b).toHaveAttribute("aria-live", "polite");
+    expect(within(b).getByText("1 satırda değişiklik")).toBeInTheDocument();
+    expect(within(b).getByRole("button", { name: "Kaydet" })).toBeEnabled();
+    const vazgec = within(b).getByRole("button", { name: "Vazgeç" });
+    expect(vazgec).toBeEnabled();
+    await user.click(vazgec);
+    await waitFor(() => expect(cubuk()).not.toBeInTheDocument());
+    expect(miktar).toHaveValue("1");
+  });
+
+  it("fire ve parametre değişince satır, fire ve alan sayıları ayrı yazılır; Kaydet sonrası çubuk kaybolur", async () => {
+    kur();
+    const tablo = await tabloHazir();
+    const user = userEvent.setup();
+    const fire = within(tablo).getByLabelText(/Fire % .*Pet Şişe/);
+    await user.clear(fire);
+    await user.type(fire, "5");
+    const faiz = screen.getByLabelText("Faiz TL (%)");
+    await user.clear(faiz);
+    await user.type(faiz, "50");
+    await waitFor(() => expect(screen.getByText("1 satırda ve 1 alanda değişiklik · 1 fire")).toBeInTheDocument());
+    await kaydetAkisi(user);
+    await waitFor(() => expect(sonExcel.topluKaydet).toHaveLength(1));
+    await waitFor(() => expect(cubuk()).not.toBeInTheDocument());
+    expect(await screen.findByRole("status", { name: "Kayıt durumu" })).toHaveTextContent("Kaydedildi · Hesap #7");
+  });
+
+  it("taslak varken sayfadan ayrılma onayı çıkar; Vazgeç kalır, Ayrıl çıkar", async () => {
+    kur();
+    const tablo = await tabloHazir();
+    const user = userEvent.setup();
+    const fire = within(tablo).getByLabelText(/Fire % .*Pet Şişe/);
+    await user.clear(fire);
+    await user.type(fire, "5");
+    await sonYon.navigate("/baska");
+    const diyalog = await screen.findByRole("dialog");
+    expect(diyalog).toHaveTextContent("Kaydedilmemiş değişiklikler var. Sayfadan ayrılmak istiyor musunuz?");
+    await user.click(within(diyalog).getByRole("button", { name: "Vazgeç" }));
+    expect(sonYon.state.location.pathname).toBe("/urunler/URUN-001");
+    expect(cubuk()).toBeInTheDocument();
+    await sonYon.navigate("/baska");
+    await user.click(await within(await screen.findByRole("dialog")).findByRole("button", { name: "Ayrıl" }));
+    await waitFor(() => expect(screen.getByText("Başka sayfa")).toBeInTheDocument());
+  });
+
+  it("taslak varken beforeunload tarayıcı onayı ister, taslak temizlenince istemez", async () => {
+    kur();
+    const tablo = await tabloHazir();
+    const user = userEvent.setup();
+    const fire = within(tablo).getByLabelText(/Fire % .*Pet Şişe/);
+    await user.clear(fire);
+    await user.type(fire, "5");
+    await screen.findByRole("region", { name: "Kaydedilmemiş değişiklikler" });
+    const olay = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(olay);
+    expect(olay.defaultPrevented).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Vazgeç" }));
+    await waitFor(() => expect(cubuk()).not.toBeInTheDocument());
+    const olay2 = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(olay2);
+    expect(olay2.defaultPrevented).toBe(false);
   });
 });

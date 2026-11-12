@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { KaynakRozeti } from "./KaynakRozeti";
+import { MaliyetHucresi, ORTALAMA_IPUCU } from "./MaliyetHucresi";
 import { ParaHucresi } from "./ParaHucresi";
 import { UyariRozeti } from "./UyariRozeti";
 import { YuzdeHucresi } from "./YuzdeHucresi";
@@ -75,5 +76,16 @@ describe("UyariRozeti", () => {
   it("sayıyı ve erişilebilir metni gösterir", () => {
     render(<UyariRozeti sayi={3} />);
     expect(screen.getByLabelText("3 uyarı")).toHaveTextContent("3");
+  });
+});
+
+describe("MaliyetHucresi", () => {
+  it("ortalama kaynağında 'ort.' rozeti ve ipucu, bu yılda düz tutar", () => {
+    const { rerender } = render(<MaliyetHucresi deger="19.5" kaynak="ortalama" />);
+    expect(screen.getByText("ort.")).toHaveAttribute("title", ORTALAMA_IPUCU);
+    expect(screen.getByText("19,50 TL")).toBeInTheDocument();
+    rerender(<MaliyetHucresi deger="19.5" kaynak="bu_yil" />);
+    expect(screen.queryByText("ort.")).not.toBeInTheDocument();
+    expect(screen.getByText("19,50 TL")).toBeInTheDocument();
   });
 });

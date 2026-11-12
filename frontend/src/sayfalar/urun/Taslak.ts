@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import type { HesapYaniti, ReceteSatiri, Sema, Urun } from "@/api/tipler";
+import type { HesapYaniti, ReceteSatiri, Sema, Urun, UrunGiris } from "@/api/tipler";
 import { paraBicimle } from "@/yardimcilar/para";
 import { parametreDegerGoster, parametreEtiketi } from "./parametreEtiketleri";
 import { eslestir, fireYuzdeMetni, MALZEME, sayiGoster } from "./yardimci";
@@ -8,7 +8,7 @@ import { eslestir, fireYuzdeMetni, MALZEME, sayiGoster } from "./yardimci";
  * Ürün ekranının tek taslağı: hücreye yazılan her değer burada durur; hesaba (override) ve tek "Kaydet"e buradan gider.
  * Sunucu değeriyle aynı olan alan taslakta tutulmaz (`taslakYamasi` düşürür).
  */
-export const URUN_ALANLARI = ["hat", "taze_tursu_sinifi", "ambalaj_hacmi", "suzme_kg", "pazar"] as const;
+export const URUN_ALANLARI = ["hat", "taze_tursu_sinifi", "ambalaj_hacmi", "suzme_kg", "pazar", "marka"] as const;
 export type UrunAlani = (typeof URUN_ALANLARI)[number];
 
 export const HEDEF_ALANLARI = [
@@ -82,6 +82,8 @@ export interface SunucuDegerleri {
   recete: ReceteSatiri[];
   /** Taslaksız hesabın üretim bilgisi (kayıtlı ürün kartı + üretim hedefi). */
   uretim?: Sema["UretimBilgisiCikis"] | null;
+  /** Kayıtlı ürün kartının markası (üretim bilgisinde yok; ürün kartından gelir). */
+  marka?: string | null;
   /** Kayıtlı parametre değerleri (kur.USD ...). */
   parametreler?: Record<string, string>;
   giderOranlari?: Record<string, string>;
@@ -201,7 +203,8 @@ export function taslakYamasi(t: Taslak, yama: TaslakYamasi, sunucu: SunucuDegerl
   const u = sunucu.uretim as Record<string, unknown> | null | undefined;
   const sonraki: Taslak = {
     ...t,
-    urun: alanBirlestir(t.urun, yama.urun, (a) => u?.[a]) as Taslak["urun"],
+    // Marka üretim bilgisinde değil, ürün kartında; boş marka kayıtlı "yok" ile aynıdır.
+    urun: alanBirlestir(t.urun, yama.urun, (a) => (a === "marka" ? (sunucu.marka ?? "") : u?.[a])) as Taslak["urun"],
     hedef: alanBirlestir(
       t.hedef as Record<string, string | boolean>,
       yama.hedef as Record<string, string | boolean | undefined> | undefined,
@@ -312,7 +315,9 @@ export function taslaktanOverride(
     gider_oranlari: { ...t.giderOranlari },
   };
   if (Object.keys(t.hedef).length > 0) override.uretim = { ...t.hedef };
-  if (Object.keys(t.urun).length > 0) override.urun = { ...t.urun } as Sema["UrunOverride"];
+  // Marka hesabı etkilemez ve geçici değişiklikte (override) yeri yok: yalnız Kaydet ile ürün kartına yazılır.
+  const { marka: _marka, ...urunOverride } = t.urun;
+  if (Object.keys(urunOverride).length > 0) override.urun = urunOverride as Sema["UrunOverride"];
   // Elle gider: sunucu kayıtlı haritanın TAMAMI yerine geçirir; bu yüzden kayıtlı + taslak birlikte gider.
   if (Object.keys(t.giderElle).length > 0) override.gider_elle = etkinGiderElle(t, sunucuGiderElle);
   return override;
@@ -337,7 +342,7 @@ export interface KaydetSecenekleri {
   neden: string;
   hesabiKaydet: boolean;
   /** Kayıtlı ürün kartı (ürün alanı taslağı varsa gerekli). */
-  urun?: Pick<Urun, "ad" | "ambalaj_hacmi" | "hat" | "taze_tursu_sinifi" | "suzme_kg" | "pazar">;
+  urun?: Pick<Urun, "ad" | "ambalaj_hacmi" | "hat" | "taze_tursu_sinifi" | "suzme_kg" | "pazar" | "marka">;
   /** Kayıtlı üretim hedefi (hedef taslağı varsa gerekli). */
   hedef?: Pick<Sema["UretimBilgisiCikis"], HedefAlani | "pazarlama_yonetim_uygula"> | null;
   recete: ReceteSatiri[];
@@ -362,7 +367,7 @@ export function taslaktanKaydetGovdesi(t: Taslak, s: KaydetSecenekleri): Sema["T
 
   if (Object.keys(t.urun).length > 0) {
     if (!s.urun) throw new Error("Ürün kartı yüklenemedi");
-    govde.urun = {
+    const urun: UrunGiris = {
       ad: s.urun.ad,
       ambalaj_hacmi: t.urun.ambalaj_hacmi ?? s.urun.ambalaj_hacmi,
       hat: t.urun.hat ?? s.urun.hat,
@@ -370,6 +375,10 @@ export function taslaktanKaydetGovdesi(t: Taslak, s: KaydetSecenekleri): Sema["T
       suzme_kg: t.urun.suzme_kg ?? s.urun.suzme_kg,
       pazar: (t.urun.pazar ?? s.urun.pazar) as Sema["UrunGiris"]["pazar"],
     };
+    // Marka: taslakta varsa o (boş -> null: sunucu addan türetir), yoksa kayıtlı değer korunur.
+    if (t.urun.marka !== undefined) urun.marka = t.urun.marka.trim() || null;
+    else if (s.urun.marka !== undefined) urun.marka = s.urun.marka;
+    govde.urun = urun;
   }
 
   if (Object.keys(t.hedef).length > 0) {
@@ -462,6 +471,7 @@ const URUN_ADI: Record<UrunAlani, string> = {
   taze_tursu_sinifi: "Taze/Turşu sınıfı",
   ambalaj_hacmi: "Ambalaj (ml)",
   pazar: "Pazar",
+  marka: "Marka",
 };
 
 const HEDEF_ADI: Record<HedefAlani | "pazarlama_yonetim_uygula", string> = {
@@ -559,12 +569,12 @@ export function degisiklikListesi(t: Taslak, s: SunucuDegerleri, havuzlar?: Havu
     const yeni = t.urun[a];
     if (yeni === undefined) continue;
     const say = a === "suzme_kg" || a === "ambalaj_hacmi";
-    const eski = u?.[a];
+    const eski = a === "marka" ? s.marka || null : u?.[a];
     liste.push({
       alan: `urun.${a}`,
       etiket: URUN_ADI[a],
       eski: eski == null ? "—" : say ? sayiGoster(String(eski)) : String(eski),
-      yeni: say ? sayiGoster(yeni) : yeni,
+      yeni: say ? sayiGoster(yeni) : a === "marka" && yeni.trim() === "" ? "— (addan türetilir)" : yeni,
       etki: "urun",
       kalici: true,
     });

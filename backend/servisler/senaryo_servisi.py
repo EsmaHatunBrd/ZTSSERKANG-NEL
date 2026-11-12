@@ -236,16 +236,18 @@ def sil(s: Session, senaryo_id: int, yedek_url: str | None = None, kullanici: st
     recete_idleri = select(m.Recete.id).where(m.Recete.senaryo_id == sen.id)
     hedef_idleri = select(m.UretimHedefi.id).where(m.UretimHedefi.senaryo_id == sen.id)
     kapasite_idleri = select(m.UretimKapasitesi.id).where(m.UretimKapasitesi.senaryo_id == sen.id)
+    stok_idleri = select(m.StokDevri.id).where(m.StokDevri.senaryo_id == sen.id)
     gunluk_kosulu = (
         ((m.DegisiklikKaydi.tablo.in_(("senaryo", "ambalaj_sinifi"))) & (m.DegisiklikKaydi.kayit_id == sen.id))
         | ((m.DegisiklikKaydi.tablo == "gider_havuzu") & m.DegisiklikKaydi.kayit_id.in_(havuz_idleri))
         | ((m.DegisiklikKaydi.tablo == "recete") & m.DegisiklikKaydi.kayit_id.in_(recete_idleri))
         | ((m.DegisiklikKaydi.tablo == "uretim_hedefi") & m.DegisiklikKaydi.kayit_id.in_(hedef_idleri))
-        | ((m.DegisiklikKaydi.tablo == "uretim_kapasitesi") & m.DegisiklikKaydi.kayit_id.in_(kapasite_idleri)))
+        | ((m.DegisiklikKaydi.tablo == "uretim_kapasitesi") & m.DegisiklikKaydi.kayit_id.in_(kapasite_idleri))
+        | ((m.DegisiklikKaydi.tablo == "stok_devri") & m.DegisiklikKaydi.kayit_id.in_(stok_idleri)))
     silinen["degisiklik_kaydi"] = s.execute(delete(m.DegisiklikKaydi).where(gunluk_kosulu)).rowcount
     silinen["dagitim_anahtari"] = s.execute(delete(m.DagitimAnahtari).where(m.DagitimAnahtari.gider_havuzu_id.in_(havuz_idleri))).rowcount
     silinen["recete_satiri"] = s.execute(delete(m.ReceteSatiri).where(m.ReceteSatiri.recete_id.in_(recete_idleri))).rowcount
-    for tablo in (m.GiderHavuzu, m.Recete, m.ParametreDegeri, m.MalzemeFiyati, m.AmbalajSinifi, m.UretimHedefi, m.FireKurali, m.MetinParametre, m.UretimKapasitesi):
+    for tablo in (m.GiderHavuzu, m.Recete, m.ParametreDegeri, m.MalzemeFiyati, m.AmbalajSinifi, m.UretimHedefi, m.FireKurali, m.MetinParametre, m.UretimKapasitesi, m.StokDevri):
         silinen[tablo.__tablename__] = s.execute(delete(tablo).where(tablo.senaryo_id == sen.id)).rowcount
     kimlik = {"ad": sen.ad, "sezon_ad": sen.sezon.ad, "tur": sen.tur, "aciklama": sen.aciklama}
     s.delete(sen)

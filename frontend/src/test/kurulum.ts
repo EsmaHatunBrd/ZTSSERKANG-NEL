@@ -44,4 +44,12 @@ if (!("ResizeObserver" in globalThis)) {
 }
 
 // globals: false oldugu icin otomatik temizlik yok.
-afterEach(() => cleanup());
+// Testler arası tarayıcı belleği sızmasın (favoriler, son açılanlar, menü tercihi); clear() kullanıcı adını yeniden yazar.
+afterEach(() => {
+  cleanup();
+  try {
+    localStorage.clear();
+  } catch {
+    /* localStorage yok */
+  }
+});

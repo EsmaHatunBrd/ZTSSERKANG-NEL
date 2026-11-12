@@ -1,17 +1,18 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Boxes, CircleDollarSign, Percent, TrendingUp, Wallet } from "lucide-react";
+import { Boxes, CircleDollarSign, Download, Percent, TrendingUp, Wallet } from "lucide-react";
 import type { ApiHatasi } from "@/api/istemci";
-import { useKurRiski } from "@/api/sorgular/analiz";
+import { kurRiskiXlsxAdresi, useKurRiski } from "@/api/sorgular/analiz";
 import type { KurRiskiSatiri } from "@/api/tipler";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { ANALIZ_SEKMELERI, SayfaSekmeleri } from "@/bilesenler/SayfaSekmeleri";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
-import { Button } from "@/bilesenler/ui/button";
+import { Button, buttonVariants } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
 import { YuzdeHucresi } from "@/bilesenler/YuzdeHucresi";
+import { cn } from "@/lib/utils";
 import { Kart } from "@/sayfalar/dashboard/UstKartlar";
 import { D, paraBicimle, yuzdeBicimle } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
@@ -161,6 +162,14 @@ export default function KurRiski() {
       <SayfaBasligi
         baslik="Kur riski"
         altBaslik="Maliyetin ne kadarı döviz? Kur artarsa ürün başına ve yıllık ne kadar etkiler? Hiçbir şey kaydedilmez."
+        eylemler={
+          senaryoId !== null && (
+            <a href={kurRiskiXlsxAdresi(senaryoId, uygulanan)} download className={cn(buttonVariants({ variant: "outline" }))}>
+              <Download aria-hidden />
+              Excel'e indir
+            </a>
+          )
+        }
       />
       <form onSubmit={hesapla} aria-label="Kur artışı" className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
         <label className="flex flex-col gap-1 text-sm">

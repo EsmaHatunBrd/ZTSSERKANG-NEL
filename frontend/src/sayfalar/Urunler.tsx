@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { PackagePlus } from "lucide-react";
+import { History, PackagePlus, Star } from "lucide-react";
 import { useUrunler } from "@/api/sorgular/urunler";
 import type { ApiHatasi } from "@/api/istemci";
 import type { DashboardSatiri } from "@/api/tipler";
@@ -13,6 +13,8 @@ import { useSenaryoSayfasi } from "@/yardimcilar/sayfalama";
 import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
 import { ambalajMetni } from "@/yardimcilar/ambalaj";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { FavoriDugmesi } from "@/bilesenler/FavoriDugmesi";
+import { favoriDegistir, favorileriOku, sonAcilaniKaydet, sonAcilanlariOku } from "@/yardimcilar/sonAcilanlar";
 
 const BOYUT = 50;
 const tr = (s: string) => s.toLocaleLowerCase("tr");
@@ -45,18 +47,80 @@ const DURUM_SUTUNU: SutunTanimi<DashboardSatiri> = {
     ),
 };
 
+/** Favoriler / Son açılanlar bölümü: ürün adı + kod çipleri; ad listedeki satırdan, bulunamazsa yalnız kod. */
+function UrunCipleri({
+  baslik,
+  simge,
+  kodlar,
+  satirlar,
+  senaryoId,
+}: {
+  baslik: string;
+  simge: ReactNode;
+  kodlar: string[];
+  satirlar: DashboardSatiri[];
+  senaryoId: number;
+}) {
+  if (kodlar.length === 0) return null;
+  const adlar = new Map(satirlar.map((s) => [s.kod, s.ad]));
+  return (
+    <section aria-label={baslik} className="flex flex-col gap-1.5">
+      <h2 className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        {simge}
+        {baslik}
+      </h2>
+      <ul className="flex flex-wrap gap-1.5">
+        {kodlar.map((kod) => {
+          const ad = adlar.get(kod);
+          return (
+            <li key={kod}>
+              <Link
+                to={`/urunler/${encodeURIComponent(kod)}?senaryo=${senaryoId}`}
+                className="inline-flex max-w-[28rem] items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
+                {ad && <span className="truncate">{ad}</span>}
+                <span className={cn("tabular-nums", ad && "text-xs text-muted-foreground")}>{kod}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 /** Menüdeki "Ürün Maliyeti" girişi: ürün seçilir, satır `/urunler/:kod?senaryo=` ekranına gider. */
 export default function Urunler() {
   const { senaryoId } = useSenaryo();
   const gezin = useNavigate();
   const [arama, setArama] = useState("");
+  const [favoriler, setFavoriler] = useState<string[]>(() => favorileriOku());
+  const [sonAcilanlar, setSonAcilanlar] = useState<string[]>(() => sonAcilanlariOku());
   const [params] = useSearchParams();
   const [tum, setTum] = useState(() => params.get("tum") === "1"); // Veri Kontrolü "Reçetesi olmayan ürün" bağlantısından
 
   const [sayfa, setSayfa] = useSenaryoSayfasi(senaryoId);
 
   const urunler = useUrunler(senaryoId, { sayfa, boyut: BOYUT, tum: tum || undefined });
-  const sutunlar = useMemo(() => (tum ? [...SUTUNLAR, DURUM_SUTUNU] : SUTUNLAR), [tum]);
+  // Favori sütunu `favoriler`e bağlı olursa her tıklamada hücre bileşeni yeniden mount olur (odak kaybı). Sütun sabit kalır;
+  // hücre güncel listeyi ref'ten okur (Urunler her favori değişiminde yeniden çizildiği için hücre de yeniden çizilir).
+  const favorilerRef = useRef(favoriler);
+  favorilerRef.current = favoriler;
+  const sutunlar = useMemo<SutunTanimi<DashboardSatiri>[]>(() => {
+    const favoriSutunu: SutunTanimi<DashboardSatiri> = {
+      id: "favori",
+      header: () => <span className="sr-only">Favori</span>,
+      enableSorting: false,
+      meta: { sinif: "w-10 pr-0" },
+      cell: ({ row }) => (
+        <FavoriDugmesi
+          secili={favorilerRef.current.includes(row.original.kod)}
+          onDegistir={() => setFavoriler(favoriDegistir(row.original.kod))}
+        />
+      ),
+    };
+    return tum ? [favoriSutunu, ...SUTUNLAR, DURUM_SUTUNU] : [favoriSutunu, ...SUTUNLAR];
+  }, [tum]);
   const satirlar = useMemo(() => urunler.data?.kayitlar ?? [], [urunler.data]);
   const gorunen = useMemo(() => {
     const q = tr(arama.trim());
@@ -88,6 +152,24 @@ export default function Urunler() {
           </Link>
         }
       />
+      {(favoriler.length > 0 || sonAcilanlar.length > 0) && (
+        <div className="flex flex-col gap-3 rounded-xl border bg-muted/30 p-3">
+          <UrunCipleri
+            baslik="Favoriler"
+            simge={<Star className="size-3.5" aria-hidden />}
+            kodlar={favoriler}
+            satirlar={satirlar}
+            senaryoId={senaryoId}
+          />
+          <UrunCipleri
+            baslik="Son açılanlar"
+            simge={<History className="size-3.5" aria-hidden />}
+            kodlar={sonAcilanlar}
+            satirlar={satirlar}
+            senaryoId={senaryoId}
+          />
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <Input
           type="search"
@@ -122,7 +204,10 @@ export default function Urunler() {
               ? "Hiç ürün kartı yok — Veri Girişi'nden yeni ürün açın"
               : "Bu çalışmada reçetesi olan ürün yok — yeni ürün açın ya da çalışma dışı ürünleri gösterin"
           }
-          satirTikla={(s) => gezin(`/urunler/${encodeURIComponent(s.kod)}?senaryo=${senaryoId}`)}
+          satirTikla={(s) => {
+            setSonAcilanlar(sonAcilaniKaydet(s.kod));
+            gezin(`/urunler/${encodeURIComponent(s.kod)}?senaryo=${senaryoId}`);
+          }}
         />
       </div>
       {sayfali && (

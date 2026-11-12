@@ -214,14 +214,16 @@ describe("ReceteAktar - tam kitap onayı", () => {
 });
 
 describe("ReceteAktar - Veri Aktar sekmeleri", () => {
-  it("sayfa başlığı Veri Aktar; ok tuşlarıyla altı sekme arasında gezilir", async () => {
+  it("sayfa başlığı Veri Aktar; ok tuşlarıyla yedi sekme arasında gezilir", async () => {
     kur();
     expect(screen.getByRole("heading", { name: "Veri Aktar" })).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(6);
+    expect(screen.getAllByRole("tab")).toHaveLength(7);
     screen.getByRole("tab", { name: "Tüm çalışma kitabı" }).focus();
     await userEvent.keyboard("{ArrowRight}");
     expect(screen.getByRole("tab", { name: "Satın alma fiyat listesi" })).toHaveAttribute("aria-selected", "true");
     await userEvent.keyboard("{End}");
+    expect(screen.getByRole("tab", { name: "Stokta kalan" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.keyboard("{ArrowLeft}");
     expect(screen.getByRole("tab", { name: "Ürün reçetesi" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByLabelText("Ürün kodu")).toBeInTheDocument();
   });

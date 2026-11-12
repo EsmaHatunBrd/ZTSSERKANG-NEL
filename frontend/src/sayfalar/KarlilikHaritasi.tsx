@@ -1,15 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowRight, TriangleAlert, X } from "lucide-react";
+import { ArrowRight, Download, TriangleAlert, X } from "lucide-react";
 import type { ApiHatasi } from "@/api/istemci";
-import { useKarlilik } from "@/api/sorgular/analiz";
+import { karlilikXlsxAdresi, useKarlilik } from "@/api/sorgular/analiz";
 import type { KarlilikBolgesi, KarlilikSatiri } from "@/api/tipler";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
+import { MaliyetHucresi } from "@/bilesenler/MaliyetHucresi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { ANALIZ_SEKMELERI, SayfaSekmeleri } from "@/bilesenler/SayfaSekmeleri";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
-import { Button } from "@/bilesenler/ui/button";
+import { Button, buttonVariants } from "@/bilesenler/ui/button";
 import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
 import { YuzdeHucresi } from "@/bilesenler/YuzdeHucresi";
 import { cn } from "@/lib/utils";
@@ -126,7 +127,12 @@ export default function KarlilikHaritasi() {
         header: "Adet",
         cell: (c) => <ParaHucresi deger={c.row.original.adet} paraBirimi="" basamak={0} />,
       },
-      { id: "maliyet", accessorFn: (r) => sayi(r.maliyet), header: "Maliyet", cell: (c) => <ParaHucresi deger={c.row.original.maliyet} /> },
+      {
+        id: "maliyet",
+        accessorFn: (r) => sayi(r.maliyet),
+        header: "Maliyet",
+        cell: (c) => <MaliyetHucresi deger={c.row.original.maliyet} kaynak={c.row.original.maliyet_kaynagi} />,
+      },
       {
         id: "satis_fiyati",
         accessorFn: (r) => sayi(r.satis_fiyati),
@@ -185,6 +191,14 @@ export default function KarlilikHaritasi() {
       <SayfaBasligi
         baslik="Kârlılık haritası"
         altBaslik="Ürünler yıllık adet ve marja göre dört bölgede. Çizgiler: medyan adet ve hedef marj."
+        eylemler={
+          senaryoId !== null && (
+            <a href={karlilikXlsxAdresi(senaryoId, secili)} download className={cn(buttonVariants({ variant: "outline" }))}>
+              <Download aria-hidden />
+              Excel'e indir
+            </a>
+          )
+        }
       />
 
       {ozet && (

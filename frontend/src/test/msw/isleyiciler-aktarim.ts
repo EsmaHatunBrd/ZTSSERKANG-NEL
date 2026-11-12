@@ -10,7 +10,7 @@ import type {
 
 const T = "*/api/v1/aktarim";
 
-type Tip = "uretim-adetleri" | "satin-alma" | "gider-dagitim";
+type Tip = "uretim-adetleri" | "satin-alma" | "gider-dagitim" | "stok-devri";
 
 export interface AktarimIstegi {
   asama: "onizle" | "uygula";
@@ -58,8 +58,28 @@ export const satinAlmaUygula: AktarimUygulaSatinAlma = {
 
 export const giderOnizle: AktarimOnizleGider = {
   havuz: [
-    { kod: "dolum_iscilik", ad: "Dolum doğrudan işçilik", eski_toplam: "1000", yeni_toplam: "2000", eski_baz: "500", yeni_baz: "500", anahtar_farki: false, degisti: true, yeni_carpanlar: [] },
-    { kod: "elektrik", ad: "Elektrik", eski_toplam: "900", yeni_toplam: "900", eski_baz: null, yeni_baz: null, anahtar_farki: false, degisti: false, yeni_carpanlar: [] },
+    {
+      kod: "dolum_iscilik",
+      ad: "Dolum doğrudan işçilik",
+      eski_toplam: "1000",
+      yeni_toplam: "2000",
+      eski_baz: "500",
+      yeni_baz: "500",
+      anahtar_farki: false,
+      degisti: true,
+      yeni_carpanlar: [],
+    },
+    {
+      kod: "elektrik",
+      ad: "Elektrik",
+      eski_toplam: "900",
+      yeni_toplam: "900",
+      eski_baz: null,
+      yeni_baz: null,
+      anahtar_farki: false,
+      degisti: false,
+      yeni_carpanlar: [],
+    },
   ],
   ambalaj: {
     eski_adet: 1,

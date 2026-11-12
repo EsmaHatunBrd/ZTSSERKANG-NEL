@@ -396,7 +396,7 @@ def test_json_para_alanlari_string_ve_sozlesme_anahtarlari(istemci, oturum):
         assert {"urun_kodu", "senaryo_id", "hesap_tarihi", "satirlar", "toplamlar", "fiyatlar", "toplamlar_firesiz", "fiyatlar_firesiz",
                 "kullanilan_parametreler", "uyarilar"} <= set(g)
         assert set(g) - {"urun_kodu", "senaryo_id", "hesap_tarihi", "satirlar", "toplamlar", "fiyatlar", "toplamlar_firesiz", "fiyatlar_firesiz",
-                         "kullanilan_parametreler", "uyarilar"} == {"uretim", "parametreler", "notlar"}
+                         "kullanilan_parametreler", "uyarilar"} == {"uretim", "parametreler", "notlar", "stok_devri", "satis_ortalamadan"}
     assert canli["satirlar"][0]["fire_kaynagi"] == "satir" and canli["satirlar"][0]["fire_orani"] == "0.02"
 
 

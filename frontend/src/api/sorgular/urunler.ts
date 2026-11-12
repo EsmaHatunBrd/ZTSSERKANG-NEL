@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiHatasi, cagir } from "../istemci";
-import type { Sema } from "../tipler";
+import type { Sema, UrunGiris } from "../tipler";
 import { anahtar } from "./anahtarlar";
 
 export interface UrunListeSecenegi {
@@ -12,16 +12,12 @@ export interface UrunListeSecenegi {
   tum?: boolean;
 }
 
-export function useUrunler(
-  senaryo: number | null | undefined,
-  secenek: UrunListeSecenegi = {},
-) {
+export function useUrunler(senaryo: number | null | undefined, secenek: UrunListeSecenegi = {}) {
   return useQuery({
     queryKey: anahtar.urunler(senaryo, secenek),
     enabled: senaryo != null,
     // Yalnızca aynı senaryonun önceki verisi (sayfa değişimi) gösterilir; senaryo değişince başka senaryonun tutarları asla.
-    placeholderData: (onceki, oncekiSorgu) =>
-      oncekiSorgu?.queryKey[1] === (senaryo ?? null) ? onceki : undefined,
+    placeholderData: (onceki, oncekiSorgu) => (oncekiSorgu?.queryKey[1] === (senaryo ?? null) ? onceki : undefined),
     queryFn: () =>
       cagir(
         api.GET("/api/v1/urunler", {
@@ -53,11 +49,7 @@ export function useUrun(kod: string, senaryo?: number | null) {
   });
 }
 
-export function useRecete(
-  kod: string,
-  senaryo: number | null | undefined,
-  tarih?: string,
-) {
+export function useRecete(kod: string, senaryo: number | null | undefined, tarih?: string) {
   return useQuery({
     queryKey: [...anahtar.recete(kod, senaryo), tarih ?? null],
     enabled: !!kod && senaryo != null,
@@ -75,7 +67,7 @@ export function useRecete(
 
 export interface UrunOlusturDegiskenleri {
   kod: string;
-  govde: Sema["UrunGiris"];
+  govde: UrunGiris;
 }
 
 /**
@@ -107,15 +99,8 @@ export function useUrunOlustur() {
 export function useUrunPasiflestir() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (kod: string) =>
-      cagir(
-        api.PATCH("/api/v1/urunler/{kod}/pasif", { params: { path: { kod } } }),
-      ),
-    onSuccess: () =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: ["urunler"] }),
-        qc.invalidateQueries({ queryKey: ["urun"] }),
-      ]),
+    mutationFn: (kod: string) => cagir(api.PATCH("/api/v1/urunler/{kod}/pasif", { params: { path: { kod } } })),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ["urunler"] }), qc.invalidateQueries({ queryKey: ["urun"] })]),
   });
 }
 
@@ -138,13 +123,9 @@ export function useReceteKaydet() {
       ),
     onSuccess: (_v, { kod }) =>
       Promise.all(
-        [
-          ["recete", kod],
-          ["urunler"],
-          ["urun", kod],
-          ["uyarilar"],
-          ["hesaplar", kod],
-        ].map((queryKey) => qc.invalidateQueries({ queryKey })),
+        [["recete", kod], ["urunler"], ["urun", kod], ["uyarilar"], ["hesaplar", kod]].map((queryKey) =>
+          qc.invalidateQueries({ queryKey }),
+        ),
       ),
   });
 }
@@ -168,13 +149,9 @@ export function useUretimHedefiKaydet() {
       ),
     onSuccess: (_v, { kod }) =>
       Promise.all(
-        [
-          ["urun", kod],
-          ["urunler"],
-          ["uyarilar"],
-          ["hesaplar", kod],
-          ["karsilastirma"],
-        ].map((queryKey) => qc.invalidateQueries({ queryKey })),
+        [["urun", kod], ["urunler"], ["uyarilar"], ["hesaplar", kod], ["karsilastirma"]].map((queryKey) =>
+          qc.invalidateQueries({ queryKey }),
+        ),
       ),
   });
 }

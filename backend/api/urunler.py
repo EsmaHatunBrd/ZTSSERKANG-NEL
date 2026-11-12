@@ -13,7 +13,7 @@ from .semalar import AileDegisCikis, AileGiris, DegisiklikListesi, HATA_404_409_
 router = APIRouter(tags=["urunler"])
 
 SAYISAL = ("recete_maliyeti", "gug", "faaliyet", "finans", "gider_yuzdesi", "maliyet_tl", "maliyet_usd", "maliyet_eur", "satis_tl", "uretim_adedi",
-           "maliyet_tl_firesiz", "maliyet_usd_firesiz", "gecen_yil_tl", "enflasyon_fark_yuzde", "hedef_adet_maliyet_tl")
+           "maliyet_tl_firesiz", "maliyet_usd_firesiz", "gecen_yil_tl", "enflasyon_fark_yuzde", "hedef_adet_maliyet_tl", "ortalama_maliyet_tl")
 
 
 def _hesapla_satirlar(s: Session, senaryo: int, tarih: date | None = None, gecici: bool | None = None, tum: bool = False) -> tuple[list[dict], list[dict]]:
@@ -35,7 +35,7 @@ def _hesapla_satirlar(s: Session, senaryo: int, tarih: date | None = None, gecic
         satir = {"id": u.id, "kod": kod, "ad": u.ad, "ambalaj_hacmi": str(u.ambalaj_hacmi), "ambalaj_etiket": aile_servisi.ambalaj_etiket(u.ad), "hat": u.hat, "gecici_kod": u.gecici_kod}
         if isinstance(c, Exception):
             satir.update({a: None for a in SAYISAL})
-            satir.update(uyari_sayisi=None, hata=str(getattr(c, "mesaj", None) or c), enflasyon_durumu=None)
+            satir.update(uyari_sayisi=None, hata=str(getattr(c, "mesaj", None) or c), enflasyon_durumu=None, stok_etkisi=False)
         else:
             r = c.sonuc
             finans = r.finansman.get("TL", SIFIR)
@@ -46,6 +46,8 @@ def _hesapla_satirlar(s: Session, senaryo: int, tarih: date | None = None, gecic
                                       "satis_tl": r.satis_fiyati_tl, "uretim_adedi": c.girdi.uretim.vardiya_uretim_adedi,
                                       "maliyet_tl_firesiz": r.firesiz.finansman_dahil_maliyet_tl if r.firesiz else None,
                                       "maliyet_usd_firesiz": r.firesiz.doviz_maliyet.get("USD") if r.firesiz else None}))
+            stok = c.stok_devri or {}
+            satir.update(ortalama_maliyet_tl=decimal_str(stok.get("ortalama_maliyet")), stok_etkisi=bool(stok.get("stok_etkisi")))
             satir.update(uyari_sayisi=len(r.uyarilar), hata=None, **_karsilastirma_alanlari(s, u, sen, tarih, c, gecen.get(u.id), hedefler.get(kod)))
         out.append(satir)
     return out, uyarilar
@@ -116,7 +118,7 @@ def _parametre_ozeti(parametreler: dict | None, kullanilan: dict) -> dict | None
 def _gorunum(urun_kodu: str, senaryo_id: int, tarih: date, sonuc: dict, recete: list[dict], fire_kaynaklari: list, kullanilan: dict,
              para_birimleri: dict[str, str | None] | None = None, zs_haritasi: dict[str, str | None] | None = None,
              uretim: dict | None = None, parametreler: dict | None = None, notlar: list[str] | None = None,
-             seviyeler: list[int | None] | None = None) -> dict:
+             seviyeler: list[int | None] | None = None, stok_devri: dict | None = None, satis_ortalamadan: bool = False) -> dict:
     """Tek çizici: canlı hesap ve kayıtlı hesap aynı sözlük biçimlerinden (decimal_str çıktısı) bu yanıtı üretir.
     Firesiz bloklar `sonuc["firesiz"]`dan gelir; firesiz alanı olmayan eski snapshot'larda None döner.
     uretim/parametreler/notlar/zs/birim eski snapshot'larda bulunmayabilir (None / boş)."""
@@ -153,14 +155,15 @@ def _gorunum(urun_kodu: str, senaryo_id: int, tarih: date, sonuc: dict, recete: 
             "toplamlar": _toplamlar(sonuc), "fiyatlar": _fiyatlar(sonuc, parametreler),
             "toplamlar_firesiz": _toplamlar(firesiz) if firesiz else None, "fiyatlar_firesiz": _fiyatlar(firesiz, parametreler) if firesiz else None,
             "kullanilan_parametreler": kullanilan, "uyarilar": sonuc["uyarilar"],
-            "uretim": _uretim_ozeti(uretim, parametreler), "parametreler": _parametre_ozeti(parametreler, kullanilan), "notlar": list(notlar or [])}
+            "uretim": _uretim_ozeti(uretim, parametreler), "parametreler": _parametre_ozeti(parametreler, kullanilan), "notlar": list(notlar or []),
+            "stok_devri": stok_devri or None, "satis_ortalamadan": bool(satis_ortalamadan)}
 
 
 def _hesap_yaniti(c, urun_kodu, senaryo_id, tarih):
     pb = {k: mz.para_birimi for k, mz in (c.malzemeler or {}).items()}
     zs = {k: mz.zs for k, mz in (c.malzemeler or {}).items()}
     return _gorunum(urun_kodu, senaryo_id, tarih, decimal_str(c.sonuc), decimal_str(list(c.girdi.recete)), c.fire_kaynaklari, decimal_str(c.kullanilan_parametreler), pb,
-                    zs, decimal_str(c.girdi.uretim), decimal_str(c.parametreler), c.notlar, c.seviyeler)
+                    zs, decimal_str(c.girdi.uretim), decimal_str(c.parametreler), c.notlar, c.seviyeler, decimal_str(c.stok_devri), c.satis_ortalamadan)
 
 
 def _hedef_dict(h) -> dict:
@@ -169,7 +172,7 @@ def _hedef_dict(h) -> dict:
 
 def _urun_dict(u) -> dict:
     return {"id": u.id, "kod": u.kod, "ad": u.ad, "ambalaj_hacmi": str(u.ambalaj_hacmi), "hat": u.hat, "taze_tursu_sinifi": u.taze_tursu_sinifi,
-            "suzme_kg": str(u.suzme_kg), "pazar": u.pazar, "aktif": u.aktif, "gecici_kod": u.gecici_kod,
+            "suzme_kg": str(u.suzme_kg), "pazar": u.pazar, "aktif": u.aktif, "gecici_kod": u.gecici_kod, "marka": u.marka or None,
             "aile": u.aile, "aile_ad": aile_servisi.aile_gorunen_ad(u.aile, [u]) if u.aile else None, "ambalaj_etiket": aile_servisi.ambalaj_etiket(u.ad)}
 
 
@@ -225,7 +228,8 @@ def getir(s: OturumDep, kod: str, senaryo: int | None = None):
 
 @router.put("/urunler/{kod}", response_model=UrunCikis, responses=HATA_404_409_422, response_model_exclude_unset=True)
 def kaydet(s: OturumDep, kod: str, g: UrunGiris, k: str = Depends(kullanici_ver)):
-    return _urun_dict(hs.urun_kaydet(s, kod, g.ad, g.ambalaj_hacmi, g.hat, g.taze_tursu_sinifi, g.suzme_kg, g.pazar, k))
+    return _urun_dict(hs.urun_kaydet(s, kod, g.ad, g.ambalaj_hacmi, g.hat, g.taze_tursu_sinifi, g.suzme_kg, g.pazar, k,
+                                     **({"marka": g.marka} if "marka" in g.model_fields_set else {})))
 
 
 @router.patch("/urunler/{kod}/pasif", response_model=PasifCikis, responses=HATA_404_409_422)
@@ -343,7 +347,8 @@ def hesap_getir(s: OturumDep, hesap_id: int):
                        gs_.get("fire_kaynaklari", []), gs_.get("kullanilan_parametreler", {}),
                        {k: v.get("para_birimi") for k, v in gs_["malzemeler"].items()} if gs_.get("malzemeler") else None,
                        {k: v.get("zs") for k, v in gs_["malzemeler"].items()} if gs_.get("malzemeler") else None,
-                       gs_["girdi"].get("uretim"), gs_.get("parametreler"), gs_.get("notlar"), (gs_.get("recete") or {}).get("seviyeler"))
+                       gs_["girdi"].get("uretim"), gs_.get("parametreler"), gs_.get("notlar"), (gs_.get("recete") or {}).get("seviyeler"),
+                       gs_.get("stok_devri"), bool(gs_.get("satis_ortalamadan")))
     return {"id": h.id, "urun_id": h.urun_id, "senaryo_id": h.senaryo_id, "hesap_tarihi": h.hesap_tarihi.isoformat(), "olusturan": h.olusturan,
             "girdi_snapshot": h.girdi_snapshot, "sonuc_snapshot": h.sonuc_snapshot, "uyarilar": h.uyarilar, "gorunum": gorunum}
 

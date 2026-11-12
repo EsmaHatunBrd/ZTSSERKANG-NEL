@@ -20,6 +20,7 @@ import { HavuzDiyalogu, havuzGovdesi } from "./ayarlar/HavuzDiyalogu";
 import { KAPASITE_ALANLARI, kapasiteSayisi, useKapasiteDuzenleme } from "./ayarlar/kapasiteDuzenleme";
 import { degerMetni, ParametreDiyalogu } from "./ayarlar/ParametreDiyalogu";
 import { Alan, Kart, SELECT } from "./girdi/ortak";
+import { StokDevriKarti } from "./girdi/StokDevriKarti";
 import { UretimBilgileriKarti } from "./girdi/UretimBilgileriKarti";
 import { YeniUrunKarti } from "./girdi/YeniUrunKarti";
 
@@ -478,7 +479,7 @@ export default function VeriGirisi() {
     <section className="flex flex-col gap-4">
       <SayfaBasligi
         baslik="Veri Girişi"
-        altBaslik="Yeni ürün kartı, gider havuzu, malzeme fiyatı, parametre, ürün üretim bilgileri ve hat kapasitesini Excel'e dönmeden tek yerden girin. Her kayıt nedenle günlüğe düşer."
+        altBaslik="Yeni ürün kartı, gider havuzu, malzeme fiyatı, parametre, ürün üretim bilgileri, hat kapasitesi ve stokta kalanı Excel'e dönmeden tek yerden girin. Her kayıt nedenle günlüğe düşer."
       />
       <KilitSeridi />
       {mesaj && (
@@ -496,6 +497,7 @@ export default function VeriGirisi() {
           <ParametreKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
           <UretimBilgileriKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
           <KapasiteKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
+          <StokDevriKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
         </div>
       )}
     </section>

@@ -5,9 +5,23 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from fiyat_motoru.modeller import Parametreler
 from ..depo import modeller as m
+from . import liste_kurallari as lk
 from .hatalar import PARAMETRE_EKSIK, DogrulamaHatasi
 
 ZORUNLU = ("enflasyon", "satis_kar", "vardiya_saati")
+# Anahtara özgü değer doğrulaması (422): liste bölenleri 0 < b <= 1, yuvarlama adımı izinli kümeden.
+EVET_HAYIR = ("satis_ortalama_maliyetten",)   # birim "evet_hayir": yalnız 0 ya da 1
+
+
+def evet_hayir_dogrula(deger) -> Decimal:
+    d = Decimal(str(deger))
+    if d not in (0, 1):
+        raise DogrulamaHatasi("bu parametre yalnız 0 (hayır) ya da 1 (evet) olabilir", {"deger": str(deger)})
+    return Decimal(int(d))
+
+
+DOGRULAYICILAR = {**{a: lk.bolen_dogrula for a in lk.BOLEN_ANAHTARLARI.values()}, lk.YUVARLAMA_ANAHTARI: lk.yuvarlama_dogrula,
+                  **{a: evet_hayir_dogrula for a in EVET_HAYIR}}
 
 
 def _parametre(s: Session, anahtar: str) -> m.Parametre:
@@ -25,6 +39,8 @@ def deger_ekle(s: Session, senaryo_id: int, anahtar: str, deger: Decimal, gecerl
                kapsam_tipi: str = "genel", kapsam_id: int | None = None, olusturan: str = "sistem") -> m.ParametreDegeri:
     if kapsam_tipi not in ("genel", "urun") or (kapsam_tipi == "urun" and kapsam_id is None):
         raise DogrulamaHatasi("kapsam geçersiz", {"kapsam_tipi": kapsam_tipi})
+    if anahtar in DOGRULAYICILAR:
+        deger = DOGRULAYICILAR[anahtar](deger)
     kayit = m.ParametreDegeri(parametre_id=_parametre(s, anahtar).id, senaryo_id=senaryo_id, kapsam_tipi=kapsam_tipi,
                               kapsam_id=kapsam_id, deger=Decimal(deger), gecerlilik_basi=gecerlilik_basi, neden=neden, olusturan=olusturan)
     s.add(kayit); s.flush()

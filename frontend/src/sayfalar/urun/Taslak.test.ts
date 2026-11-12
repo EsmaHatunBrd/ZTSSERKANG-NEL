@@ -107,6 +107,14 @@ describe("taslaktanOverride", () => {
     });
   });
 
+  it("marka hesaba (override) gitmez; yalnız kayıtta ürün kartına yazılır", () => {
+    const t = uygula(taslakBos(), { urun: { marka: "Berrak", hat: "Herbort" } });
+    expect(taslakSayisi(t)).toBe(2);
+    expect(taslaktanOverride(t, recete)?.urun).toEqual({ hat: "Herbort" });
+    const yalnizMarka = uygula(taslakBos(), { urun: { marka: "Berrak" } });
+    expect(taslaktanOverride(yalnizMarka, recete)?.urun).toBeUndefined();
+  });
+
   it("yalnız fire olan satır satirlar'a girmez; elle brüt satırında fire override'a girmez", () => {
     let t = uygula(taslakBos(), { satirlar: { 1: { fire: "0.05" }, 3: { fire: "0.03" } } });
     t = uygula(t, { satirlar: { 3: { brut_miktar_elle: "1.1" } } });
@@ -129,6 +137,19 @@ describe("taslaktanKaydetGovdesi", () => {
       hesabi_kaydet: true,
       parametreler: [{ anahtar: "kur.USD", deger: "52", kapsam: "genel" }],
     });
+  });
+
+  it("marka: taslaktaki değer yazılır, boşsa null (addan türetilir); taslak yoksa kayıtlı marka korunur", () => {
+    const markali = { ...temel, urun: { ...urun, marka: "Berrak" } };
+    const sunucuMarkali = { ...sunucu, marka: "Berrak" };
+    const yaz = (y: TaslakYamasi) => taslaktanKaydetGovdesi(taslakYamasi(taslakBos(), y, sunucuMarkali), markali).urun;
+    expect(yaz({ urun: { marka: "Niko" } })).toMatchObject({ marka: "Niko", hat: "Niko" });
+    expect(yaz({ urun: { marka: "  " } })).toMatchObject({ marka: null });
+    expect(yaz({ urun: { hat: "Herbort" } })).toMatchObject({ marka: "Berrak", hat: "Herbort" });
+    // Kayıtlı markayla aynı değer taslakta tutulmaz.
+    expect(taslakSayisi(taslakYamasi(taslakBos(), { urun: { marka: "Berrak" } }, sunucuMarkali))).toBe(0);
+    const l = degisiklikListesi(taslakYamasi(taslakBos(), { urun: { marka: "" } }, sunucuMarkali), sunucuMarkali);
+    expect(l.find((x) => x.alan === "urun.marka")).toMatchObject({ etiket: "Marka", eski: "Berrak", yeni: "— (addan türetilir)" });
   });
 
   it("ürün ve hedef taslağı tam kayıt olarak birleştirilir; tarih verilirse gider", () => {

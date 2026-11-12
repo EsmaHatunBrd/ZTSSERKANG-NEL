@@ -23,9 +23,18 @@ import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
 
 const BOYUT = 100;
+/** Süzgeç onay kutuları: basılabilir rozet görünümü (işaretliyse vurgulu zemin). */
+const SUZGEC_ROZETI =
+  "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-sm whitespace-nowrap select-none hover:bg-muted has-checked:border-primary/40 has-checked:bg-accent";
 
 function birim(m: Malzeme): ParaBirimi {
   return m.para_birimi?.trim() || "TL";
+}
+
+/** Tip adını kısaltır: "0001-Hammadde" -> "Hammadde" (kod öneki ipucunda kalır). */
+export function tipKisa(tip: string | null | undefined): string {
+  const t = (tip ?? "").trim();
+  return t.replace(/^\d+\s*-\s*/, "") || t;
 }
 
 /** Geçmiş çekmecesi: fiyat geçmişini çeker; geri al = eski fiyatı bugünden geçerli YENİ kayıt olarak ekler. */
@@ -164,15 +173,37 @@ export default function MalzemeFiyatlari() {
 
   const sutunlar = useMemo<SutunTanimi<Malzeme>[]>(
     () => [
-      { accessorKey: "kod", header: "Kod" },
+      // Kod ve Ad yatay kaydırmada solda sabit kalır (hucre-sabit); genişlikleri sabit ki ikinci sütunun sol kenarı tutsun.
+      {
+        accessorKey: "kod",
+        header: "Kod",
+        meta: { sinif: "hucre-sabit left-0 w-44 min-w-44 font-mono text-xs" },
+      },
       {
         accessorKey: "ad",
         header: "Ad",
-        cell: ({ row }) => (row.original.kart_yok ? <Badge variant="destructive">Kart yok</Badge> : (row.original.ad ?? "—")),
+        meta: { sinif: "hucre-sabit left-44 min-w-56 border-r" },
+        cell: ({ row }) =>
+          row.original.kart_yok ? (
+            <Badge variant="destructive">Kart yok</Badge>
+          ) : (
+            <span className="block max-w-[20rem] truncate" title={row.original.ad ?? undefined}>
+              {row.original.ad ?? "—"}
+            </span>
+          ),
       },
-      { accessorKey: "tip", header: "Tip" },
-      { accessorKey: "birim", header: "Birim" },
-      { accessorKey: "para_birimi", header: "Para" },
+      {
+        accessorKey: "tip",
+        header: "Tip",
+        cell: ({ row }) =>
+          row.original.tip ? (
+            <span title={row.original.tip}>{tipKisa(row.original.tip)}</span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+      },
+      { accessorKey: "birim", header: "Birim", meta: { sinif: "w-16" } },
+      { accessorKey: "para_birimi", header: "Para", meta: { sinif: "w-16" } },
       {
         accessorKey: "zs",
         header: () => <span title={ZS_ACIKLAMA}>Kaynak</span>,
@@ -212,9 +243,13 @@ export default function MalzemeFiyatlari() {
           row.original.kart_yok ? (
             <span className="block text-right text-muted-foreground">—</span>
           ) : (
+            // Fiyatsız satırda "0,0000" yazılmaz; yalnız rozet.
             <span className="flex items-center justify-end gap-2">
-              {row.original.fiyatsiz && <Badge variant="outline">Fiyatsız</Badge>}
-              <ParaHucresi deger={row.original.fiyat ?? null} paraBirimi={birim(row.original)} basamak={4} />
+              {row.original.fiyatsiz ? (
+                <Badge variant="outline">Fiyatsız</Badge>
+              ) : (
+                <ParaHucresi deger={row.original.fiyat ?? null} paraBirimi={birim(row.original)} basamak={4} />
+              )}
             </span>
           ),
       },
@@ -280,34 +315,40 @@ export default function MalzemeFiyatlari() {
       />
       <KilitSeridi />
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={fiyatsiz}
+      {/* Tek satır: arama solda, iki süzgeç basılabilir rozet görünümünde, sağda kayıt sayacı. Dar ekranda sarar. */}
+      <div role="group" aria-label="Süzgeçler" className="flex flex-wrap items-center gap-2">
+        <Input
+          type="search"
+          aria-label="Malzeme ara (kod ya da ad)"
+          placeholder="Malzeme ara (kod ya da ad)"
+          value={arama}
           onChange={(e) => {
-            setFiyatsiz(e.target.checked);
+            setArama(e.target.value);
             setSayfa(1);
           }}
+          className="max-w-sm"
         />
-        Yalnızca fiyatsız malzemeler (kartı olmayanlar dahil)
-      </label>
-
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={revize} onChange={(e) => revizeAyarla(e.target.checked)} />
-        Yalnız revize edilenler (geçerli fiyat ilk bütçeden farklı)
-      </label>
-
-      <Input
-        type="search"
-        aria-label="Malzeme ara (kod ya da ad)"
-        placeholder="Malzeme ara (kod ya da ad)"
-        value={arama}
-        onChange={(e) => {
-          setArama(e.target.value);
-          setSayfa(1);
-        }}
-        className="max-w-xs"
-      />
+        <label className={SUZGEC_ROZETI} title="Yalnızca fiyatsız malzemeler (kartı olmayanlar dahil)">
+          <input
+            type="checkbox"
+            className="accent-primary"
+            checked={fiyatsiz}
+            onChange={(e) => {
+              setFiyatsiz(e.target.checked);
+              setSayfa(1);
+            }}
+          />
+          Yalnız fiyatsız
+        </label>
+        <label className={SUZGEC_ROZETI} title="Geçerli fiyat ilk bütçeden farklı olanlar">
+          <input type="checkbox" className="accent-primary" checked={revize} onChange={(e) => revizeAyarla(e.target.checked)} />
+          Yalnız revize edilenler
+        </label>
+        {/* Sayaç: sayfadaki yüklü verinin toplamı (API'de ayrı fiyatsız sayısı yok; süzgeç açıkken toplam zaten fiyatsız sayısıdır). */}
+        <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+          {sorgu.data ? (fiyatsiz ? `${toplam} fiyatsız malzeme` : `${toplam} malzeme`) : ""}
+        </span>
+      </div>
 
       {mesaj && (
         <p role="status" className="rounded-md bg-muted p-2 text-sm">

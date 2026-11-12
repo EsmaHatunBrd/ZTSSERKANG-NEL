@@ -36,7 +36,7 @@ Vite portu **5180**'dir (5173 bazı makinelerde başka süreçte kullanılıyor;
 ## Testler
 - Birim/bileşen: `npm test -- --run` (Vitest, jsdom, MSW).
 - Uçtan uca: `npm run e2e` (Playwright, Chromium). Playwright iki sunucuyu kendisi başlatır:
-  1. `e2e/kurulum.py`: `veri/e2e.db` silinir, gerçek Excel içe aktarılır (~15 sn, senaryo "E2E"), uvicorn **8010** portunda açılır (geliştirme backend'i 8000 ile çakışmaz; Vite proxy `API_PORT=8010` ile yönlendirilir).
+  1. `e2e/kurulum.py`: `veri/e2e.db` silinir, gerçek Excel içe aktarılır (~15 sn, senaryo "E2E"), uvicorn **8010** portunda açılır (geliştirme backend'i 8000 ile çakışmaz; Vite proxy `API_PORT` ile yönlendirilir). 8010 doluysa `E2E_API_PORT=8012 npm run e2e` gibi başka bir port verilebilir; testlerde sabit port kullanılmaz (`request.get("/api/v1/…")` baseURL üzerinden vekillenir).
   2. Vite, 5190 portunda.
   Önce 8000 ve 5190 portları boş olmalıdır. Testler: `e2e/duman.spec.ts` (ana akış), `e2e/erisilebilirlik.spec.ts` (8 rota x 2 görünüm, koyu tema, odak halkası). İz için: `npx playwright show-trace`.
 

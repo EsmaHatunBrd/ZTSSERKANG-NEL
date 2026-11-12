@@ -1,4 +1,5 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { render, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -104,5 +105,18 @@ describe("HesapGoruntule (kayıtlı hesap)", () => {
   it("olmayan hesapta hata role=alert ile gösterilir", async () => {
     kur("0x");
     expect(await screen.findByRole("alert")).toHaveTextContent("Geçersiz hesap numarası");
+  });
+});
+
+describe("HesapGoruntule (yazdırma)", () => {
+  it("Yazdır düğmesi window.print çağırır; kök eleman data-yazdir taşır", async () => {
+    const u = userEvent.setup();
+    const yazdir = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    const { container } = kur("5");
+    const dugme = await screen.findByRole("button", { name: "Yazdır" });
+    expect(container.querySelector("[data-yazdir]")).not.toBeNull();
+    await u.click(dugme);
+    expect(yazdir).toHaveBeenCalledTimes(1);
+    yazdir.mockRestore();
   });
 });

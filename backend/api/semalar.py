@@ -150,6 +150,8 @@ class UrunGiris(BaseModel):
     taze_tursu_sinifi: str
     suzme_kg: Decimal
     pazar: Literal["Yurtiçi", "Yurtdışı"] = "Yurtiçi"
+    # Marka ("Berrak" ise liste fiyatı uygulanır). Gönderilmezse: yeni üründe addan türetilir, var olanda değişmez; null/"" bilerek boş.
+    marka: str | None = Field(default=None, max_length=64)
 
 
 class UretimHedefiGiris(BaseModel):
@@ -409,6 +411,8 @@ class DashboardSatiri(BaseModel):
     enflasyon_durumu: str | None = None        # "altinda" | "ustunde" | null (TL yeni fiyat / (geçen yıl x (1+enflasyon)) < 1 ise altinda)
     enflasyon_fark_yuzde: str | None = None    # (oran - 1) x 100
     hedef_adet_maliyet_tl: str | None = None   # Üretim Adetleri hedefiyle yeniden hesaplanan TL maliyet (kapasite kaydı yoksa null)
+    ortalama_maliyet_tl: str | None = None     # stokta kalan varsa (stok + bu yıl üretim) ağırlıklı ortalama maliyet; yoksa null
+    stok_etkisi: bool = False                  # ortalama maliyet hesaplandı (stok adedi > 0 ve üretim adedi biliniyor)
 
 
 class UrunListesi(BaseModel):
@@ -451,6 +455,7 @@ class UrunCikis(BaseModel):
     pazar: str
     aktif: bool
     gecici_kod: bool
+    marka: str | None = None   # "Berrak" ise liste fiyatı uygulanır; null: marka yok/bilinmiyor
     uretim_hedefi: UretimHedefiCikis | None = None
     senaryoda: bool | None = None   # yalnız ?senaryo= ile: ürünün o senaryoda aktif reçetesi var mı (senaryo üyeliği)
     aile: str | None = None
@@ -608,6 +613,25 @@ class ParametreOzetiCikis(BaseModel):
     teklif_kar: list[str]
 
 
+class StokDevriCikis(BaseModel):
+    """Ürünün stokta kalan (geçen yıldan devreden) bilgisi ve ortalama maliyet. İlk dört alan elle girilenler (kayıt yoksa null);
+    `_kullanilan` alanlar hesapta kullanılan değerler. Oranlar 0,40 = %40; tutarlar TL."""
+    urun_kodu: str
+    adet: str | None
+    birim_maliyet: str | None
+    enflasyon: str | None                 # elle; null ise çalışmanın enflasyon parametresi kullanılır
+    uretim_adedi: str | None              # elle; null ise geçen yıl satış adedi - stok (en az 0)
+    enflasyon_kullanilan: str | None
+    uretim_adedi_kullanilan: str | None
+    uretim_adedi_kaynagi: Literal["elle", "satis_gecmisi"] | None
+    guncel_stok_maliyeti: str | None      # birim_maliyet x (1 + enflasyon_kullanilan)
+    bu_yil_maliyet: str | None            # finansman dahil maliyet TL (Genel Bakış "Maliyet TL")
+    ortalama_maliyet: str | None          # (stok x güncel + üretim x bu yıl) / (stok + üretim)
+    stok_payi: str | None                 # stok adedi / (stok + üretim)
+    stok_etkisi: bool                     # ortalama hesaplandı
+    aciklama: str | None                  # ortalama neden yok (null: sorun yok ya da kayıt yok)
+
+
 class HesapYaniti(BaseModel):
     urun_kodu: str
     senaryo_id: int
@@ -622,6 +646,8 @@ class HesapYaniti(BaseModel):
     uretim: UretimBilgisiCikis | None = None            # eski snapshot'larda null
     parametreler: ParametreOzetiCikis | None = None     # eski snapshot'larda null
     notlar: list[str] | None = None   # yanıt her zaman liste döner; alan eski istemciler için isteğe bağlı bildirilir
+    stok_devri: StokDevriCikis | None = None   # stokta kalan kaydı yoksa null
+    satis_ortalamadan: bool = False   # satış fiyatları ortalama maliyetten hesaplandı (`satis_ortalama_maliyetten` = 1 ve stok etkisi var)
 
 
 class TopluYazilan(BaseModel):
@@ -1328,25 +1354,34 @@ class AktarimUygulaRecete(BaseModel):
 
 
 # ---------------------------------------------------------------- Liste fiyatı çalışması (Berrak)
+ListePazari = Literal["yurtici", "yurtdisi"]
+
+
 class ListeFiyatiGiris(BaseModel):
     urun_kodu: str = Field(min_length=1, max_length=32)
     yil: int = Field(ge=2000, le=2100)
+    pazar: ListePazari = "yurtici"
     liste_fiyati: Decimal = Field(gt=0)
     birim_maliyet: Decimal | None = Field(default=None, gt=0)
+    bolen: Decimal | None = Field(default=None, gt=0, le=1)   # boşsa kaydedildiği andaki geçerli bölen yazılır
 
 
 class ListeFiyatiCikis(BaseModel):
     urun_kodu: str
     yil: int
+    pazar: ListePazari
     liste_fiyati: str
     birim_maliyet: str | None
+    bolen: str | None   # kaydedildiği andaki bölen; eski kayıtlarda null
     ornek: bool
 
 
 class ListeGecmisSatiri(BaseModel):
     yil: int
+    pazar: ListePazari
     liste_fiyati: str
     birim_maliyet: str | None
+    bolen: str | None
     ornek: bool
 
 
@@ -1357,7 +1392,8 @@ class ListeCalismaSatiri(BaseModel):
     hata: str | None
     maliyet_tl: str | None
     satis_tl: str | None
-    yeni_liste: str | None
+    yeni_liste_ham: str | None   # satış ÷ bölen, yuvarlamasız
+    yeni_liste: str | None       # yuvarlanmış (en yakın adım katı); artışlar bununla
     onceki_yil: int | None
     onceki_liste: str | None
     liste_artis: str | None
@@ -1382,11 +1418,24 @@ class ListeYilSatiri(BaseModel):
     urun_sayisi: int
 
 
+class ListeBolenleri(BaseModel):
+    yurtici: str
+    yurtdisi: str
+
+
 class ListeCalismasi(BaseModel):
+    """Yalnız Berrak markalı ürünler; `pazar` için hesaplanır."""
     yil: int
-    bolen: str
-    bolen_kayitli: bool
-    varsayilan_bolen: str
+    pazar: ListePazari
+    bolen: str                  # uygulanan bölen (deneme ?bolen= ya da kayıtlı ya da varsayılan)
+    bolenler: ListeBolenleri    # iki pazarın kayıtlı (yoksa varsayılan) bölenleri; denemeden etkilenmez
+    bolen_kayitli: bool         # uygulanan bölen bu pazar için senaryoda kayıtlı parametre mi
+    varsayilan_bolen: str       # bu pazarın varsayılanı (yurtiçi 0.63, yurtdışı 0.90)
+    yuvarlama: str              # uygulanan adım, TL (yuvarlama_secenekleri'nden biri)
+    yuvarlama_kayitli: bool
+    varsayilan_yuvarlama: str
+    yuvarlama_secenekleri: list[str]
+    berrak_disi: int            # çalışmada olup Berrak olmayan (listeye girmeyen) ürün sayısı
     ornek_var: bool
     ozet: ListeCalismaOzeti
     yillar: list[ListeYilSatiri]
@@ -2043,6 +2092,7 @@ class KarlilikSatiri(BaseModel):
     yillik_kar: str | None
     bolge: KarlilikBolgesi | None
     hata: str | None
+    maliyet_kaynagi: Literal["bu_yil", "ortalama"] | None = None   # ortalama: `satis_ortalama_maliyetten` = 1 ve stokta kalan var
 
 
 class KarlilikCikis(BaseModel):
@@ -2065,6 +2115,7 @@ class HedefFiyatOzeti(BaseModel):
 class HedefFiyatSatiri(BaseModel):
     kod: str
     ad: str
+    marka: str | None
     aile: str | None
     adet: str | None
     maliyet: str | None
@@ -2073,15 +2124,245 @@ class HedefFiyatSatiri(BaseModel):
     mevcut_marj: str | None
     hedef_fiyat: str | None       # maliyet x (1 + marj)
     gereken_zam: str | None       # hedef / geçen - 1
-    liste_fiyati: str | None      # hedef / bölen
+    liste_fiyati_yurtici: str | None    # hedef / yurtiçi bölen, adıma yuvarlanmış; Berrak değilse null
+    liste_fiyati_yurtdisi: str | None   # hedef / yurtdışı bölen, adıma yuvarlanmış; Berrak değilse null
     yillik_ek_gelir: str | None   # (hedef - geçen) x adet; negatif olabilir
     bolge: KarlilikBolgesi | None
     hata: str | None
+    maliyet_kaynagi: Literal["bu_yil", "ortalama"] | None = None   # ortalama: `satis_ortalama_maliyetten` = 1 ve stokta kalan var
 
 
 class HedefFiyatCikis(BaseModel):
     marj: str
-    bolen: str
+    bolen_yurtici: str
+    bolen_yurtdisi: str
+    yuvarlama: str   # liste fiyatı yuvarlama adımı, TL
     adet_kaynagi: str   # yıllık adedin kaynağı: "satis_gecmisi" (geçen yıl satış adedi)
     ozet: HedefFiyatOzeti
     kayitlar: list[HedefFiyatSatiri]
+
+
+# ---------------------------------------------------------------- Stokta kalan
+class StokDevriGiris(BaseModel):
+    """PUT /urunler/{kod}/stok-devri gövdesi. Sayılar metin ya da sayı; oranlar 0,40 = %40."""
+    adet: Decimal
+    birim_maliyet: Decimal | None = None   # adet > 0 iken zorunlu (> 0)
+    enflasyon: Decimal | None = None
+    uretim_adedi: Decimal | None = None
+    neden: str = Field(min_length=1, max_length=300)
+
+
+class StokDevriSatiri(StokDevriCikis):
+    ad: str
+
+
+class StokDevriListesi(BaseModel):
+    kayitlar: list[StokDevriSatiri]
+
+
+class StokDevriAktarimSatiri(BaseModel):
+    satir_no: int                 # Excel satır numarası (başlık 1)
+    urun_kodu: str
+    ad: str | None
+    adet: str | None
+    birim_maliyet: str | None
+    enflasyon: str | None
+    uretim_adedi: str | None
+    durum: Literal["yeni", "degisen", "ayni"]
+    eski: dict[str, str | None] | None = None   # degisen satırda mevcut değerler
+
+
+class StokDevriAktarimHatasi(BaseModel):
+    satir_no: int
+    mesaj: str
+
+
+class StokDevriOnizle(BaseModel):
+    sutunlar: dict[str, str | None]   # beklenen sütun -> dosyada bulunan başlık (yoksa null)
+    satirlar: list[StokDevriAktarimSatiri]
+    hatalar: list[StokDevriAktarimHatasi]
+    yeni: int
+    degisen: int
+    ayni: int
+
+
+class StokDevriUygula(BaseModel):
+    eklenen: int
+    guncellenen: int
+    ayni: int
+
+
+# ---------------------------------------------------------------- Fiyat eğilimi (analiz önerisi 9)
+class FiyatEgilimiSatiri(BaseModel):
+    """Yüzdeler 2 basamak (ROUND_HALF_UP); degisim/yillik null: ilk fiyat 0 ya da ilk/son kaydın para birimi farklı."""
+    kod: str
+    ad: str
+    tip: str | None
+    para_birimi: str
+    ilk_fiyat: str
+    ilk_tarih: str
+    son_fiyat: str
+    son_tarih: str
+    kayit_sayisi: int
+    degisim_yuzde: str | None
+    yillik_yuzde: str | None
+    esik_yuzde: str                 # TL: enflasyon parametresi x 100; döviz: 0
+    enflasyonu_asiyor: bool         # yillik_yuzde > esik_yuzde + 1 puan
+    kullanan_urun_sayisi: int       # aktif reçetesinde geçtiği senaryo üyesi ürün sayısı
+
+
+class FiyatEgilimiCikis(BaseModel):
+    senaryo_id: int
+    ay: int
+    tarih: str                      # pencere sonu (ISO)
+    pencere_basi: str               # tarih - ay ay (ISO)
+    enflasyon_yuzde: str | None     # senaryonun enflasyon parametresi (%); girilmemişse null
+    satirlar: list[FiyatEgilimiSatiri]
+    asan_sayisi: int                # süzgeçten bağımsız: enflasyonu aşan malzeme sayısı
+    toplam: int                     # satır sayısı (yalniz_asan=1 ile aşanlar)
+
+
+# ---------------------------------------------------------------- Yönetim özeti (analiz önerisi 15)
+class YonetimBaslik(BaseModel):
+    senaryo_id: int
+    sezon_ad: str
+    ad: str
+    tur: str
+    kilitli: bool
+    hesap_tarihi: str
+    uretim_zamani: str              # yanıtın üretildiği an (UTC ISO)
+
+
+class YonetimUrunSayilari(BaseModel):
+    toplam: int
+    hesaplanan: int
+    hatali: int
+
+
+class YonetimMarj(BaseModel):
+    """Oranlar 0,20 = %20. agirlikli_ortalama: geçen yıl satış adediyle ağırlıklı (adedi bilinen ürün yoksa null)."""
+    ortalama: str | None
+    agirlikli_ortalama: str | None
+    adetli_urun: int
+    hedef: str | None               # genel `satis_kar` parametresi
+    marj_esigi: str
+    adet_kaynagi: str
+
+
+class YonetimMaliyetKalemi(BaseModel):
+    toplam_tl: str
+    pay_yuzde: str | None
+    urun_basina_tl: str | None
+
+
+class YonetimMaliyetYapisi(BaseModel):
+    """Hesaplanan ürünlerin birim maliyet toplamı ve kalem payları (malzeme / uretim / faaliyet / finansman; toplamı %100)."""
+    urun_sayisi: int
+    toplam_tl: str
+    urun_basina_tl: str | None
+    kalemler: dict[str, YonetimMaliyetKalemi]
+
+
+class YonetimHedefAltiSatiri(BaseModel):
+    kod: str
+    ad: str
+    kar_orani: str
+    maliyet: str | None
+    satis: str | None
+
+
+class YonetimHedefAlti(BaseModel):
+    esik: str
+    toplam: int
+    kayitlar: list[YonetimHedefAltiSatiri]   # ilk 10, kâr oranı artan
+
+
+class YonetimKurRiskiSatiri(BaseModel):
+    kod: str
+    ad: str
+    maliyet: str | None
+    birim_etki: str | None
+    yillik_etki: str | None
+    doviz_payi_yuzde: str | None
+
+
+class YonetimKurRiski(BaseModel):
+    oran: str
+    kurlar: dict[str, str]
+    doviz_payi_yuzde: str | None
+    yillik_etki_tl: str
+    yillik_maliyet_tl: str
+    adetsiz_urun: int
+    hatali: int
+    en_riskli: list[YonetimKurRiskiSatiri]   # ilk 5 (yıllık etki azalan)
+
+
+class YonetimAcikTeklif(BaseModel):
+    teklif_id: int
+    urun_kodu: str
+    urun_ad: str
+    musteri: str | None
+    durum: str
+    tur_no: int
+    tarih: str | None               # teklifin oluşturulma zamanı (UTC ISO)
+    hesap_tarihi: str
+    fiyat_tl: str
+
+
+class YonetimTeklifler(BaseModel):
+    toplam: int
+    durumlar: dict[str, int]        # taslak / gonderildi / kabul / red
+    acik_sayi: int                  # taslak + gonderildi
+    acik_toplam_tl: str
+    en_eski_acik: list[YonetimAcikTeklif]
+
+
+class YonetimKontrolSorunu(BaseModel):
+    kod: str
+    baslik: str
+    durum: str
+    sayi: int
+
+
+class YonetimVeriKontrolu(BaseModel):
+    hata: int
+    dikkat: int
+    bilgi: int
+    tamam: int
+    sorunlar: list[YonetimKontrolSorunu]   # durumu hata/dikkat olan kontroller
+
+
+class YonetimPahaliSatiri(BaseModel):
+    kod: str
+    ad: str
+    maliyet: str
+    satis: str
+
+
+class YonetimStokEtkisi(BaseModel):
+    """Stok devri kaydı olan çalışmada; toplam_etki_tl = Σ stok adedi x (güncel stok maliyeti - bu yılın maliyeti)."""
+    kayit_sayisi: int
+    etkili_urun: int
+    stok_adedi: str
+    toplam_etki_tl: str
+    satis_ortalama_maliyetten: bool
+
+
+class YonetimUyari(BaseModel):
+    kod: str
+    ad: str
+    mesaj: str
+
+
+class YonetimOzetiCikis(BaseModel):
+    baslik: YonetimBaslik
+    urunler: YonetimUrunSayilari
+    marj: YonetimMarj
+    maliyet_yapisi: YonetimMaliyetYapisi
+    hedef_alti: YonetimHedefAlti
+    kur_riski: YonetimKurRiski
+    teklifler: YonetimTeklifler
+    veri_kontrolu: YonetimVeriKontrolu
+    en_pahali: list[YonetimPahaliSatiri]
+    stok_etkisi: YonetimStokEtkisi | None = None   # stok devri kaydı yoksa null (arayüz kartı gizler)
+    uyarilar: list[YonetimUyari]                   # hesaplanamayan ürünler, ilk 10

@@ -20,6 +20,8 @@ export type DashboardSatiri = Sema["DashboardSatiri"];
 export type UretimHedefi = Sema["UretimHedefiCikis"];
 /** `senaryoda`: ürünün seçili çalışmada aktif reçetesi var mı; yalnız `GET /urunler/{kod}?senaryo=` yanıtında (Faz 5c). */
 export type Urun = Sema["UrunCikis"];
+/** `marka` boş bırakılırsa yeni üründe sunucu addan türetir. */
+export type UrunGiris = Sema["UrunGiris"];
 export type ReceteSatiri = Sema["ReceteSatiriFireli"];
 /** Reçetesiz üründe `GET recete` 404 yerine `{id: null, versiyon: 0, satirlar: []}` döner (Faz 5c). */
 export type Recete = Sema["ReceteCikis"];
@@ -124,8 +126,11 @@ export type BgAyristirma = Sema["BgKiyasAyristirma"];
 // D7: Veri Kontrolü (çalışmanın veri sorunları tek listede).
 export type Tutarlilik = Sema["TutarlilikCikis"];
 export type TutarlilikKontrolu = Sema["TutarlilikKontrolu"];
-export type ListeCalismasi = Sema["ListeCalismasi"];
+export type ListePazari = "yurtici" | "yurtdisi";
+export type ListeGecmisSatiri = Sema["ListeGecmisSatiri"];
 export type ListeCalismaSatiri = Sema["ListeCalismaSatiri"];
+export type ListeCalismasi = Sema["ListeCalismasi"];
+export type ListeFiyatiGiris = Sema["ListeFiyatiGiris"];
 export type ListeYilSatiri = Sema["ListeYilSatiri"];
 export type AnalizSatiri = Sema["AnalizSatiri"];
 export type AnalizOzeti = Sema["AnalizOzeti"];
@@ -156,3 +161,18 @@ export type KarlilikSonucu = Sema["KarlilikCikis"];
 
 export type HedefFiyatSatiri = Sema["HedefFiyatSatiri"];
 export type HedefFiyatSonucu = Sema["HedefFiyatCikis"];
+
+// Stokta kalan (stok devri): ürün başına isteğe bağlı, çalışmaya bağlı kayıt. Oranlar 0.40 = %40.
+/** Kayıt yoksa alanlar null, `stok_etkisi` false. */
+export type StokDevri = Sema["StokDevriCikis"];
+export type StokDevriGiris = Sema["StokDevriGiris"];
+export type StokDevriSatiri = Sema["StokDevriSatiri"];
+export type StokDevriListesi = Sema["StokDevriListesi"];
+export type AktarimOnizleStokDevri = Sema["StokDevriOnizle"];
+export type AktarimUygulaStokDevri = Sema["StokDevriUygula"];
+export type StokDevriAktarimSatiri = Sema["StokDevriAktarimSatiri"];
+
+// Dalga 4 (12.11.2026): fiyat eğilimi (analiz önerisi 9) ve tek sayfa yönetim özeti (15). Yüzdeler metin, 2 basamak.
+export type FiyatEgilimiSatiri = Sema["FiyatEgilimiSatiri"];
+export type FiyatEgilimiSonucu = Sema["FiyatEgilimiCikis"];
+export type YonetimOzeti = Sema["YonetimOzetiCikis"];

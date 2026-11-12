@@ -28,3 +28,15 @@ export const sayiKurali =
     const m = sayiHatasi(x, negatifIzin);
     if (m) ctx.addIssue({ code: "custom", message: m });
   };
+
+/**
+ * Açık/kapalı (0/1) parametrelerin birimi (ör. `satis_ortalama_maliyetten`). Bu birimdeki parametre "Açık / Kapalı" gösterilir ve
+ * değer girişi yerine aç/kapa ile değiştirilir. Backend birim adı değişirse yalnız burası düzeltilir.
+ */
+export const EVET_HAYIR_BIRIMI = "evet_hayir";
+
+/** 0/1 parametre değeri açık mı ("1", "1.0", "1.00" açık; boş/0 kapalı). */
+export function acikMi(deger: string | null | undefined): boolean {
+  if (deger === null || deger === undefined || deger.trim() === "") return false;
+  return !D(deger.trim().replace(",", ".")).isZero();
+}

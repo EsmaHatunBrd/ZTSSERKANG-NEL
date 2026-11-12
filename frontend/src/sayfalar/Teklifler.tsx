@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, Printer } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { ApiHatasi } from "@/api/istemci";
 import { useSenaryoTeklifleri } from "@/api/sorgular/hesaplar";
 import type { SenaryoTeklifSatiri } from "@/api/tipler";
@@ -220,6 +220,14 @@ export default function Teklifler() {
             hata={hata}
             bosMetin="Bu senaryoda teklif yok"
             bosAciklama="Teklif ürün ekranından açılır: Ürün Maliyeti'nde ürünü açın, Kaydet ile hesabı kaydedin, ardından sayfanın altındaki Teklif turları bölümünden kâr oranını seçip teklifi oluşturun."
+            bosEylem={
+              <Link
+                to={senaryoId === null ? "/urunler" : `/urunler?senaryo=${senaryoId}`}
+                className={cn(buttonVariants({ variant: "default", size: "sm" }))}
+              >
+                Ürün seç
+              </Link>
+            }
             satirTikla={git}
           />
         </section>

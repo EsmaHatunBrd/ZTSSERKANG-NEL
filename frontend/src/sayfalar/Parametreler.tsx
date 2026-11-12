@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { History, Lock, Pencil } from "lucide-react";
+import { History, Lock, Pencil, ToggleLeft, ToggleRight } from "lucide-react";
 import { useParametreEkle, useParametreGecmisi, useParametreler, useParametreTanimlari } from "@/api/sorgular/parametreler";
 import type { ParametreTanimi } from "@/api/tipler";
 import { GecmisCekmecesi } from "@/bilesenler/GecmisCekmecesi";
@@ -12,6 +12,9 @@ import { GeriAlOnayi } from "./ayarlar/GeriAlOnayi";
 import { hataMetniVarsa } from "@/api/istemci";
 import { degerMetni, ParametreDiyalogu } from "./ayarlar/ParametreDiyalogu";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
+import { Girdi } from "@/bilesenler/Girdi";
+import { acikMi, EVET_HAYIR_BIRIMI } from "./ayarlar/ortak";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
 
 interface Grup {
@@ -21,7 +24,7 @@ interface Grup {
 }
 
 const GRUPLAR: Grup[] = [
-  { baslik: "Genel", eslesir: (a) => ["enflasyon", "satis_kar", "vardiya_saati"].includes(a) },
+  { baslik: "Genel", eslesir: (a) => ["enflasyon", "satis_kar", "vardiya_saati", "satis_ortalama_maliyetten"].includes(a) },
   { baslik: "Kurlar", eslesir: (a) => a.startsWith("kur.") },
   { baslik: "Faiz", eslesir: (a) => a.startsWith("faiz.") },
   { baslik: "Stok süresi", eslesir: (a) => a.startsWith("stok_ay.") },
@@ -112,6 +115,53 @@ function GecmisPaneli({
   );
 }
 
+/** Açık/kapalı parametreyi tersine çevirme onayı: bugünden geçerli, tüm ürünler; neden zorunlu. */
+function AcKapaOnayi({
+  tanim,
+  yeniAcik,
+  bekliyor,
+  hata,
+  onOnayla,
+  onVazgec,
+}: {
+  tanim: ParametreTanimi;
+  yeniAcik: boolean;
+  bekliyor: boolean;
+  hata: string | null;
+  onOnayla: (neden: string) => void;
+  onVazgec: () => void;
+}) {
+  const [neden, setNeden] = useState("");
+  const [denendi, setDenendi] = useState(false);
+  const eksik = denendi && !neden.trim();
+  return (
+    <OnayDiyalogu
+      baslik={`${tanim.aciklama ?? tanim.anahtar}: ${yeniAcik ? "Aç" : "Kapat"}`}
+      onayMetni={bekliyor ? "Kaydediliyor…" : yeniAcik ? "Aç" : "Kapat"}
+      bekliyor={bekliyor}
+      hata={hata}
+      onVazgec={onVazgec}
+      onOnayla={() => {
+        setDenendi(true);
+        if (neden.trim()) onOnayla(neden.trim());
+      }}
+    >
+      <p>
+        Özet: <strong>{tanim.anahtar}</strong> bugünden itibaren tüm ürünler için <strong>{yeniAcik ? "Açık" : "Kapalı"}</strong> olacak.
+      </p>
+      <label htmlFor="ac-kapa-neden" className="font-medium">
+        Neden (zorunlu)
+      </label>
+      <Girdi id="ac-kapa-neden" value={neden} aria-invalid={eksik} onChange={(e) => setNeden(e.target.value)} />
+      {eksik && (
+        <p role="alert" className="text-xs text-destructive">
+          Neden zorunlu
+        </p>
+      )}
+    </OnayDiyalogu>
+  );
+}
+
 export default function Parametreler() {
   const { senaryoId, senaryo, kilitli: senaryoKilitli } = useSenaryo();
   const tanimlar = useParametreTanimlari();
@@ -119,6 +169,7 @@ export default function Parametreler() {
   const ekle = useParametreEkle();
   const [duzenlenen, setDuzenlenen] = useState<ParametreTanimi | null>(null);
   const [gecmis, setGecmis] = useState<ParametreTanimi | null>(null);
+  const [acKapa, setAcKapa] = useState<ParametreTanimi | null>(null);
   const [mesaj, setMesaj] = useState<string | null>(null);
 
   const gerceklesen = senaryo?.tur === "gerceklesen";
@@ -190,7 +241,13 @@ export default function Parametreler() {
                       <span className="block font-mono text-xs text-muted-foreground">{t.anahtar}</span>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {deger === undefined ? "—" : degerMetni(deger, t.birim)}
+                      {t.birim === EVET_HAYIR_BIRIMI ? (
+                        <Badge variant={acikMi(deger) ? "default" : "outline"}>{acikMi(deger) ? "Açık" : "Kapalı"}</Badge>
+                      ) : deger === undefined ? (
+                        "—"
+                      ) : (
+                        degerMetni(deger, t.birim)
+                      )}
                     </TableCell>
                     <TableCell>
                       {grup.saltOkunur ? (
@@ -202,6 +259,23 @@ export default function Parametreler() {
                               <Lock className="size-3" aria-hidden />
                               Gerçekleşen senaryoda enflasyon kilitlidir: gerçekleşen değerler sonradan değiştirilemez.
                             </span>
+                          ) : t.birim === EVET_HAYIR_BIRIMI ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              role="switch"
+                              aria-checked={acikMi(deger)}
+                              aria-label={`Aç/Kapat ${t.anahtar}`}
+                              disabled={senaryoKilitli}
+                              onClick={() => {
+                                ekle.reset();
+                                setAcKapa(t);
+                              }}
+                            >
+                              {acikMi(deger) ? <ToggleRight className="text-primary" /> : <ToggleLeft />}
+                              {acikMi(deger) ? "Kapat" : "Aç"}
+                            </Button>
                           ) : (
                             <Button
                               type="button"
@@ -267,6 +341,32 @@ export default function Parametreler() {
               },
             )
           }
+        />
+      )}
+
+      {acKapa && senaryoId != null && (
+        <AcKapaOnayi
+          tanim={acKapa}
+          yeniAcik={!acikMi(degerler.data?.[acKapa.anahtar])}
+          bekliyor={ekle.isPending}
+          hata={hataMetniVarsa(ekle.error)}
+          onVazgec={() => setAcKapa(null)}
+          onOnayla={(neden) => {
+            const yeniAcik = !acikMi(degerler.data?.[acKapa.anahtar]);
+            ekle.mutate(
+              {
+                anahtar: acKapa.anahtar,
+                senaryo: senaryoId,
+                govde: { deger: yeniAcik ? "1" : "0", gecerlilik_basi: bugunIso(), neden, kapsam_tipi: "genel" },
+              },
+              {
+                onSuccess: () => {
+                  setMesaj(`${acKapa.anahtar} ${yeniAcik ? "açıldı" : "kapatıldı"}.`);
+                  setAcKapa(null);
+                },
+              },
+            );
+          }}
         />
       )}
 

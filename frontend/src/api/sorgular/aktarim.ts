@@ -4,22 +4,25 @@ import type {
   AktarimOnizleGider,
   AktarimOnizleRecete,
   AktarimOnizleSatinAlma,
+  AktarimOnizleStokDevri,
   AktarimOnizleUretim,
   AktarimUygulaGider,
   AktarimUygulaRecete,
   AktarimUygulaSatinAlma,
+  AktarimUygulaStokDevri,
   AktarimUygulaUretim,
 } from "../tipler";
 import { formVerisi } from "./aktar";
 
 /** Ayrı ayrı yüklenebilen veri türleri (uç adresindeki parça). */
-export type AktarimTipi = "uretim-adetleri" | "satin-alma" | "gider-dagitim" | "recete";
+export type AktarimTipi = "uretim-adetleri" | "satin-alma" | "gider-dagitim" | "recete" | "stok-devri";
 
 export interface TipHaritasi {
   "uretim-adetleri": { onizle: AktarimOnizleUretim; uygula: AktarimUygulaUretim };
   "satin-alma": { onizle: AktarimOnizleSatinAlma; uygula: AktarimUygulaSatinAlma };
   "gider-dagitim": { onizle: AktarimOnizleGider; uygula: AktarimUygulaGider };
   recete: { onizle: AktarimOnizleRecete; uygula: AktarimUygulaRecete };
+  "stok-devri": { onizle: AktarimOnizleStokDevri; uygula: AktarimUygulaStokDevri };
 }
 
 /** Başarılı uygulamada yenilenecek sorgu önekleri (yazılan veriyi gösteren tüm ekranlar). */
@@ -27,6 +30,7 @@ const GECERSIZ: Record<AktarimTipi, string[]> = {
   "uretim-adetleri": ["kapasite", "ambalaj-ozeti", "urunler", "hesaplar", "uyarilar"],
   "satin-alma": ["malzemeler", "fiyat-gecmisi", "urunler", "hesaplar", "uyarilar"],
   "gider-dagitim": ["gider-havuzlari", "ambalajlar", "ambalaj-ozeti", "urunler", "hesaplar", "uyarilar"],
+  "stok-devri": ["stok-devri", "urun", "urunler", "hesaplar", "uyarilar", "analiz", "karsilastirma", "liste-calismasi"],
   recete: ["recete", "urun", "urunler", "hesaplar", "uyarilar", "ambalaj-ozeti", "karsilastirma", "senaryolar", "gunluk", "arsiv"],
 };
 

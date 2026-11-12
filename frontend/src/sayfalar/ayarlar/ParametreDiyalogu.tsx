@@ -3,7 +3,7 @@ import { useUrun, useUrunler } from "@/api/sorgular/urunler";
 import type { ParametreTanimi } from "@/api/tipler";
 import { D, yuzdeBicimle } from "@/yardimcilar/para";
 import { goster } from "@/yardimcilar/tarih";
-import { NEGATIF_OLABILIR } from "./ortak";
+import { acikMi, EVET_HAYIR_BIRIMI, NEGATIF_OLABILIR } from "./ortak";
 import { DegerDiyalogu, type DegerGirdisi } from "./DegerDiyalogu";
 
 export interface ParametreGirdisi extends DegerGirdisi {
@@ -23,10 +23,11 @@ interface Props {
 
 /** Gösterim: oran yüzde; diğerleri Türkçe binlik ayraçla, en çok 4 ondalık (CHF 63,291139… -> 63,2911). Saklanan değer değişmez. */
 export function degerMetni(deger: string, birim: string | null | undefined): string {
+  if (birim === EVET_HAYIR_BIRIMI) return acikMi(deger) ? "Açık" : "Kapalı";
   if (birim === "oran") return yuzdeBicimle(deger, 2);
   const metin = /^-?\d+(\.\d+)?$/.test(deger.trim())
     ? new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 4 }).format(D(deger).toDecimalPlaces(4).toFixed() as unknown as number)
-    : deger.replace(".", ",");   // sayı değilse olduğu gibi
+    : deger.replace(".", ","); // sayı değilse olduğu gibi
   return birim ? `${metin} ${birim}` : metin;
 }
 
@@ -38,12 +39,7 @@ export function ParametreDiyalogu({ tanim, mevcut, senaryo, gonderiliyor, hata, 
   const urunler = useUrunler(kapsam === "urun" ? senaryo : null, { boyut: 100 });
   const urun = useUrun(kapsam === "urun" ? urunKod : "", senaryo);
 
-  const engel =
-    kapsam === "urun" && !urun.data
-      ? urunKod
-        ? "Ürün bilgisi yükleniyor…"
-        : "Ürün kapsamı için bir ürün seçin."
-      : null;
+  const engel = kapsam === "urun" && !urun.data ? (urunKod ? "Ürün bilgisi yükleniyor…" : "Ürün kapsamı için bir ürün seçin.") : null;
 
   return (
     <DegerDiyalogu
@@ -62,11 +58,7 @@ export function ParametreDiyalogu({ tanim, mevcut, senaryo, gonderiliyor, hata, 
       negatifIzin={NEGATIF_OLABILIR.has(tanim.anahtar)}
       onKapat={onKapat}
       onGonder={(v) =>
-        onGonder(
-          kapsam === "genel"
-            ? { ...v, kapsam_tipi: "genel" }
-            : { ...v, kapsam_tipi: "urun", kapsam_id: urun.data?.id },
-        )
+        onGonder(kapsam === "genel" ? { ...v, kapsam_tipi: "genel" } : { ...v, kapsam_tipi: "urun", kapsam_id: urun.data?.id })
       }
     >
       <fieldset className="flex flex-col gap-2">

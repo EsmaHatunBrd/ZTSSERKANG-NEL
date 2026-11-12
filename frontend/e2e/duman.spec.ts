@@ -58,7 +58,7 @@ test("duman: dashboard -> ürün -> birim fiyat değişimi -> Kaydet -> yenile -
   await fiyatGirdisi().fill(yeniFiyat);
 
   // Şerit tek değişikliği sayar; fireli toplam değişir.
-  await expect(page.getByText("1 değişiklik")).toBeVisible();
+  await expect(page.getByText("1 satırda değişiklik")).toBeVisible();
   await expect.poll(async () => (await fireliSatir.innerText()).trim(), { timeout: 20_000 }).not.toBe(oncekiFireli);
 
   // Kaydet -> özet diyaloğu -> neden -> gönder -> "Kaydedildi · Hesap #N".
@@ -68,7 +68,7 @@ test("duman: dashboard -> ürün -> birim fiyat değişimi -> Kaydet -> yenile -
   await diyalog.getByLabel("Neden").fill("E2E birim fiyat güncellemesi");
   await diyalog.getByRole("button", { name: "Onayla ve kaydet" }).click();
   await expect(page.getByRole("status", { name: "Kayıt durumu" })).toContainText(/Kaydedildi · Hesap #\d+/);
-  await expect(page.getByText("Değişiklik yok")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Kaydedilmemiş değişiklikler" })).toBeHidden();
 
   // Sayfayı yenile: değer kalıcıdır (reçete yeni sürüm olarak yazıldı).
   await page.reload();

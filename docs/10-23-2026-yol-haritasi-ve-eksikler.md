@@ -69,7 +69,8 @@ Faz 5b: muhasebe cevapları (Z/S, revize fiyat, elle giriş + çarpanlar, Veri G
 
 ## Güncelleme 09.11.2026 — analiz önerileri (Claude Docs belgesi, 18 madde)
 Yapıldı: 1 Ya olursa, 2 Neden değişti (Bütçe vs Gerçekleşen sapma ayrıştırması), 5 şirket toplamı sapma, 6 Zam etkisi, 16 Eksik fiyat etkisi, 17 Hatalı fiyat uyarısı (%30), 20 Hedef altı ürünler, **13 Kârlılık haritası (09.11: Karşılaştırma → "Kârlılık haritası" sekmesi; x üretim adedi log, y kâr oranı; eşikler medyan adet × hedef kâr `satis_kar`; dört bölge sayıları; "çok satan, marjı zayıf" tablosu; fiyat kaynağı seçimi: geçen yıl gerçek satış / hesaplanan satış — bütçe satışı maliyet × hedef kâr olduğundan hesaplanan kaynakta harita düzdür, not gösterilir)**.
-Kısmen: 12 Enflasyona göre fiyat (satış geçmişi bekliyor), 19 Ambalaj tutarlılığı (tablo var, uyarı yok).
+Kısmen: 12 Enflasyona göre fiyat (satış geçmişi bekliyor).
+10.11.2026: **19 Ambalaj boyu tutarlılığı YAPILDI** — Veri Kontrolü'ne `ambalaj_tutarsiz` kontrolü (aynı ailede büyük boyun litre/kg başı satış fiyatı küçük boydan %1'den fazla pahalıysa; `tutarlilik_servisi.ambalaj_tutarsizliklari`, saf; çözüm bağlantısı Karşılaştırma · ürün aileleri). Ayrıca arayüz düzen dalgaları 1-3 (`docs/`'ta rapor yok; kontrolör defteri): üst çubuk tek satır, daraltılabilir menü, reçete tablosu grup başlıkları/sabit sütunlar/yoğunluk, formül ipucu, ağaç katlama, klavye gezinme, favoriler ve son açılanlar, kayıtlı hesap yazdırma, yapışkan Kaydet/Vazgeç, ürün sayfasında geçmiş hesaplar ve iki hesabı kıyasla.
 Kalan: 7 80/20, 8 yıllık malzeme ihtiyacı, 9 fiyat eğilimi, 10 taban fiyat (Sonra), 11 eskimiş teklif (Sonra), 14 kur riski, 15 yönetim özeti, 18 marjı koruyan fiyat.
 Not: SMM ajanları çalışırken yalnız frontend dosyalarına dokunuldu (Karsilastirma.tsx + karsilastirma/karlilik.ts, KarlilikHaritasi.tsx, testler); backend yeniden başlatılmadı.
 
