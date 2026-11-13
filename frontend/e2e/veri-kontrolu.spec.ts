@@ -5,6 +5,8 @@ import { DASHBOARD_BEKLEME_MS } from "./sabitler";
 // ilgili liste süzülmüş açılır; Genel Bakış'ta özet bağlantısı vardır. Sayılar kitaba bağlı olduğundan yalnız varlıkları denetlenir.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("fiyat-calismasi.kullanici", "E2E Kullanıcı"));
+  // Düzenleme kilidi uygulamada kilitli başlar; yazma yapan senaryolar için sekmede açık başlatılır.
+  await page.addInitScript(() => sessionStorage.setItem("fiyat-calismasi.duzenleme-acik-bitis", String(Date.now() + 3_600_000)));
 });
 
 test("veri kontrolü: kontroller ve çözüm bağlantıları; fiyatsız malzemeye tıklayınca Malzeme Fiyatları süzülür; Genel Bakış şeridi", async ({

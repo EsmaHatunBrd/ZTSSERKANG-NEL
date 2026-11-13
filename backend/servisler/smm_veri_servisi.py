@@ -181,7 +181,9 @@ def veri_durumu(s: Session, donem_id: int) -> dict:
     from .smm_ozet_servisi import grup
     grupsuz = [x for x in kalemler if grup(x.tur, x.mizan_kodu) is None
                and (x.dbs_tutar or x.alim_tutar or x.iade_tutar or x.sayim_miktar)]
+    from .smm_donem_servisi import devir_ozeti
     return decimal_str({
+        "devir": devir_ozeti(s, d),   # açılış stoku devralınan dönemin şu anki kapanışıyla uyumlu mu (devir kaynağı yoksa None)
         "donem": donem_cikis(d, len(kalemler)),
         "donem_basi": {"kaynak": "devir" if d.devir_donem_id else ("excel" if d.kaynak_dosya else "yok"), "dolu": dbs_dolu,
                        "tutar": sum((x.dbs_tutar for x in kalemler), SIFIR), "hazir": devir or dbs_dolu > 0},
@@ -226,15 +228,51 @@ def ayarlar_guncelle(s: Session, donem_id: int, finansman: Decimal | None = None
     return veri_durumu(s, donem_id)
 
 
-def kilit(s: Session, donem_id: int, kilitli: bool, kullanici: str = "sistem") -> dict:
+def _tl(x) -> str:
+    """1234567.891 -> '1.234.567,89' (uyarı metinleri için)."""
+    return f"{_d(x):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def kapanis_eksikleri(s: Session, donem_id: int) -> list[str]:
+    """Dönem kapatılmadan önce giderilmesi beklenenler: yüklenmemiş zorunlu kaynak, türü boş kalem, açılış–önceki kapanış uyumsuzluğu."""
+    v = veri_durumu(s, donem_id)
+    eksikler = [f"Eksik veri: {ad}" for ad in v["eksik"]]
+    if v["grupsuz"]["kalem"]:
+        eksikler.append(f"{v['grupsuz']['kalem']} kalemin türü / mizan kodu boş; SMM tablosuna girmiyor")
+    dv = v.get("devir")
+    if dv and not dv["uyumlu"]:
+        eksikler.append(f"Açılış stoku {dv['onceki_ad']} kapanışıyla uyuşmuyor ({dv['fark_kalem']} kalem, fark {_tl(dv['fark_tutar'])} TL)")
+    return eksikler
+
+
+def kilit(s: Session, donem_id: int, kilitli: bool, kullanici: str = "sistem", zorla: bool = False) -> dict:
+    """Dönemi kapatır ya da kilidi açar. Kapatırken eksik varsa ve `zorla` değilse 409 `kapanis_eksik`. Kilidi açarken: açılışını bu
+    dönemden devralmış dönem kilitliyse 409 `sonraki_kilitli`; kilitli değilse yanıtta `uyari` (devri yenileyin). Rol denetimi API'de."""
+    from .smm_donem_servisi import sonraki_donemler
     d = donem_getir(s, donem_id)
+    uyari = None
     if bool(d.kilitli) != kilitli:
+        kayit = {"donem": donem_adi(d)}
+        if kilitli:
+            eksikler = kapanis_eksikleri(s, donem_id)
+            if eksikler and not zorla:
+                raise CatismaHatasi(f"{donem_adi(d)} kapatılmadan önce eksikler var", {"eksikler": eksikler}, kod="kapanis_eksik")
+            if eksikler:
+                kayit.update(zorla=True, eksikler=eksikler)
+        else:
+            sonrakiler = sonraki_donemler(s, d)
+            kapali = next((x for x in sonrakiler if x.kilitli), None)
+            if kapali is not None:
+                raise CatismaHatasi(f"önce {donem_adi(kapali)} kilidini açın; açılışı bu dönemden devralındı", {"donem_id": kapali.id},
+                                    kod="sonraki_kilitli")
+            if sonrakiler:
+                uyari = f"{donem_adi(sonrakiler[0])} açılışı bu dönemden devralındı; değişiklik sonrası devri yenileyin"
         d.kilitli = kilitli
         d.kilitleyen = kullanici if kilitli else None
         s.add(m.DegisiklikKaydi(tablo="smm_donem", kayit_id=d.id, islem="kilitle" if kilitli else "kilit_ac", eski=None,
-                                yeni={"donem": donem_adi(d)}, kullanici=kullanici))
+                                yeni=kayit, kullanici=kullanici))
         s.flush()
-    return donem_cikis(d)
+    return {**donem_cikis(d), "uyari": uyari}
 
 
 def fis_excel(s: Session, donem_id: int) -> tuple[bytes, str]:

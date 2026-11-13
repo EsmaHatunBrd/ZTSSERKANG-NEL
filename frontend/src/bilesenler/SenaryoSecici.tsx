@@ -133,6 +133,11 @@ export function useSenaryo(): SenaryoBaglami {
   return b;
 }
 
+/** SenaryoSaglayici dışında da çağrılabilen sürüm (sağlayıcı yoksa null): ortak şeritler için. */
+export function useSenaryoVarsa(): SenaryoBaglami | null {
+  return useContext(Baglam);
+}
+
 const MENU_OGESI =
   "w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent";
 
@@ -305,8 +310,8 @@ export function SenaryoSecici() {
         >
           <p>Bu işlem geri alınamaz; silmeden önce otomatik yedek alınır.</p>
           <p className="text-muted-foreground">
-            Çalışmaya bağlı reçeteler, fiyatlar, parametre değerleri, gider dağıtımı ve üretim bilgileri de silinir. Kayıtlı hesabı olan
-            ya da kilitli çalışma silinemez; ürün ve malzeme kartları etkilenmez.
+            Çalışmaya bağlı reçeteler, fiyatlar, parametre değerleri, gider dağıtımı ve üretim bilgileri de silinir. Kayıtlı hesabı olan ya
+            da kilitli çalışma silinemez; ürün ve malzeme kartları etkilenmez.
           </p>
         </OnayDiyalogu>
       )}

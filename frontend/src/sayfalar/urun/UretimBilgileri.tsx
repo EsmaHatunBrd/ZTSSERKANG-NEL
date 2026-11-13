@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useGiderHavuzlari } from "@/api/sorgular/gider";
 import type { UretimBilgisi } from "@/api/tipler";
+import { useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { Input } from "@/bilesenler/ui/input";
 import { cn } from "@/lib/utils";
 import { goster } from "@/yardimcilar/tarih";
@@ -79,6 +80,9 @@ function Alan({ etiket, children }: { etiket: string; children: React.ReactNode 
 /** Ürünün üretim girdileri: her alan hücreye yazılır, hesaba hemen girer ve tek "Kaydet" ile kalıcı yazılır. */
 export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, taslak, onTaslak, taban, marka }: Props) {
   const havuzlar = useGiderHavuzlari(senaryoId);
+  // Sayı hücreleri (GirdiHucresi) kilidi kendisi uygular; seçim kutuları, marka ve onay kutusu burada kapatılır.
+  const kilitli = !useDuzenlemeKilidi().acik;
+  const kilitNotu = kilitli ? "Düzenleme kilitli" : undefined;
   const seciliHat = taslak.urun.hat ?? uretim.hat;
 
   const hatlar = useMemo(() => hatListesi(havuzlar.data?.kayitlar, seciliHat), [havuzlar.data, seciliHat]);
@@ -134,6 +138,8 @@ export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, ta
         <Alan etiket="Üretim hattı">
           <select
             aria-label="Üretim hattı"
+            disabled={kilitli}
+            title={kilitNotu}
             value={etkinUrun("hat")}
             onChange={(e) => urunTaslagi("hat", e.target.value)}
             className={cn(SECIM_SINIFI, taslak.urun.hat !== undefined && "border-primary")}
@@ -148,6 +154,8 @@ export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, ta
         <Alan etiket="Taze/Turşu sınıfı">
           <select
             aria-label="Taze/Turşu sınıfı"
+            disabled={kilitli}
+            title={kilitNotu}
             value={etkinUrun("taze_tursu_sinifi")}
             onChange={(e) => urunTaslagi("taze_tursu_sinifi", e.target.value)}
             className={cn(SECIM_SINIFI, taslak.urun.taze_tursu_sinifi !== undefined && "border-primary")}
@@ -162,6 +170,8 @@ export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, ta
         <Alan etiket="Pazar">
           <select
             aria-label="Pazar"
+            disabled={kilitli}
+            title={kilitNotu}
             value={etkinUrun("pazar")}
             onChange={(e) => urunTaslagi("pazar", e.target.value)}
             className={cn(SECIM_SINIFI, taslak.urun.pazar !== undefined && "border-primary")}
@@ -176,6 +186,7 @@ export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, ta
         <Alan etiket="Marka">
           <Input
             aria-label="Marka"
+            disabled={kilitli}
             aria-description="Boş bırakılırsa ürün adından türetilir (ör. adında Berrak geçiyorsa Berrak)."
             title={
               taslak.urun.marka !== undefined
@@ -215,6 +226,8 @@ export function UretimBilgileri({ senaryoId, senaryoAdi, hesapTarihi, uretim, ta
           <input
             type="checkbox"
             aria-label="Pazarlama/yönetim payı uygula"
+            disabled={kilitli}
+            title={kilitNotu}
             checked={etkinPazarlama}
             onChange={(e) => {
               onTaslak({

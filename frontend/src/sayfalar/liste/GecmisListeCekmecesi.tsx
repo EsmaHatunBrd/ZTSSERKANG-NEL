@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { hataMetni } from "@/api/istemci";
 import { useListeFiyatiKaydet, useListeFiyatiSil } from "@/api/sorgular/liste";
+import { useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import type { ListeCalismaSatiri, ListePazari } from "@/api/tipler";
 import { Button } from "@/bilesenler/ui/button";
@@ -28,6 +29,8 @@ interface SatirProps {
 /** Tek yılın satırı: liste fiyatı ve birim maliyet düzenlenir; Kaydet yalnız değişince açılır. */
 function YilSatiri({ kod, yil, pazar, liste, maliyet, bolen, ornek }: SatirProps) {
   const kaydet = useListeFiyatiKaydet(useSenaryo().senaryoId);
+  const kilitli = !useDuzenlemeKilidi().acik;
+  const kilitNotu = kilitli ? "Düzenleme kilitli" : undefined;
   const sil = useListeFiyatiSil();
   const [l, setL] = useState(kutuMetni(liste));
   const [mal, setMal] = useState(kutuMetni(maliyet));
@@ -66,7 +69,8 @@ function YilSatiri({ kod, yil, pazar, liste, maliyet, bolen, ornek }: SatirProps
           type="button"
           size="sm"
           variant="outline"
-          disabled={sil.isPending}
+          disabled={sil.isPending || kilitli}
+          title={kilitNotu}
           onClick={() => sil.mutate({ urun_kodu: kod, yil, pazar })}
         >
           Sil
@@ -74,7 +78,8 @@ function YilSatiri({ kod, yil, pazar, liste, maliyet, bolen, ornek }: SatirProps
         <Button
           type="button"
           size="sm"
-          disabled={(!degisti && !ornek) || !gecerli || kaydet.isPending}
+          disabled={(!degisti && !ornek) || !gecerli || kaydet.isPending || kilitli}
+          title={kilitNotu}
           onClick={() => kaydet.mutate({ urun_kodu: kod, yil, pazar, liste_fiyati: lApi as string, birim_maliyet: malApi })}
         >
           {ornek && !degisti ? "Gerçek olarak kaydet" : "Kaydet"}
@@ -92,6 +97,8 @@ function YilSatiri({ kod, yil, pazar, liste, maliyet, bolen, ornek }: SatirProps
 /** Yeni yıl ekleme formu (varsayılan yıl: listedeki en eski yılın bir öncesi ya da çalışma yılının bir öncesi). */
 function YilEkle({ kod, pazar, varsayilanYil }: { kod: string; pazar: ListePazari; varsayilanYil: number }) {
   const kaydet = useListeFiyatiKaydet(useSenaryo().senaryoId);
+  const kilitli = !useDuzenlemeKilidi().acik;
+  const kilitNotu = kilitli ? "Düzenleme kilitli" : undefined;
   const [yil, setYil] = useState(String(varsayilanYil));
   const [l, setL] = useState("");
   const [mal, setMal] = useState("");
@@ -142,7 +149,7 @@ function YilEkle({ kod, pazar, varsayilanYil }: { kod: string; pazar: ListePazar
         </label>
       </div>
       <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={kaydet.isPending}>
+        <Button type="submit" size="sm" disabled={kaydet.isPending || kilitli} title={kilitNotu}>
           Ekle
         </Button>
       </div>

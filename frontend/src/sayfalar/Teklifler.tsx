@@ -37,6 +37,19 @@ export default function Teklifler() {
   const [durum, setDurum] = useState("");
   const [musteriGirdi, setMusteriGirdi] = useState("");
   const [musteri, setMusteri] = useState("");
+  // Ürün süzgeci (kod ya da ad); ?urun= ile gelen değer kutuya dolar (ürün ekranından bağlantı için).
+  const [urunGirdi, setUrunGirdi] = useState(() => new URLSearchParams(window.location.search).get("urun") ?? "");
+  const [urun, setUrun] = useState(urunGirdi.trim());
+  useEffect(() => {
+    const yeni = urunGirdi.trim();
+    if (yeni === urun) return;
+    const z = setTimeout(() => {
+      setUrun(yeni);
+      setSayfa(1);
+    }, MUSTERI_GECIKME_MS);
+    return () => clearTimeout(z);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urunGirdi, urun]);
 
   // Müşteri aramasında her tuş vuruşunda istek atmamak için kısa gecikme.
   useEffect(() => {
@@ -51,7 +64,7 @@ export default function Teklifler() {
 
   const [sayfa, setSayfa] = useSenaryoSayfasi(senaryoId);
 
-  const sorgu = useSenaryoTeklifleri(senaryoId, { durum, musteri, sayfa, boyut: BOYUT });
+  const sorgu = useSenaryoTeklifleri(senaryoId, { durum, musteri, urun, sayfa, boyut: BOYUT });
   const satirlar = useMemo(() => sorgu.data?.kayitlar ?? [], [sorgu.data]);
   const toplam = sorgu.data?.toplam ?? 0;
   const sayfaSayisi = Math.max(1, Math.ceil(toplam / BOYUT));
@@ -199,6 +212,16 @@ export default function Teklifler() {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Ürün ara
+            <Input
+              type="search"
+              value={urunGirdi}
+              onChange={(e) => setUrunGirdi(e.target.value)}
+              className="w-64"
+              placeholder="Ürün kodu ya da adı…"
+            />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             Müşteri ara

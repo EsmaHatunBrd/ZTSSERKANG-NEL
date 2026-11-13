@@ -16,6 +16,8 @@ interface Props {
   kod: string;
   senaryoId: number | null;
   kilitli: boolean;
+  /** Kilit nedeni (ipucu); verilmezse "Senaryo kilitli". */
+  kilitNedeni?: string;
   /** Kayıt/silme sonrası çağrılır: ürün ekranı hesabı yeniden koşturur (satış fiyatı ortalama maliyetten olabilir). */
   onDegisti?: () => void;
 }
@@ -144,7 +146,7 @@ function Satir({ etiket, children, vurgu }: { etiket: string; children: ReactNod
  * Ürün ekranındaki "Stok etkisi" bölümü: ürün ekranının "hücreye yaz, tek Kaydet" akışından AYRIDIR, her işlem anında kaydedilir.
  * Kayıt yoksa yalnız sade bir "Stokta kalan ekle" düğmesi görünür (dikkat çekmez).
  */
-export function StokEtkisiKarti({ kod, senaryoId, kilitli, onDegisti }: Props) {
+export function StokEtkisiKarti({ kod, senaryoId, kilitli, kilitNedeni = "Senaryo kilitli", onDegisti }: Props) {
   const sorgu = useStokDevri(kod, senaryoId);
   const [diyalog, setDiyalog] = useState<"duzenle" | "kaldir" | null>(null);
   const [mesaj, setMesaj] = useState<string | null>(null);
@@ -198,7 +200,7 @@ export function StokEtkisiKarti({ kod, senaryoId, kilitli, onDegisti }: Props) {
           size="sm"
           className="text-muted-foreground"
           disabled={kilitli}
-          title={kilitli ? "Senaryo kilitli" : "Geçen yıldan kalan stok varsa ortalama maliyet için girin"}
+          title={kilitli ? kilitNedeni : "Geçen yıldan kalan stok varsa ortalama maliyet için girin"}
           onClick={() => setDiyalog("duzenle")}
         >
           <PackagePlus aria-hidden />
@@ -230,7 +232,7 @@ export function StokEtkisiKarti({ kod, senaryoId, kilitli, onDegisti }: Props) {
             variant="outline"
             size="sm"
             disabled={kilitli}
-            title={kilitli ? "Senaryo kilitli" : undefined}
+            title={kilitli ? kilitNedeni : undefined}
             onClick={() => setDiyalog("duzenle")}
           >
             <Pencil aria-hidden />
@@ -241,7 +243,7 @@ export function StokEtkisiKarti({ kod, senaryoId, kilitli, onDegisti }: Props) {
             variant="ghost"
             size="sm"
             disabled={kilitli}
-            title={kilitli ? "Senaryo kilitli" : undefined}
+            title={kilitli ? kilitNedeni : undefined}
             onClick={() => setDiyalog("kaldir")}
           >
             <Trash2 aria-hidden />

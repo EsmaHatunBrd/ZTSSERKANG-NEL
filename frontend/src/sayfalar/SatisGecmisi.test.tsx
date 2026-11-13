@@ -15,8 +15,28 @@ beforeEach(() => localStorage.clear());
 
 const T = "*/api/v1/satis-gecmisi";
 const KAYITLAR = [
-  { id: 7, urun_kodu: "ORNEK-001", urun_ad: "Örnek Ürün", musteri: "Deneme Ltd", tarih: "2025-03-01", fiyat: "1234.5", para_birimi: "EUR", adet: "100", olusturan: "esma" },
-  { id: 8, urun_kodu: "ORNEK-002", urun_ad: "Başka Ürün", musteri: "Başka AŞ", tarih: "2024-12-31", fiyat: "9", para_birimi: "TL", adet: "2000", olusturan: "esma" },
+  {
+    id: 7,
+    urun_kodu: "ORNEK-001",
+    urun_ad: "Örnek Ürün",
+    musteri: "Deneme Ltd",
+    tarih: "2025-03-01",
+    fiyat: "1234.5",
+    para_birimi: "EUR",
+    adet: "100",
+    olusturan: "esma",
+  },
+  {
+    id: 8,
+    urun_kodu: "ORNEK-002",
+    urun_ad: "Başka Ürün",
+    musteri: "Başka AŞ",
+    tarih: "2024-12-31",
+    fiyat: "9",
+    para_birimi: "TL",
+    adet: "2000",
+    olusturan: "esma",
+  },
 ];
 
 function kur() {
@@ -101,7 +121,12 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
       {
         hata: "dogrulama",
         mesaj: "dosyada hatalı satırlar var; hiçbir satır eklenmedi",
-        alanlar: { hatalar: [{ satir_no: 3, mesaj: "ürün bulunamadı" }, { satir_no: 5, mesaj: "tarih geçersiz" }] },
+        alanlar: {
+          hatalar: [
+            { satir_no: 3, mesaj: "ürün bulunamadı" },
+            { satir_no: 5, mesaj: "tarih geçersiz" },
+          ],
+        },
       },
       { status: 422 },
     );
@@ -126,7 +151,14 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
     await userEvent.type(within(form).getByLabelText("Adet *"), "40");
     await userEvent.click(within(form).getByRole("button", { name: "Ekle" }));
     await waitFor(() => expect(istekler.ekle).toHaveLength(1));
-    expect(istekler.ekle[0]).toEqual({ urun_kodu: "ORNEK-001", musteri: "Deneme Ltd", tarih: "2025-06-30", fiyat: "12.5", para_birimi: "USD", adet: "40" });
+    expect(istekler.ekle[0]).toEqual({
+      urun_kodu: "ORNEK-001",
+      musteri: "Deneme Ltd",
+      tarih: "2025-06-30",
+      fiyat: "12.5",
+      para_birimi: "USD",
+      adet: "40",
+    });
     expect(await screen.findByRole("status", { name: "Ekleme durumu" })).toBeInTheDocument();
   });
 
@@ -151,5 +183,26 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
     await userEvent.click(within(satir).getByRole("button", { name: /^Sil/ }));
     await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Sil" }));
     await waitFor(() => expect(istekler.sil).toEqual(["7"]));
+  });
+
+  it("düzenleme kilidi: kilitliyken ekleme ve silme devre dışı, kilit açılınca etkin", async () => {
+    sessionStorage.removeItem("fiyat-calismasi.duzenleme-acik-bitis");
+    kur();
+    sunucu.use(
+      http.post("*/api/v1/duzenleme-kilidi/ac", () =>
+        HttpResponse.json({ kayit_id: 1, sayfa: "/", senaryo_id: null, kullanici: "Test Kullanıcı" }, { status: 201 }),
+      ),
+    );
+    const satir = (await screen.findByText("ORNEK-001")).closest("tr") as HTMLElement;
+    const sil = within(satir).getByRole("button", { name: /^Sil/ });
+    expect(sil).toBeDisabled();
+    expect(sil).toHaveAttribute("title", "Düzenleme kilitli");
+    expect(screen.getByRole("button", { name: "Ekle" })).toBeDisabled();
+    // Süzme ve okuma serbest
+    expect(screen.getByRole("link", { name: /Şablonu indir/ })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await waitFor(() => expect(within(satir).getByRole("button", { name: /^Sil/ })).toBeEnabled());
+    expect(screen.getByRole("button", { name: "Ekle" })).toBeEnabled();
   });
 });

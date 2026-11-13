@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useImportExcelTam } from "@/api/sorgular/aktar";
 import { useSenaryolar } from "@/api/sorgular/senaryolar";
 import type { Senaryo } from "@/api/tipler";
+import { useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
@@ -45,6 +46,8 @@ export function TamKitapFormu() {
   const aktar = useImportExcelTam();
   const senaryolar = useSenaryolar();
   const { senaryoId, senaryo: seciliSenaryo, kilitli } = useSenaryo();
+  // Yeni çalışma açan mod senaryo kilidinden etkilenmez; düzenleme kilidi iki modu da kapatır.
+  const { duzenlemeKilitli } = useYazmaKilidi();
   // Mod bilinçli seçilir (varsayılan yok): yanlışlıkla ikinci bir senaryo açılmasın ya da mevcut senaryoya yazılmasın.
   const [mod, setMod] = useState<"yeni" | "tamamla" | null>(null);
   const [bekleyen, setBekleyen] = useState<{
@@ -209,7 +212,11 @@ export function TamKitapFormu() {
         )}
 
         <div>
-          <Button type="submit" disabled={aktar.isPending || mod === null || (mod === "tamamla" && (senaryoId === null || kilitli))}>
+          <Button
+            type="submit"
+            disabled={aktar.isPending || mod === null || duzenlemeKilitli || (mod === "tamamla" && (senaryoId === null || kilitli))}
+            title={duzenlemeKilitli ? "Düzenleme kilitli" : undefined}
+          >
             {aktar.isPending ? "Aktarılıyor…" : "İçe aktar"}
           </Button>
           {mod === null && <p className="mt-1 text-xs text-muted-foreground">Önce aktarım modunu seçin.</p>}

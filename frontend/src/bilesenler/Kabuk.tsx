@@ -4,6 +4,7 @@ import {
   Boxes,
   Calculator,
   CalendarRange,
+  ChartColumn,
   ChartPie,
   ClipboardList,
   Factory,
@@ -36,6 +37,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DuzenlemeKilidiSaglayici } from "./DuzenlemeKilidi";
 import { useOturum } from "./GirisKapisi";
 import { HesapDugmesi } from "./HesapDugmesi";
 import { HizliArama } from "./HizliAramaKutusu";
@@ -195,6 +197,20 @@ export const SMM_MENU_GRUPLARI: MenuGrubu[] = [
         son: false,
         simge: Sigma,
         aciklama: "Satılan mamul maliyeti, stok mizanı karşılaştırması ve fiş taslağı",
+      },
+      {
+        yol: "/smm/butce-kiyas",
+        etiket: "Bütçe Kıyası",
+        son: false,
+        simge: GitCompareArrows,
+        aciklama: "Fiyat çalışmasındaki bütçe maliyeti ile fiili birim maliyet, ürün ürün",
+      },
+      {
+        yol: "/smm/aylar-arasi",
+        etiket: "Aylar Arası",
+        son: false,
+        simge: ChartColumn,
+        aciklama: "SMM tablosunun dönemler arası karşılaştırması ve değişim",
       },
     ],
   },
@@ -440,7 +456,9 @@ export function Kabuk() {
                 </div>
               }
             >
-              <Outlet />
+              <DuzenlemeKilidiSaglayici>
+                <Outlet />
+              </DuzenlemeKilidiSaglayici>
             </Suspense>
           </main>
         </div>

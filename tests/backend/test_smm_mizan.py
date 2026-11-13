@@ -140,7 +140,7 @@ def test_kilitli_donemde_mizan_degismez(istemci):  # noqa: F811
     did = _ekim(istemci)
     u = f"{A}/smm/donemler/{did}/mizan/gider"
     assert istemci.post(u, json={"hesap": "720", "bakiye": "10", "neden": "ilk"}, headers=H).status_code == 201
-    assert istemci.put(f"{A}/smm/donemler/{did}/kilit", json={"kilitli": True}).status_code == 200
+    assert istemci.put(f"{A}/smm/donemler/{did}/kilit", json={"kilitli": True, "zorla": True}).status_code == 200
     r = istemci.post(u, json={"hesap": "730", "bakiye": "10", "neden": "x"}, headers=H)
     assert r.status_code == 409 and r.json()["kod"] == "donem_kilitli"
     assert istemci.patch(f"{u}/720", json={"bakiye": "11", "neden": "x"}, headers=H).status_code == 409

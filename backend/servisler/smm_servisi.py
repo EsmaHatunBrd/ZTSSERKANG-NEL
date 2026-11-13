@@ -8,14 +8,14 @@ Stok hesabı, malzeme başına:
 Finansman payı alım tutarı oranında dağıtılır. Tutarlar Decimal."""
 import io
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 import zipfile
 from collections import Counter, defaultdict
 from decimal import Decimal, InvalidOperation
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 from sqlalchemy import delete, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 from ..depo import modeller as m
 from .donusum import decimal_str
 from .hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi, KilitliHatasi
@@ -144,11 +144,21 @@ def stok_tablosu(s: Session, donem_id: int, tur: str | None = None, arama: str |
     })
 
 
+def kilit_zamani(d: m.SmmDonem) -> str | None:
+    """Dönemin kapatıldığı an (son 'kilitle' değişiklik kaydı, UTC ISO 8601); dönem açık ya da kayıt yoksa None."""
+    s = object_session(d)
+    if not d.kilitli or s is None or d.id is None:
+        return None
+    z = s.scalar(select(m.DegisiklikKaydi.zaman).where(m.DegisiklikKaydi.tablo == "smm_donem", m.DegisiklikKaydi.kayit_id == d.id,
+                                                       m.DegisiklikKaydi.islem == "kilitle").order_by(m.DegisiklikKaydi.id.desc()).limit(1))
+    return z.replace(tzinfo=timezone.utc).isoformat(timespec="seconds") if z else None
+
+
 def donem_cikis(d: m.SmmDonem, kalem_sayisi: int | None = None) -> dict:
     return decimal_str({"id": d.id, "yil": d.yil, "ay": d.ay, "ad": donem_adi(d), "kaynak_dosya": d.kaynak_dosya, "finansman": d.finansman,
                         "kalem_sayisi": kalem_sayisi, "excel_kontrol": d.excel_kontrol, "olusturan": d.olusturan,
                         "recete_kaynagi": d.recete_kaynagi or "excel", "devir_donem_id": d.devir_donem_id,
-                        "kilitli": bool(d.kilitli), "kilitleyen": d.kilitleyen})
+                        "kilitli": bool(d.kilitli), "kilitleyen": d.kilitleyen, "kilit_zamani": kilit_zamani(d)})
 
 
 def donemler(s: Session) -> list[dict]:

@@ -1535,6 +1535,7 @@ class SmmDonemCikis(BaseModel):
     devir_donem_id: int | None = None
     kilitli: bool = False
     kilitleyen: str | None = None
+    kilit_zamani: str | None = None   # kapatıldığı an (UTC ISO 8601); dönem açıksa null
 
 
 class SmmKaynakSon(BaseModel):
@@ -1585,6 +1586,62 @@ class SmmVeriDurumu(BaseModel):
     ayarlar: SmmVeriAyarlari
     turler: list[str]
     grupsuz: SmmGrupsuzKalemler | None = None
+    devir: "SmmVeriDevir | None" = None
+
+
+class SmmVeriDevir(BaseModel):
+    """Açılış stoku devralınan dönemin şu anki kapanışıyla uyumlu mu (kısa özet; ayrıntı GET …/devir-durumu)."""
+    uyumlu: bool
+    fark_kalem: int
+    fark_tutar: str = "0"   # açılış toplamı − kapanış toplamı (TL)
+    onceki_ad: str
+    onceki_kilitli: bool
+
+
+class SmmDevirOnceki(BaseModel):
+    id: int
+    ad: str
+    kilitli: bool
+
+
+class SmmDevirFarki(BaseModel):
+    kod: str
+    ad: str | None = None
+    acilis_miktar: str
+    kapanis_miktar: str
+    acilis_tutar: str
+    kapanis_tutar: str
+    elle: bool = False   # açılış değeri ekrandan elle girilmiş / düzeltilmiş
+
+
+class SmmDevirDurumu(BaseModel):
+    """`onceki` null: dönemin açılışı devirle gelmemiş (Excel'den yüklenmiş ya da ilk dönem); o durumda uyumlu=true."""
+    onceki: SmmDevirOnceki | None
+    uyumlu: bool
+    fark_kalem: int
+    fark_tutar: str
+    acilis_tutar: str | None = None
+    kapanis_tutar: str | None = None
+    elle_kalem: int = 0
+    ornek: list[SmmDevirFarki]   # TL farkı en büyük ilk 20 kalem
+
+
+class SmmDevirYenileGiris(BaseModel):
+    neden: str = Field(min_length=1, max_length=300)
+    elle_ez: bool = False   # true: elle girilmiş açılış değerleri de önceki kapanışla ezilir
+
+
+class SmmDevirYenileCikis(BaseModel):
+    donem: "SmmDonemCikis"
+    guncellenen: int
+    eklenen: int
+    elle_kalem: int        # önceki kapanıştan farklı, elle girilmiş açılış sayısı
+    elle_korundu: bool     # true: bunlara dokunulmadı (elle_ez=false)
+    durum: SmmDevirDurumu
+
+
+class SmmKilitCikis(SmmDonemCikis):
+    uyari: str | None = None   # kilit açılınca: sonraki dönemin açılışı bu dönemden devralındıysa
 
 
 class SmmAyarGiris(BaseModel):
@@ -1595,6 +1652,7 @@ class SmmAyarGiris(BaseModel):
 
 class SmmKilitGiris(BaseModel):
     kilitli: bool
+    zorla: bool = False   # kapatırken eksikler (409 kapanis_eksik) görüldükten sonra "yine de kapat"
 
 
 class SmmYeniDonemGiris(BaseModel):
@@ -1606,6 +1664,7 @@ class SmmDevir(BaseModel):
     onceki: str | None
     kalem: int
     tutar: str
+    uyari: str | None = None   # önceki dönem kapatılmadıysa: devir sonradan değişebilir
 
 
 class SmmYeniDonemCikis(SmmDonemCikis):
@@ -2377,3 +2436,163 @@ class YonetimOzetiCikis(BaseModel):
     en_pahali: list[YonetimPahaliSatiri]
     stok_etkisi: YonetimStokEtkisi | None = None   # stok devri kaydı yoksa null (arayüz kartı gizler)
     uyarilar: list[YonetimUyari]                   # hesaplanamayan ürünler, ilk 10
+
+
+# ---------------------------------------------------------------- Maliyet muhasebesi raporları (bütçe kıyası, aylar arası, maliyet kartı)
+class SmmFiiliDokum(BaseModel):
+    """Aşama hesabının ürün satırı (birim başına TL). Üst aşamada `malzeme`, alt aşamadan gelen yarı mamulün tam maliyetini içerir."""
+    malzeme: str
+    iscilik: str
+    gug: str
+    fire: str
+    stok_payi: str
+
+
+class SmmButceDokum(BaseModel):
+    """Fiyat Çalışması hesabından (birim başına TL). malzeme / iscilik / gug firesiz değerler; fire = fireli − firesiz üretim maliyeti
+    (firesiz blok yoksa null ve kalemler fire dahil). uretim_gideri = işçilik + GÜG (fire dahil). Son ikisi bütçe üretim maliyetine girmez."""
+    malzeme: str
+    iscilik: str
+    gug: str
+    fire: str | None
+    uretim_gideri: str
+    pazarlama_yonetim: str
+    finansman: str
+
+
+class SmmButceKiyasSatiri(BaseModel):
+    kod: str
+    ad: str | None
+    asama: int
+    birim: str | None
+    uretim_miktar: str
+    uretildi: bool
+    butce_maliyet_tl: str | None              # finansman, pazarlama ve yönetim HARİÇ üretim maliyeti; bütçe hesaplanamadıysa null
+    butce_finansman_dahil_tl: str | None      # bilgi için: satış fiyatına esas maliyet
+    fiili_birim_maliyet_tl: str
+    fark_tl: str | None                       # fiili − bütçe; üretim yoksa ya da bütçe yoksa null
+    fark_yuzde: str | None                    # oran (0.05 = %5)
+    fiili_dokum: SmmFiiliDokum
+    butce_dokum: SmmButceDokum | None
+    alim_kurali: bool
+    butce_hatasi: str | None
+    eslesme: Literal["kod"]
+
+
+class SmmYalnizButce(BaseModel):
+    kod: str
+    ad: str | None
+    butce_maliyet_tl: str | None
+    stok_kartinda: bool                       # dönemde stok kartı var ama aşama reçetesi yok
+    eslesme: Literal["yok"]
+
+
+class SmmYalnizFiili(BaseModel):
+    kod: str
+    ad: str | None
+    asama: int
+    uretim_miktar: str
+    fiili_birim_maliyet_tl: str
+    eslesme: Literal["yok"]
+
+
+class SmmButceKiyasOzeti(BaseModel):
+    eslesen: int
+    karsilastirilan: int                      # farkı hesaplanabilen (üretilmiş ve bütçesi olan)
+    uretimsiz: int
+    yalniz_butce: int
+    yalniz_fiili: int
+    ortalama_fark_yuzde: str | None           # karşılaştırılanların basit ortalaması (oran)
+    fiili_yuksek: int
+
+
+class SmmSenaryoOzeti(BaseModel):
+    id: int
+    ad: str
+
+
+class SmmButceKiyas(BaseModel):
+    donem: SmmDonemCikis
+    senaryo: SmmSenaryoOzeti
+    ozet: SmmButceKiyasOzeti
+    kayitlar: list[SmmButceKiyasSatiri]
+    yalniz_butce: list[SmmYalnizButce]
+    yalniz_fiili: list[SmmYalnizFiili]
+
+
+class SmmKarsilastirmaHucresi(BaseModel):
+    donem_id: int
+    tutar: str
+    degisim_tl: str | None                    # bir önceki (soldaki) döneme göre; ilk dönemde null
+    degisim_yuzde: str | None                 # oran; önceki tutar 0 ise null
+
+
+class SmmKarsilastirmaSatiri(BaseModel):
+    anahtar: str
+    ad: str
+    vurgulu: bool
+    hucreler: list[SmmKarsilastirmaHucresi]
+    son_fark_tl: str | None                   # son iki dönemin farkı; tek dönemde null
+    son_fark_yuzde: str | None
+
+
+class SmmKarsilastirma(BaseModel):
+    donemler: list[SmmDonemCikis]             # en eski başta
+    satirlar: list[SmmKarsilastirmaSatiri]
+
+
+class SmmKartAsamasi(BaseModel):
+    asama: int
+    ad: str
+    kod: str
+    urun_ad: str | None
+    birim: str | None
+    ust_kod: str | None                       # bu yarı mamulü kullanan üst ürün; ürünün kendi satırında null
+    carpan: str | None                        # üst ürünün bir birimi için reçetedeki kullanım
+    malzeme: str
+    iscilik: str
+    gug: str
+    fire: str
+    stok_payi: str
+    birim_maliyet: str
+    uretim_miktar: str
+    alim_kurali: bool
+    elle_alanlar: list[str] = []
+
+
+class SmmKartOnceki(BaseModel):
+    donem: SmmDonemCikis
+    asama: int
+    birim_maliyet: str
+    uretim_miktar: str
+    fark_tl: str
+    fark_yuzde: str | None
+
+
+class SmmMaliyetKarti(BaseModel):
+    donem: SmmDonemCikis
+    kod: str
+    ad: str | None
+    birim: str | None
+    asama: int
+    birim_maliyet: str
+    uretim_miktar: str
+    toplam: str
+    alim_kurali: bool
+    alim_fiyati: str
+    asamalar: list[SmmKartAsamasi]            # ürünün kendi aşaması başta, sonra reçetesindeki alt aşama ürünleri
+    satirlar: list[SmmReceteKalemi]
+    onceki: SmmKartOnceki | None
+
+
+class DuzenlemeKilidiAcGiris(BaseModel):
+    """Arayüzdeki düzenleme kilidinin açılması: hangi çalışmada, hangi sayfada."""
+    senaryo_id: int | None = None
+    sayfa: str = Field(min_length=1, max_length=200)
+
+
+class DuzenlemeKilidiAcCikis(BaseModel):
+    kayit_id: int
+    sayfa: str
+    senaryo_id: int | None
+    kullanici: str

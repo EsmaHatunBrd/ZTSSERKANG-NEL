@@ -498,6 +498,9 @@ def test_senaryo_teklifleri_ve_son_tur(istemci, oturum):
     assert [y["teklif_id"] for y in istemci.get(f"{A}/teklifler?senaryo={sid}&durum=kabul").json()["kayitlar"]] == [t1["id"]]
     assert istemci.get(f"{A}/teklifler?senaryo={sid}&musteri=MIGROS").json()["toplam"] == 2
     assert istemci.get(f"{A}/teklifler?senaryo={sid}&musteri=%25").json()["toplam"] == 0   # joker kaçışlı
+    # ürün süzgeci: kod ya da adda içerir, büyük/küçük harf duyarsız; eşleşmeyen 0
+    assert istemci.get(f"{A}/teklifler?senaryo={sid}&urun=tes").json()["toplam"] == 3
+    assert istemci.get(f"{A}/teklifler?senaryo={sid}&urun=YOKBOYLE").json()["toplam"] == 0
     s1 = istemci.get(f"{A}/teklifler?senaryo={sid}&boyut=2&sayfa=2").json()
     assert s1["toplam"] == 3 and len(s1["kayitlar"]) == 1
     assert istemci.get(f"{A}/teklifler?senaryo={sid2}").json() == {"kayitlar": [], "toplam": 0}

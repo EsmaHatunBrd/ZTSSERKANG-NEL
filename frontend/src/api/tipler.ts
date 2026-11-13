@@ -154,6 +154,9 @@ export type SmmSure = Sema["SmmSure"];
 export type SmmVeriDurumu = Sema["SmmVeriDurumu"];
 export type SmmMizan = Sema["SmmMizan"];
 export type SmmMizanSatiri = Sema["SmmMizanSatiri"];
+export type SmmDevirDurumu = Sema["SmmDevirDurumu"];
+export type SmmDevirFarki = Sema["SmmDevirFarki"];
+export type SmmDevirYenileSonucu = Sema["SmmDevirYenileCikis"];
 
 export type KurRiskiSatiri = Sema["KurRiskiSatiri"];
 export type KurRiskiSonucu = Sema["KurRiskiCikis"];
@@ -178,3 +181,11 @@ export type StokDevriAktarimSatiri = Sema["StokDevriAktarimSatiri"];
 export type FiyatEgilimiSatiri = Sema["FiyatEgilimiSatiri"];
 export type FiyatEgilimiSonucu = Sema["FiyatEgilimiCikis"];
 export type YonetimOzeti = Sema["YonetimOzetiCikis"];
+
+// SMM raporları (13.11.2026): bütçe / fiili kıyası, aylar arası SMM, ürün birim maliyet kartı. Oranlar metin (0.05 = %5).
+export type SmmButceKiyas = Sema["SmmButceKiyas"];
+export type SmmButceKiyasSatiri = Sema["SmmButceKiyasSatiri"];
+export type SmmKarsilastirma = Sema["SmmKarsilastirma"];
+export type SmmKarsilastirmaSatiri = Sema["SmmKarsilastirmaSatiri"];
+export type SmmMaliyetKarti = Sema["SmmMaliyetKarti"];
+export type SmmKartAsamasi = Sema["SmmKartAsamasi"];

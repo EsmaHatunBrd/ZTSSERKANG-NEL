@@ -63,6 +63,12 @@ export function TeklifPaneli({ kod, senaryoId, sonKayitId }: Props) {
     <section aria-label="Teklif turları" className="flex flex-col gap-3 rounded-xl border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold">Teklif turları</h2>
+        <Link
+          to={`/teklifler?senaryo=${senaryoId ?? ""}&urun=${encodeURIComponent(kod)}`}
+          className="text-sm text-primary underline underline-offset-4"
+        >
+          Bu ürünün tüm teklifleri
+        </Link>
         <label className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Kayıtlı hesap</span>
           <select

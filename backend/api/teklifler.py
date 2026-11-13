@@ -25,9 +25,9 @@ def _senaryo_satiri(t: m.Teklif, h: m.MaliyetHesabi, u: m.Urun) -> dict:
 
 
 @router.get("/teklifler", response_model=SenaryoTeklifListesi, responses=HATA_404_422)
-def senaryo_teklifleri(s: OturumDep, sen: SenaryoDep, durum: str | None = None, musteri: str | None = None,
+def senaryo_teklifleri(s: OturumDep, sen: SenaryoDep, durum: str | None = None, musteri: str | None = None, urun: str | None = None,
                        sayfa: int = Query(1, ge=1), boyut: int = Query(50, ge=1, le=500)):
-    satirlar = ts.senaryo_teklifleri(s, sen.id, durum, musteri)
+    satirlar = ts.senaryo_teklifleri(s, sen.id, durum, musteri, urun)
     bas = (sayfa - 1) * boyut
     return {"kayitlar": [_senaryo_satiri(*x) for x in satirlar[bas:bas + boyut]], "toplam": len(satirlar)}
 

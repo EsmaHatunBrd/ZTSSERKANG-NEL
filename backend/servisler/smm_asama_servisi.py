@@ -339,13 +339,8 @@ def uretim_maliyeti(s: Session, donem_id: int, asama: int = 50, arama: str | Non
                         "kayitlar": kayitlar})
 
 
-def urun_recetesi(s: Session, donem_id: int, asama: int, kod: str) -> dict:
-    """Bir aşama ürününün reçete satırları: çarpan, fiyat kaynağı, malzeme ve fire tutarı (birim başına)."""
-    d = donem_getir(s, donem_id)
-    b = _Baglam(s, d)
-    x = b.sonuc.get(asama, {}).get(kod)
-    if x is None:
-        raise BulunamadiHatasi("bu aşamada ürün bulunamadı", {"asama": asama, "kod": kod})
+def recete_satirlari(b: _Baglam, asama: int, kod: str) -> list[dict]:
+    """Kurulmuş bağlamdan bir aşama ürününün reçete satırları (Decimal değerli): çarpan, fiyat, kaynak, malzeme ve fire tutarı."""
     satirlar = []
     for r in b.gruplar[asama][kod]:
         carpan = b.carpan(r)
@@ -354,6 +349,17 @@ def urun_recetesi(s: Session, donem_id: int, asama: int, kod: str) -> dict:
         satirlar.append({"malzeme_kod": r.malzeme_kod, "malzeme_ad": r.malzeme_ad, "miktar": r.miktar, "birim": r.birim, "carpan": carpan,
                          "fiyat": fiyat, "fiyat_kaynagi": kaynak, "tutar": carpan * fiyat, "fire_orani": r.fire_orani,
                          "fire_tutari": carpan * r.fire_orani * fiyat})
+    return satirlar
+
+
+def urun_recetesi(s: Session, donem_id: int, asama: int, kod: str) -> dict:
+    """Bir aşama ürününün reçete satırları: çarpan, fiyat kaynağı, malzeme ve fire tutarı (birim başına)."""
+    d = donem_getir(s, donem_id)
+    b = _Baglam(s, d)
+    x = b.sonuc.get(asama, {}).get(kod)
+    if x is None:
+        raise BulunamadiHatasi("bu aşamada ürün bulunamadı", {"asama": asama, "kod": kod})
+    satirlar = recete_satirlari(b, asama, kod)
     ex = (d.excel_asama or {}).get(str(asama), {}).get(kod)
     return decimal_str({"urun": {**x, "excel_birim": _d(ex) if ex is not None else None,
                                  "excel_farkli": ex is not None and not _yakin(x["birim_maliyet"], _d(ex))},

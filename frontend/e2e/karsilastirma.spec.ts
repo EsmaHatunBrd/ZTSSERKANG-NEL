@@ -3,6 +3,8 @@ import { DASHBOARD_BEKLEME_MS, E2E_URUN_KODU } from "./sabitler";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("fiyat-calismasi.kullanici", "E2E Kullanıcı"));
+  // Düzenleme kilidi uygulamada kilitli başlar; yazma yapan senaryolar için sekmede açık başlatılır.
+  await page.addInitScript(() => sessionStorage.setItem("fiyat-calismasi.duzenleme-acik-bitis", String(Date.now() + 3_600_000)));
 });
 
 // Gerçek backend + gerçek Excel verisi: aile adları sabit yazılmaz; yapı doğrulanır.

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight, Pencil, TriangleAlert } from "lucide-react";
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
 import { useSmmDagitim, useSmmUretim, useSmmUrunElle, useSmmUrunRecetesi } from "@/api/sorgular/smm";
@@ -247,6 +248,12 @@ function ReceteCekmecesi({
                 {urun.kod} · {asama} aşaması · birim maliyet {paraBicimle((u ?? urun).birim_maliyet, "TL", 4)}
                 {urun.excel_birim !== null && ` (Excel: ${paraBicimle(urun.excel_birim, "TL", 4)})`}
               </SheetDescription>
+              <Link
+                to={`/smm/urun/${encodeURIComponent(urun.kod)}?donem=${donemId}`}
+                className="w-fit text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Maliyet kartını aç
+              </Link>
             </SheetHeader>
             <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4">
               <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 rounded-xl bg-muted/50 p-3 text-sm">

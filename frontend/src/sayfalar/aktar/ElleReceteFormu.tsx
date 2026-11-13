@@ -8,6 +8,7 @@ import { hataMetni, type ApiHatasi } from "@/api/istemci";
 import type { Sema } from "@/api/tipler";
 import { useRecete, useReceteKaydet } from "@/api/sorgular/urunler";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
+import { useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Button } from "@/bilesenler/ui/button";
 import { sayiApi, sayiGecerli } from "@/yardimcilar/sayi";
@@ -136,7 +137,8 @@ interface Props {
 }
 
 export function ElleReceteFormu({ urunKodu, gomulu = false }: Props = {}) {
-  const { senaryoId, kilitli } = useSenaryo();
+  const { senaryoId } = useSenaryo();
+  const { kilitli, neden: kilitNedeni } = useYazmaKilidi();
   const ekle = useReceteKaydet();
   const [senaryoYok, setSenaryoYok] = useState(false);
   const {
@@ -165,10 +167,7 @@ export function ElleReceteFormu({ urunKodu, gomulu = false }: Props = {}) {
 
   function onayla() {
     if (!bekleyen || senaryoId == null) return;
-    ekle.mutate(
-      { kod: bekleyen.kod, senaryo: senaryoId, satirlar: bekleyen.satirlar },
-      { onSettled: () => setBekleyen(null) },
-    );
+    ekle.mutate({ kod: bekleyen.kod, senaryo: senaryoId, satirlar: bekleyen.satirlar }, { onSettled: () => setBekleyen(null) });
   }
 
   return (
@@ -213,7 +212,12 @@ export function ElleReceteFormu({ urunKodu, gomulu = false }: Props = {}) {
                     <Input aria-label={`Ad ${n}`} {...register(`satirlar.${i}.ad`)} />
                   </Alan>
                   <Alan etiket="Miktar" hata={e?.miktar?.message}>
-                    <Input aria-label={`Miktar ${n}`} inputMode="decimal" aria-invalid={!!e?.miktar} {...register(`satirlar.${i}.miktar`)} />
+                    <Input
+                      aria-label={`Miktar ${n}`}
+                      inputMode="decimal"
+                      aria-invalid={!!e?.miktar}
+                      {...register(`satirlar.${i}.miktar`)}
+                    />
                   </Alan>
                   <Alan etiket="Birim" hata={e?.birim?.message}>
                     <Input aria-label={`Birim ${n}`} {...register(`satirlar.${i}.birim`)} />
@@ -245,7 +249,7 @@ export function ElleReceteFormu({ urunKodu, gomulu = false }: Props = {}) {
             <Plus aria-hidden />
             Satır ekle
           </Button>
-          <Button type="submit" disabled={ekle.isPending || kilitli}>
+          <Button type="submit" disabled={ekle.isPending || kilitli} title={kilitNedeni}>
             {ekle.isPending ? "Kaydediliyor…" : "Reçeteyi kaydet"}
           </Button>
         </div>

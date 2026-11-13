@@ -16,6 +16,7 @@ import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { Girdi } from "@/bilesenler/Girdi";
 import { acikMi, EVET_HAYIR_BIRIMI } from "./ayarlar/ortak";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
+import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 
 interface Grup {
   baslik: string;
@@ -39,6 +40,7 @@ function GecmisPaneli({
   birim,
   senaryo,
   kilitli,
+  kilitNotu,
   onKapat,
   onBasari,
 }: {
@@ -46,6 +48,8 @@ function GecmisPaneli({
   birim: string | null;
   senaryo: number;
   kilitli: boolean;
+  /** Başlıkta gösterilen kilit nedeni (senaryo kilidi, düzenleme kilidi ya da gerçekleşen enflasyon). */
+  kilitNotu?: string;
   onKapat: () => void;
   onBasari: (m: string) => void;
 }) {
@@ -87,7 +91,7 @@ function GecmisPaneli({
       <GecmisCekmecesi
         acik
         onAcikDegisti={(a) => !a && onKapat()}
-        baslik={`Parametre geçmişi: ${anahtar}${kilitli ? " (kilitli: gerçekleşen senaryoda geri alınamaz)" : ""}`}
+        baslik={`Parametre geçmişi: ${anahtar}${kilitli ? ` (${kilitNotu ?? "kilitli"})` : ""}`}
         kayitlar={kayitlar}
         degerGoster={(d) => degerMetni(d, birim)}
         geriAl={
@@ -163,7 +167,8 @@ function AcKapaOnayi({
 }
 
 export default function Parametreler() {
-  const { senaryoId, senaryo, kilitli: senaryoKilitli } = useSenaryo();
+  const { senaryoId, senaryo } = useSenaryo();
+  const { kilitli: yazmaKilitli, neden: kilitNedeni } = useYazmaKilidi();
   const tanimlar = useParametreTanimlari();
   const degerler = useParametreler(senaryoId);
   const ekle = useParametreEkle();
@@ -194,6 +199,7 @@ export default function Parametreler() {
     <section className="flex flex-col gap-4">
       <SayfaBasligi baslik="Parametreler" />
       <KilitSeridi />
+      <DuzenlemeKilidi />
 
       {mesaj && (
         <p role="status" className="rounded-md bg-muted p-2 text-sm">
@@ -267,7 +273,8 @@ export default function Parametreler() {
                               role="switch"
                               aria-checked={acikMi(deger)}
                               aria-label={`Aç/Kapat ${t.anahtar}`}
-                              disabled={senaryoKilitli}
+                              disabled={yazmaKilitli}
+                              title={kilitNedeni}
                               onClick={() => {
                                 ekle.reset();
                                 setAcKapa(t);
@@ -282,7 +289,8 @@ export default function Parametreler() {
                               variant="outline"
                               size="sm"
                               aria-label={`Değiştir ${t.anahtar}`}
-                              disabled={senaryoKilitli}
+                              disabled={yazmaKilitli}
+                              title={kilitNedeni}
                               onClick={() => {
                                 ekle.reset();
                                 setDuzenlenen(t);
@@ -375,7 +383,8 @@ export default function Parametreler() {
           anahtar={gecmis.anahtar}
           birim={gecmis.birim}
           senaryo={senaryoId}
-          kilitli={senaryoKilitli || (gerceklesen && gecmis.anahtar === "enflasyon")}
+          kilitli={yazmaKilitli || (gerceklesen && gecmis.anahtar === "enflasyon")}
+          kilitNotu={gerceklesen && gecmis.anahtar === "enflasyon" ? "kilitli: gerçekleşen senaryoda geri alınamaz" : kilitNedeni}
           onKapat={() => setGecmis(null)}
           onBasari={setMesaj}
         />

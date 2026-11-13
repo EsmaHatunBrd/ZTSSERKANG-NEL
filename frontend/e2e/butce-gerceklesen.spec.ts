@@ -9,6 +9,8 @@ const DENEME = path.resolve(process.cwd(), "..", "10-27-2026-gerceklesen-deneme-
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("fiyat-calismasi.kullanici", "E2E Kullanıcı"));
+  // Düzenleme kilidi uygulamada kilitli başlar; yazma yapan senaryolar için sekmede açık başlatılır.
+  await page.addInitScript(() => sessionStorage.setItem("fiyat-calismasi.duzenleme-acik-bitis", String(Date.now() + 3_600_000)));
 });
 
 test("gerçekleşen: Excel'i Gerçekleşen türüyle yükle -> kıyas listesi, sapan süzgeci, ürün sapma kaynağı, Genel Bakış şeridi", async ({

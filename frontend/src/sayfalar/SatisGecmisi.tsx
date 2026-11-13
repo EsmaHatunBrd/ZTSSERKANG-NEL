@@ -5,6 +5,7 @@ import { useSatisEkle, useSatisGecmisi, useSatisSil } from "@/api/sorgular/satis
 import type { SatisKaydi } from "@/api/tipler";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
+import { DuzenlemeKilidi, useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { SatisYuklemeKarti } from "@/bilesenler/SatisYuklemeKarti";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { Button } from "@/bilesenler/ui/button";
@@ -32,6 +33,8 @@ function Alan({ etiket, children }: { etiket: string; children: React.ReactNode 
 
 /** Satış geçmişi: "geçen yıl kaça sattım" karşılaştırması için ürün başına satış satırları (CSV/xlsx yükleme veya elle satır). */
 export default function SatisGecmisi() {
+  const kilitli = !useDuzenlemeKilidi().acik;
+  const kilitNotu = kilitli ? "Düzenleme kilitli" : undefined;
   const [urunKodu, setUrunKodu] = useState("");
   const [musteri, setMusteri] = useState("");
   const [bas, setBas] = useState("");
@@ -118,6 +121,8 @@ export default function SatisGecmisi() {
             size="sm"
             variant="outline"
             aria-label={`Sil — ${c.row.original.urun_kodu} ${goster(c.row.original.tarih)}`}
+            disabled={kilitli}
+            title={kilitNotu}
             onClick={() => {
               sil.reset();
               setSilinecek(c.row.original);
@@ -129,7 +134,7 @@ export default function SatisGecmisi() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [kilitli],
   );
 
   return (
@@ -148,6 +153,8 @@ export default function SatisGecmisi() {
           </a>
         }
       />
+
+      <DuzenlemeKilidi />
 
       <SatisYuklemeKarti />
 
@@ -212,7 +219,7 @@ export default function SatisGecmisi() {
           <Alan etiket="Adet *">
             <Input inputMode="decimal" value={form.adet} onChange={(e) => setForm({ ...form, adet: e.target.value })} />
           </Alan>
-          <Button type="submit" disabled={ekle.isPending}>
+          <Button type="submit" disabled={ekle.isPending || kilitli} title={kilitNotu}>
             Ekle
           </Button>
         </div>

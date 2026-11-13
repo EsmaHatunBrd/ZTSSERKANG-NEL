@@ -65,6 +65,8 @@ export function useTeklifler(hesapId: number | null | undefined) {
 export interface SenaryoTeklifSecenegi {
   durum?: string;
   musteri?: string;
+  /** Ürün kodu ya da adında geçen metin. */
+  urun?: string;
   sayfa?: number;
   boyut?: number;
 }
@@ -84,6 +86,7 @@ export function useSenaryoTeklifleri(senaryo: number | null | undefined, secenek
               senaryo: senaryo as number,
               durum: secenek.durum || undefined,
               musteri: secenek.musteri || undefined,
+              urun: secenek.urun || undefined,
               sayfa: secenek.sayfa,
               boyut: secenek.boyut,
             },

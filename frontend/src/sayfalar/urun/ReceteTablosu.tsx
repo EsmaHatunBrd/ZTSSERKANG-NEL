@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import type { HesapSatiri, ReceteSatiri } from "@/api/tipler";
+import { useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { KaynakRozeti, ZS_ACIKLAMA, zsEtiketi } from "@/bilesenler/KaynakRozeti";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { Badge } from "@/bilesenler/ui/badge";
@@ -88,12 +89,14 @@ function GecisDugmesi({
   onClick: () => void;
   children: React.ReactNode;
 }) {
+  const kilitli = !useDuzenlemeKilidi().acik;
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={kilitli}
       aria-label={`${etiket}. ${eylem}`}
-      title={eylem}
+      title={kilitli ? "Düzenleme kilitli" : eylem}
       className="rounded-4xl focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       {children}

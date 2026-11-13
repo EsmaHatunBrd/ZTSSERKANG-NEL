@@ -21,6 +21,7 @@ import { GeriAlOnayi } from "./ayarlar/GeriAlOnayi";
 import { hataMetniVarsa, type ApiHatasi } from "@/api/istemci";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
+import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 
 const BOYUT = 100;
 /** Süzgeç onay kutuları: basılabilir rozet görünümü (işaretliyse vurgulu zemin). */
@@ -127,7 +128,8 @@ function FiyatGecmisiPaneli({
 }
 
 export default function MalzemeFiyatlari() {
-  const { senaryoId, kilitli } = useSenaryo();
+  const { senaryoId } = useSenaryo();
+  const { kilitli, neden: kilitNedeni } = useYazmaKilidi();
   const [params, setParams] = useSearchParams();
   const [fiyatsiz, setFiyatsiz] = useState(() => params.get("fiyatsiz") === "1"); // Genel Bakış'taki "Fiyatsız malzeme" kartından
   const [duzenlenen, setDuzenlenen] = useState<Malzeme | null>(null);
@@ -279,7 +281,7 @@ export default function MalzemeFiyatlari() {
               variant="ghost"
               size="icon-sm"
               aria-label={`Fiyat değiştir ${row.original.kod}`}
-              title={row.original.kart_yok ? "Önce malzeme kartı açılmalı" : "Fiyat değiştir"}
+              title={row.original.kart_yok ? "Önce malzeme kartı açılmalı" : (kilitNedeni ?? "Fiyat değiştir")}
               disabled={!!row.original.kart_yok || kilitli}
               onClick={() => setDuzenlenen(row.original)}
             >
@@ -300,7 +302,7 @@ export default function MalzemeFiyatlari() {
         ),
       },
     ],
-    [kilitli],
+    [kilitli, kilitNedeni],
   );
 
   return (
@@ -308,12 +310,19 @@ export default function MalzemeFiyatlari() {
       <SayfaBasligi
         baslik="Malzeme Fiyatları"
         eylemler={
-          <Button type="button" variant="outline" disabled={senaryoId == null || kilitli} onClick={() => setYukle(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={senaryoId == null || kilitli}
+            title={kilitNedeni}
+            onClick={() => setYukle(true)}
+          >
             <Upload /> Fiyat listesi yükle
           </Button>
         }
       />
       <KilitSeridi />
+      <DuzenlemeKilidi />
 
       {/* Tek satır: arama solda, iki süzgeç basılabilir rozet görünümünde, sağda kayıt sayacı. Dar ekranda sarar. */}
       <div role="group" aria-label="Süzgeçler" className="flex flex-wrap items-center gap-2">

@@ -272,4 +272,29 @@ describe("Liste Çalışması", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Örnek veriyle göster" }));
     expect(await screen.findByRole("note")).toHaveTextContent("Örnek veri");
   });
+
+  it("düzenleme kilidi: kilitliyken ayar kaydı ve örnek veri üretimi devre dışı, kilit açılınca etkin", async () => {
+    sessionStorage.removeItem("fiyat-calismasi.duzenleme-acik-bitis");
+    sunucu.use(
+      http.get(`${T}/liste-calismasi`, ({ request }) => HttpResponse.json(veri({ ...sorguOku(request), gecmisli: false }))),
+      http.post(`${T}/duzenleme-kilidi/ac`, () =>
+        HttpResponse.json({ kayit_id: 1, sayfa: "/", senaryo_id: 1, kullanici: "Test Kullanıcı" }, { status: 201 }),
+      ),
+    );
+    kurSayfa(<ListeCalismasi />);
+    const ornek = await screen.findByRole("button", { name: "Örnek veriyle göster" });
+    expect(ornek).toBeDisabled();
+    expect(ornek).toHaveAttribute("title", "Düzenleme kilitli");
+    // Bölen denemesi (kayıt yapmaz) serbesttir; kalıcı "Ayarı kaydet" kilitlidir.
+    const bolen = screen.getByLabelText(/bölen/i);
+    await userEvent.clear(bolen);
+    await userEvent.type(bolen, "0,70");
+    const kaydet = await screen.findByRole("button", { name: "Ayarı kaydet" });
+    expect(kaydet).toBeDisabled();
+    expect(kaydet).toHaveAttribute("title", "Düzenleme kilitli");
+
+    await userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ayarı kaydet" })).toBeEnabled());
+    expect(screen.getByRole("button", { name: "Örnek veriyle göster" })).toBeEnabled();
+  });
 });

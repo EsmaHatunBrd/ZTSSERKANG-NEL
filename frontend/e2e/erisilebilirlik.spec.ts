@@ -3,6 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 // Yazma istekleri ve ilk açılış diyaloğu kullanıcı adı ister: testlerde ad önceden kayıtlıdır.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("fiyat-calismasi.kullanici", "E2E Kullanıcı"));
+  // Düzenleme kilidi uygulamada kilitli başlar; yazma yapan senaryolar için sekmede açık başlatılır.
+  await page.addInitScript(() => sessionStorage.setItem("fiyat-calismasi.duzenleme-acik-bitis", String(Date.now() + 3_600_000)));
 });
 
 const YOLLAR = [
@@ -18,7 +20,9 @@ const YOLLAR = [
   "/uyarilar",
   "/veri-kontrolu",
   "/butce-gerceklesen",
-  "/yardim", "/yonetim-ozeti", "/fiyat-egilimi",
+  "/yardim",
+  "/yonetim-ozeti",
+  "/fiyat-egilimi",
 ];
 const BOYUTLAR = [
   { ad: "1280x800", width: 1280, height: 800 },

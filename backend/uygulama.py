@@ -11,7 +11,8 @@ from .depo.veritabani import oturum_ver
 from .servisler import isitici, onbellek
 from .servisler.hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi, KilitliHatasi, KimlikHatasi, YetkiHatasi
 from .api import senaryolar, parametreler, malzemeler, gider, urunler, teklifler, fire, import_, disa_aktar, kapasite, satis, karsilastirma, aktarim, gunluk, kiyas, tutarlilik, kimlik, liste, analiz, smm, smm_stok, smm_mizan, stok_devri
-from .api import fiyat_egilimi, yonetim
+from .api import fiyat_egilimi, yonetim, smm_rapor
+from .api import duzenleme_kilidi
 from .api.bagimliliklar import kimlik_denetle
 
 
@@ -53,8 +54,9 @@ def uygulama_olustur(oturum_bagimliligi=None, giris_zorunlu: bool | None = None)
     # Giriş ekranının uçları (giriş, çıkış, ben, şifre) denetimsiz; diğer tüm uçlar oturum ve rol denetiminden geçer.
     app.include_router(kimlik.acik_router, prefix="/api/v1")
     for r in (senaryolar, parametreler, malzemeler, gider, urunler, teklifler, fire, import_, disa_aktar, kapasite, satis, karsilastirma, aktarim, gunluk, kiyas, tutarlilik, kimlik, liste, analiz, smm, smm_stok, smm_mizan, stok_devri,
-              fiyat_egilimi, yonetim):
+              fiyat_egilimi, yonetim, smm_rapor):
         app.include_router(r.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
+    app.include_router(duzenleme_kilidi.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
     if oturum_bagimliligi is not None:
         app.dependency_overrides[oturum_ver] = oturum_bagimliligi
 

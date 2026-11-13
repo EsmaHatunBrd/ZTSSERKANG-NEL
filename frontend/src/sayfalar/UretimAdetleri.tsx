@@ -1,4 +1,5 @@
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
+import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { useState } from "react";
 import { hataMetni } from "@/api/istemci";
 import { useKapasite } from "@/api/sorgular/kapasite";
@@ -14,7 +15,8 @@ const BOYUT = 50;
 
 /** Excel `Üretim Adetleri` sayfası: ürün başına kapasite, süre, hedef üretim ve ortalama işçi; satır içi düzenleme (neden zorunlu). */
 export default function UretimAdetleri() {
-  const { senaryoId, kilitli } = useSenaryo();
+  const { senaryoId } = useSenaryo();
+  const { kilitli, neden: kilitNedeni } = useYazmaKilidi();
   const [sayfa, setSayfa] = useSenaryoSayfasi(senaryoId);
   const liste = useKapasite(senaryoId, { sayfa, boyut: BOYUT });
   // Düzenleme durumu/doğrulama/kayıt Veri Girişi sayfasıyla ortak (ayarlar/kapasiteDuzenleme).
@@ -40,8 +42,12 @@ export default function UretimAdetleri() {
 
   return (
     <section className="flex flex-col gap-4 p-4">
-      <SayfaBasligi baslik="Üretim Adetleri" altBaslik="Ürün başına kapasite ve hedef üretim. Her değişiklik bir nedenle kaydedilir ve geçmişte tutulur." />
+      <SayfaBasligi
+        baslik="Üretim Adetleri"
+        altBaslik="Ürün başına kapasite ve hedef üretim. Her değişiklik bir nedenle kaydedilir ve geçmişte tutulur."
+      />
       <KilitSeridi />
+      <DuzenlemeKilidi />
 
       <div aria-live="polite">
         {durum && (
@@ -129,7 +135,7 @@ export default function UretimAdetleri() {
                           </p>
                         )}
                         <div className="flex gap-2">
-                          <Button type="button" size="sm" disabled={!kaydedilebilir} onClick={kaydetTikla}>
+                          <Button type="button" size="sm" disabled={!kaydedilebilir || kilitli} title={kilitNedeni} onClick={kaydetTikla}>
                             Kaydet
                           </Button>
                           <Button type="button" size="sm" variant="outline" onClick={iptal}>
@@ -144,6 +150,7 @@ export default function UretimAdetleri() {
                         variant="outline"
                         aria-label={`Düzenle — ${k.urun_kodu}`}
                         disabled={kilitli}
+                        title={kilitNedeni}
                         onClick={() => {
                           setDurum(null);
                           basla(k);

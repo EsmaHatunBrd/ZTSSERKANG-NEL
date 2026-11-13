@@ -6,6 +6,7 @@ import { useListeCalismasi, useListeOrnekSil, useListeOrnekUret, useListeYukle }
 import { useParametreEkle } from "@/api/sorgular/parametreler";
 import type { ListeCalismaSatiri, ListePazari } from "@/api/tipler";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
+import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
@@ -64,7 +65,8 @@ function FarkHucresi({ fark }: { fark: string | null }) {
  * veri üretilebilir (açıkça etiketli, tek tıkla silinir).
  */
 export default function ListeCalismasi() {
-  const { senaryoId, kilitli } = useSenaryo();
+  const { senaryoId } = useSenaryo();
+  const { kilitli, duzenlemeKilitli, neden: kilitNedeni } = useYazmaKilidi();
   const [params, setParams] = useSearchParams();
   const pazar: ListePazari = params.get("pazar") === "yurtdisi" ? "yurtdisi" : "yurtici";
   const kayitliSorgu = useListeCalismasi(senaryoId, { pazar });
@@ -242,6 +244,7 @@ export default function ListeCalismasi() {
         }
       />
       <KilitSeridi />
+      <DuzenlemeKilidi />
 
       <div className="flex flex-col gap-3 rounded-xl border bg-card p-4" aria-label="Liste ayarı">
         <div className="flex flex-wrap items-end gap-4">
@@ -310,7 +313,7 @@ export default function ListeCalismasi() {
                 type="button"
                 size="sm"
                 disabled={kilitli || senaryoId === null || bolenGecersiz}
-                title={kilitli ? "Senaryo kilitli" : undefined}
+                title={kilitNedeni}
                 onClick={() => {
                   parametreEkle.reset();
                   setNeden("");
@@ -363,7 +366,14 @@ export default function ListeCalismasi() {
             <span className="font-semibold">Örnek veri.</span> Geçmiş yılların liste fiyatları ve maliyetleri tahminidir (yıllık yaklaşık
             %35–50 artış varsayımı). Gerçek liste fiyatları yüklenince ya da girilince değişir.
           </p>
-          <Button type="button" variant="outline" size="sm" disabled={ornekSil.isPending} onClick={() => ornekSil.mutate()}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={ornekSil.isPending || duzenlemeKilitli}
+            title={duzenlemeKilitli ? "Düzenleme kilitli" : undefined}
+            onClick={() => ornekSil.mutate()}
+          >
             Örnek veriyi sil
           </Button>
         </div>
@@ -381,7 +391,8 @@ export default function ListeCalismasi() {
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              disabled={ornekUret.isPending || senaryoId === null}
+              disabled={ornekUret.isPending || senaryoId === null || duzenlemeKilitli}
+              title={duzenlemeKilitli ? "Düzenleme kilitli" : undefined}
               onClick={() => senaryoId !== null && ornekUret.mutate(senaryoId)}
             >
               Örnek veriyle göster
@@ -476,7 +487,8 @@ export default function ListeCalismasi() {
           />
           <Button
             type="button"
-            disabled={!dosya || yukle.isPending}
+            disabled={!dosya || yukle.isPending || duzenlemeKilitli}
+            title={duzenlemeKilitli ? "Düzenleme kilitli" : undefined}
             onClick={() =>
               dosya &&
               yukle.mutate(dosya, {

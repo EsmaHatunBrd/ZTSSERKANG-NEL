@@ -7,6 +7,7 @@ import {
   type AktarimUygulaDegiskenleri,
   type TipHaritasi,
 } from "@/api/sorgular/aktarim";
+import { useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Girdi } from "@/bilesenler/Girdi";
 import { Button } from "@/bilesenler/ui/button";
@@ -54,7 +55,8 @@ export function AktarimFormu<T extends AktarimTipi>({
   onSifirla,
 }: Props<T>) {
   const id = useId();
-  const { senaryoId, kilitli } = useSenaryo();
+  const { senaryoId } = useSenaryo();
+  const { kilitli, neden: kilitNedeni } = useYazmaKilidi();
   const bugun = useMemo(() => bugunIso(), []);
   const [dosya, setDosya] = useState<File | null>(null);
   const [dosyaHata, setDosyaHata] = useState<string | undefined>(undefined);
@@ -196,7 +198,7 @@ export function AktarimFormu<T extends AktarimTipi>({
               <Girdi id={`${id}-neden`} value={neden} onChange={(e) => setNeden(e.target.value)} />
             </div>
             <div>
-              <Button type="submit" disabled={!uygulanabilir}>
+              <Button type="submit" disabled={!uygulanabilir} title={kilitNedeni}>
                 {uygula.isPending ? "Uygulanıyor…" : "Uygula"}
               </Button>
             </div>

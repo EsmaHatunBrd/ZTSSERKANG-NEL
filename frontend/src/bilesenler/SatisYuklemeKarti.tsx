@@ -3,6 +3,7 @@ import { FolderOpen, Upload } from "lucide-react";
 import { ApiHatasi, hataMetni } from "@/api/istemci";
 import { useSatisYukle } from "@/api/sorgular/satis";
 import type { SatisYuklemeOzeti } from "@/api/tipler";
+import { useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { Button } from "@/bilesenler/ui/button";
 
 interface YuklemeHatasi {
@@ -21,6 +22,7 @@ function yuklemeHatalari(e: unknown): YuklemeHatasi[] {
  * Yükleme senaryodan bağımsızdır (satış geçmişi ürün bazlı tutulur); başarıda liste sorguları mutasyon tarafından tazelenir.
  */
 export function SatisYuklemeKarti({ baslik = "Dosyadan yükle" }: { baslik?: string }) {
+  const kilitli = !useDuzenlemeKilidi().acik;
   const id = useId();
   const yukle = useSatisYukle();
   const dosyaRef = useRef<HTMLInputElement>(null);
@@ -73,7 +75,12 @@ export function SatisYuklemeKarti({ baslik = "Dosyadan yükle" }: { baslik?: str
         <span className={dosya ? "text-sm" : "text-sm text-muted-foreground"} data-testid="secili-dosya">
           {dosya ? dosya.name : "Henüz dosya seçilmedi"}
         </span>
-        <Button type="button" disabled={!dosya || yukle.isPending} onClick={yukleTikla}>
+        <Button
+          type="button"
+          disabled={!dosya || yukle.isPending || kilitli}
+          title={kilitli ? "Düzenleme kilitli" : undefined}
+          onClick={yukleTikla}
+        >
           {yukle.isPending ? "Yükleniyor…" : "Yükle"}
         </Button>
       </div>

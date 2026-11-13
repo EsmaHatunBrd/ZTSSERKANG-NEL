@@ -27,7 +27,8 @@ _TABLO_ETIKET = {"urun": "Ürün kartı", "uretim_hedefi": "Üretim hedefi", "gi
                  "uretim_kapasitesi": "Üretim kapasitesi", "satis_gecmisi": "Satış geçmişi", "malzeme": "Malzeme kartı", "recete": "Reçete",
                  "senaryo": "Senaryo", "teklif": "Teklif turu", "liste_fiyati": "Liste fiyatı", "smm_donem": "SMM dönemi",
                  "smm_recete": "SMM reçeteleri", "stok_devri": "Stokta kalan", "smm_kalem": "SMM stok kalemi",
-                 "smm_mizan": "SMM mizan satırı"}
+                 "smm_mizan": "SMM mizan satırı",
+                 "duzenleme_kilidi": "Düzenleme"}   # "Düzenleme" + "kilidi açıldı" = "Düzenleme kilidi açıldı"
 _ISLEM_ETIKET = {"guncelle": "güncellendi", "olustur": "oluşturuldu", "ekle": "eklendi", "sil": "silindi", "pasiflestir": "pasifleştirildi",
                  "aile_degistir": "ailesi değişti", "kod_degistir": "kodu değişti", "toplu_yukle": "toplu yüklendi", "etkinlestir": "sürümü etkinleştirildi",
                  "kilitle": "kilitlendi", "kilit_ac": "kilidi açıldı", "kopyala": "kopyalanarak oluşturuldu",
@@ -200,6 +201,8 @@ def _degisiklik_satirlari(s: Session, senaryo: int | None, urunler: dict[int, m.
             veri = k.yeni if isinstance(k.yeni, dict) and "urun_kodu" in k.yeni else k.eski
             if isinstance(veri, dict):
                 urun_kodu, sen_id = veri.get("urun_kodu"), veri.get("senaryo_id")
+        elif t == "duzenleme_kilidi":   # arayüz düzenleme kilidinin açılması: çalışma içerikte saklıdır (yoksa her çalışmada görünür)
+            sen_id = k.yeni.get("senaryo_id") if isinstance(k.yeni, dict) else None
         elif t == "teklif" and isinstance(k.eski, dict):   # silinmiş tur: ürün ve senaryo içerikte saklıdır
             urun_kodu, sen_id = k.eski.get("urun_kodu"), k.eski.get("senaryo_id")
         if senaryo is not None and sen_id is not None and sen_id != senaryo:

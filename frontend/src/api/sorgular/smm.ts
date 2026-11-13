@@ -367,11 +367,45 @@ export function useSmmAyarlar(donemId: number | null) {
   });
 }
 
+/** Hata kodları: kapatırken eksik varsa 409 `kapanis_eksik` (alanlar.eksikler), sonraki dönem kilitliyse 409 `sonraki_kilitli`. */
+export const SMM_KAPANIS_EKSIK = "kapanis_eksik";
+
+/** Dönemi kapatır ya da kilidi açar (kilit açma yalnız Genel Direktör). `zorla`: eksikler görüldükten sonra "yine de kapat". */
 export function useSmmKilit() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ donemId, kilitli }: { donemId: number; kilitli: boolean }) =>
-      cagir(api.PUT("/api/v1/smm/donemler/{donem_id}/kilit", { params: { path: { donem_id: donemId } }, body: { kilitli } })),
+    mutationFn: ({ donemId, kilitli, zorla }: { donemId: number; kilitli: boolean; zorla?: boolean }) =>
+      cagir(
+        api.PUT("/api/v1/smm/donemler/{donem_id}/kilit", {
+          params: { path: { donem_id: donemId } },
+          // zorla yalnız gerektiğinde gönderilir (şemada varsayılanı false)
+          body: (zorla ? { kilitli, zorla: true } : { kilitli }) as { kilitli: boolean; zorla: boolean },
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
+  });
+}
+
+/** Açılış stoku önceki dönemin şu anki kapanışıyla aynı mı; farklı kalemlerin ilk 20'si. */
+export function useSmmDevirDurumu(donemId: number | null, acik = true) {
+  return useQuery({
+    queryKey: ["smm", "devir-durumu", donemId],
+    enabled: donemId !== null && acik,
+    queryFn: () => cagir(api.GET("/api/v1/smm/donemler/{donem_id}/devir-durumu", { params: { path: { donem_id: donemId as number } } })),
+  });
+}
+
+/** Açılış stokunu önceki dönemin güncel kapanışından yeniden yazar; elle girilmiş açılışlar korunur (`elleEz` ile ezilir). */
+export function useSmmDevirYenile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ donemId, neden, elleEz }: { donemId: number; neden: string; elleEz?: boolean }) =>
+      cagir(
+        api.POST("/api/v1/smm/donemler/{donem_id}/devir-yenile", {
+          params: { path: { donem_id: donemId } },
+          body: { neden, elle_ez: Boolean(elleEz) },
+        }),
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
   });
 }
@@ -428,5 +462,44 @@ export function useSmmMizanSil(donemId: number, tur: SmmMizanTuru) {
         }),
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
+  });
+}
+
+/** Bütçe (Fiyat Çalışması senaryosu) ile dönemin fiili SMM birim maliyeti; eşleme ürün koduyla. */
+export function useSmmButceKiyas(donemId: number | null, senaryoId: number | null) {
+  return useQuery({
+    queryKey: ["smm", "butce-kiyas", donemId, senaryoId],
+    enabled: donemId !== null && senaryoId !== null,
+    placeholderData: keepPreviousData,
+    queryFn: () =>
+      cagir(
+        api.GET("/api/v1/smm/donemler/{donem_id}/butce-kiyas", {
+          params: { path: { donem_id: donemId as number }, query: { senaryo: senaryoId as number } },
+        }),
+      ),
+  });
+}
+
+/** Dönemlerin SMM tablosu ana satırları (en eski başta); `donemler` boşsa son 6 dönem. */
+export function useSmmKarsilastirma(donemler: number[] = []) {
+  return useQuery({
+    queryKey: ["smm", "karsilastirma", donemler],
+    placeholderData: keepPreviousData,
+    queryFn: () =>
+      cagir(api.GET("/api/v1/smm/karsilastirma", { params: { query: { donemler: donemler.length ? donemler.join(",") : undefined } } })),
+  });
+}
+
+/** Ürünün aşama aşama birim maliyeti, reçete satırları ve önceki dönemle farkı. */
+export function useSmmMaliyetKarti(donemId: number | null, kod: string | null) {
+  return useQuery({
+    queryKey: ["smm", "maliyet-karti", donemId, kod],
+    enabled: donemId !== null && kod !== null,
+    queryFn: () =>
+      cagir(
+        api.GET("/api/v1/smm/donemler/{donem_id}/urun/{kod}/maliyet-karti", {
+          params: { path: { donem_id: donemId as number, kod: kod as string } },
+        }),
+      ),
   });
 }

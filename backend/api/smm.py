@@ -198,7 +198,11 @@ def sure_sil(s: OturumDep, sure_id: int, k: str = Depends(kullanici_ver)):
 
 # ---------------------------------------------------------------- aylık veri girişi ve kapanış
 from ..servisler import smm_veri_servisi as sv  # noqa: E402
-from .semalar import SmmAyarGiris, SmmKilitGiris, SmmVeriDurumu  # noqa: E402
+from ..servisler.hatalar import YetkiHatasi  # noqa: E402
+from ..servisler.kimlik_servisi import YONETICI_ROL  # noqa: E402
+from .bagimliliklar import GirisKullanicisiDep  # noqa: E402
+from .semalar import (SmmAyarGiris, SmmDevirDurumu, SmmDevirYenileCikis, SmmDevirYenileGiris, SmmKilitCikis, SmmKilitGiris,  # noqa: E402
+                      SmmVeriDurumu)
 
 
 @router.get("/smm/donemler/{donem_id}/veri", response_model=SmmVeriDurumu, responses=HATA_404_422)
@@ -219,10 +223,29 @@ def ayarlar(s: OturumDep, donem_id: int, g: SmmAyarGiris, k: str = Depends(kulla
     return sv.ayarlar_guncelle(s, donem_id, g.finansman, g.gider_720, g.gider_730, k)
 
 
-@router.put("/smm/donemler/{donem_id}/kilit", response_model=SmmDonemCikis, responses=HATA_404_422)
-def kilit(s: OturumDep, donem_id: int, g: SmmKilitGiris, k: str = Depends(kullanici_ver)):
-    """Dönemi kapatır (kilitler) ya da kilidi açar."""
-    return sv.kilit(s, donem_id, g.kilitli, k)
+@router.put("/smm/donemler/{donem_id}/kilit", response_model=SmmKilitCikis, responses=HATA_404_409_422)
+def kilit(s: OturumDep, donem_id: int, g: SmmKilitGiris, giren: GirisKullanicisiDep, k: str = Depends(kullanici_ver)):
+    """Dönemi kapatır (kilitler) ya da kilidi açar.
+
+    Kapatma: eksik kaynak, türü boş kalem ya da devir uyumsuzluğu varsa 409 `kapanis_eksik` (`alanlar.eksikler`); `zorla=true` ile kapatılır.
+    Kilit açma: yalnız Genel Direktör (403; giriş zorunlu değilken serbest). Açılışı bu dönemden devralmış dönem kilitliyse 409
+    `sonraki_kilitli`; kilitli değilse yanıtta `uyari`."""
+    if giren is not None and not g.kilitli and giren.rol != YONETICI_ROL:   # giriş kapalıyken (testler, eski kurulum) denetim yok
+        raise YetkiHatasi("dönem kilidini yalnız Genel Direktör açabilir", kod="kilit_acma_yetkisi")
+    return sv.kilit(s, donem_id, g.kilitli, k, g.zorla)
+
+
+@router.get("/smm/donemler/{donem_id}/devir-durumu", response_model=SmmDevirDurumu, responses=HATA_404_422)
+def devir_durumu(s: OturumDep, donem_id: int):
+    """Açılış stoku (dönem başı miktar / tutar) devralınan dönemin şu anki kapanışıyla aynı mı; farklı kalemlerin ilk 20'si."""
+    return sd.devir_durumu(s, donem_id)
+
+
+@router.post("/smm/donemler/{donem_id}/devir-yenile", response_model=SmmDevirYenileCikis, responses=HATA_404_409_422)
+def devir_yenile(s: OturumDep, donem_id: int, g: SmmDevirYenileGiris, k: str = Depends(kullanici_ver)):
+    """Açılış stokunu önceki dönemin güncel kapanışından yeniden yazar (neden zorunlu). Dönem kilitliyse 409. Elle girilmiş açılış
+    değerleri korunur; `elle_ez=true` ile onlar da ezilir."""
+    return sd.devir_yenile(s, donem_id, g.neden, g.elle_ez, k)
 
 
 @router.get("/smm/donemler/{donem_id}/fis.xlsx", responses=HATA_404_422)

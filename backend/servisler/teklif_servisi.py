@@ -32,9 +32,10 @@ def turlar(s: Session, hesap_id: int) -> list[m.Teklif]:
     return list(s.scalars(select(m.Teklif).where(m.Teklif.maliyet_hesabi_id == hesap_id).order_by(m.Teklif.tur_no)))
 
 
-def senaryo_teklifleri(s: Session, senaryo_id: int, durum: str | None = None, musteri: str | None = None) -> list[Row]:
+def senaryo_teklifleri(s: Session, senaryo_id: int, durum: str | None = None, musteri: str | None = None,
+                       urun: str | None = None) -> list[Row]:
     """Senaryodaki tüm teklif turları (en yeni önce): tek birleşik sorgu Teklif -> MaliyetHesabi -> Urun.
-    durum: tam eşleşme; musteri: büyük/küçük harf duyarsız içerir (ILIKE). Satır: (Teklif, MaliyetHesabi, Urun)."""
+    durum: tam eşleşme; musteri: büyük/küçük harf duyarsız içerir (ILIKE); urun: ürün kodu ya da adında içerir. Satır: (Teklif, MaliyetHesabi, Urun)."""
     q = (select(m.Teklif, m.MaliyetHesabi, m.Urun)
          .join(m.MaliyetHesabi, m.MaliyetHesabi.id == m.Teklif.maliyet_hesabi_id)
          .join(m.Urun, m.Urun.id == m.MaliyetHesabi.urun_id)
@@ -44,6 +45,9 @@ def senaryo_teklifleri(s: Session, senaryo_id: int, durum: str | None = None, mu
     if musteri:
         kacis = musteri.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         q = q.where(m.Teklif.musteri.ilike(f"%{kacis}%", escape="\\"))
+    if urun:
+        kacis = urun.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        q = q.where(m.Urun.kod.ilike(f"%{kacis}%", escape="\\") | m.Urun.ad.ilike(f"%{kacis}%", escape="\\"))
     return list(s.execute(q.order_by(m.Teklif.id.desc())).all())
 
 

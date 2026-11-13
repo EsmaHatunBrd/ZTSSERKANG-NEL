@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { Input } from "@/bilesenler/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -31,15 +32,17 @@ export const DEGISTI_SINIFI = "border-marka bg-sari";
  */
 export function GirdiHucresi({ etiket, deger, onMetin, disabled, className, title, aciklama, onCik, degisti, eski, otomatikOdak }: Props) {
   const [metin, setMetin] = useState<string | null>(null);
+  // Düzenleme kilidi kapalıyken hücre yazılamaz (taslaktaki değer görünmeye devam eder).
+  const kilitli = !useDuzenlemeKilidi().acik;
   return (
     <Input
       aria-label={etiket}
       autoFocus={otomatikOdak}
-      title={title ?? (degisti && eski !== undefined ? `Eski değer: ${eski}` : undefined)}
+      title={kilitli ? "Düzenleme kilitli" : (title ?? (degisti && eski !== undefined ? `Eski değer: ${eski}` : undefined))}
       aria-description={aciklama}
       data-degisti={degisti ? "true" : undefined}
       inputMode="decimal"
-      disabled={disabled}
+      disabled={disabled || kilitli}
       value={metin ?? deger}
       onChange={(e) => {
         setMetin(e.target.value);

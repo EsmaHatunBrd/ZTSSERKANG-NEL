@@ -4,6 +4,8 @@ import { DASHBOARD_BEKLEME_MS } from "./sabitler";
 // Yazma istekleri ve ilk açılış diyaloğu kullanıcı adı ister: testlerde ad önceden kayıtlıdır.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("fiyat-calismasi.kullanici", "E2E Kullanıcı"));
+  // Düzenleme kilidi uygulamada kilitli başlar; yazma yapan senaryolar için sekmede açık başlatılır.
+  await page.addInitScript(() => sessionStorage.setItem("fiyat-calismasi.duzenleme-acik-bitis", String(Date.now() + 3_600_000)));
 });
 
 // Not: e2e/kurulum.py her koşuda veri/e2e.db'yi silip gerçek kitabı yeniden yükler; burada açılan boş çalışma ve yeni ürün

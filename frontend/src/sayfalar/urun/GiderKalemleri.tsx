@@ -1,5 +1,6 @@
 import { Fragment, useState } from "react";
 import type { HesapSatiri, Toplamlar, UretimBilgisi } from "@/api/tipler";
+import { useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { KaynakRozeti } from "@/bilesenler/KaynakRozeti";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/bilesenler/ui/table";
@@ -102,6 +103,7 @@ function ElleHucre({
   children,
 }: SatirProps & { alan: GiderElleAlani; children: React.ReactNode }) {
   const [duzenle, setDuzenle] = useState(false);
+  const kilitli = !useDuzenlemeKilidi().acik;
   const kod = s.kod ?? "";
   // Düzenlenen ekranda taslak + kayıtlı değer; kayıtlı hesap görünümünde hesabın kendi işareti.
   const elle = onTaslak && kod ? etkinElle(kod, alan, taslakElle, sunucuElle) : (s.elle_alanlar ?? []).includes(alan) ? "" : null;
@@ -112,8 +114,9 @@ function ElleHucre({
       <button
         type="button"
         onClick={() => yaz(null)}
+        disabled={kilitli}
         aria-label={`${ad}: Elle. Formüle dön`}
-        title="Formüle dön"
+        title={kilitli ? "Düzenleme kilitli" : "Formüle dön"}
         className="rounded-4xl focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <KaynakRozeti tur="elle" />
@@ -135,8 +138,9 @@ function ElleHucre({
       <button
         type="button"
         onClick={() => setDuzenle(true)}
+        disabled={kilitli}
         aria-label={`${ad}: bu ürün için elle değer yaz`}
-        title="Bu ürün için elle değer yaz (formül yerine)"
+        title={kilitli ? "Düzenleme kilitli" : "Bu ürün için elle değer yaz (formül yerine)"}
         className="w-full rounded-md text-right decoration-dotted underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         {children}

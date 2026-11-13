@@ -78,7 +78,7 @@ export function ParametreDiyalogu({ tanim, mevcut, senaryo, gonderiliyor, hata, 
             </label>
             <select
               id={`${id}-urun`}
-              className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+              className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2 text-sm"
               value={urunKod}
               onChange={(e) => setUrunKod(e.target.value)}
             >

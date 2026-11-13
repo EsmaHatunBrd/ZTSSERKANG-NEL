@@ -30,6 +30,9 @@ const SmmOzet = lazy(() => import("@/sayfalar/smm/SmmOzet"));
 const SmmReceteler = lazy(() => import("@/sayfalar/smm/SmmReceteler"));
 const SmmSureler = lazy(() => import("@/sayfalar/smm/SmmSureler"));
 const SmmVeri = lazy(() => import("@/sayfalar/smm/SmmVeri"));
+const SmmButceKiyas = lazy(() => import("@/sayfalar/smm/SmmButceKiyas"));
+const SmmAylarArasi = lazy(() => import("@/sayfalar/smm/SmmAylarArasi"));
+const SmmMaliyetKarti = lazy(() => import("@/sayfalar/smm/SmmMaliyetKarti"));
 const MalzemeFiyatlari = lazy(() => import("@/sayfalar/MalzemeFiyatlari"));
 const Karsilastirma = lazy(() => import("@/sayfalar/Karsilastirma"));
 const Parametreler = lazy(() => import("@/sayfalar/Parametreler"));
@@ -78,6 +81,9 @@ export const rotalar = [
       { path: "smm/receteler", element: <SmmReceteler /> },
       { path: "smm/sureler", element: <SmmSureler /> },
       { path: "smm/veri", element: <SmmVeri /> },
+      { path: "smm/butce-kiyas", element: <SmmButceKiyas /> },
+      { path: "smm/aylar-arasi", element: <SmmAylarArasi /> },
+      { path: "smm/urun/:kod", element: <SmmMaliyetKarti /> },
       { path: "uretim-adetleri", element: <UretimAdetleri /> },
       { path: "satis-gecmisi", element: <SatisGecmisi /> },
       { path: "karsilastirma", element: <Karsilastirma /> },

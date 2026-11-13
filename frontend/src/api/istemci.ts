@@ -52,8 +52,42 @@ export function girisModunuAyarla(acik: boolean, dustu: (() => void) | null = nu
   oturumDustu = dustu;
 }
 
+/** Tamamlanan her API yanıtının özeti (yol, yöntem, başarı): düzenleme kilidi süresini yenilemek gibi yan işler için. */
+export interface YanitBilgisi {
+  yol: string;
+  yontem: string;
+  basarili: boolean;
+  /** Veri yazan istek mi (GET/HEAD ve hesaplama/önizleme POST'ları değil). */
+  yazma: boolean;
+}
+const yanitDinleyicileri = new Set<(b: YanitBilgisi) => void>();
+
+/** Her API yanıtında çağrılacak dinleyici ekler; dönen işlev aboneliği kaldırır. Dinleyici hatası isteği etkilemez. */
+export function yanitDinle(dinleyici: (b: YanitBilgisi) => void): () => void {
+  yanitDinleyicileri.add(dinleyici);
+  return () => yanitDinleyicileri.delete(dinleyici);
+}
+
+/** Hesaplama ve önizleme POST'ları veri yazmaz. */
+const SALT_OKUNUR_POST = [/\/hesapla$/, /\/onizle$/, /\/import\/fiyat-listesi$/];
+
+function yanitiBildir(request: Request, response: Response): void {
+  if (yanitDinleyicileri.size === 0) return;
+  const yol = new URL(request.url).pathname;
+  const yontem = request.method.toUpperCase();
+  const yazma = yontem !== "GET" && yontem !== "HEAD" && !SALT_OKUNUR_POST.some((r) => r.test(yol));
+  for (const d of yanitDinleyicileri) {
+    try {
+      d({ yol, yontem, basarili: response.ok, yazma });
+    } catch {
+      /* dinleyici hatası isteği bozmasın */
+    }
+  }
+}
+
 api.use({
   onResponse({ request, response }) {
+    yanitiBildir(request, response);
     if (girisModu && response.status === 401 && !new URL(request.url).pathname.startsWith("/api/v1/kimlik/")) oturumDustu?.();
     return response;
   },

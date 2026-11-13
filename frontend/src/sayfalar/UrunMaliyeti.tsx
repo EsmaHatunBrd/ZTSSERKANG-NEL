@@ -9,6 +9,7 @@ import type { HesapYaniti, Sema } from "@/api/tipler";
 import { DegisiklikCubugu } from "@/bilesenler/DegisiklikCubugu";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
+import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Badge } from "@/bilesenler/ui/badge";
 import { Button } from "@/bilesenler/ui/button";
@@ -134,7 +135,10 @@ export default function UrunMaliyeti() {
   useEffect(() => {
     if (kod) sonAcilaniKaydet(kod);
   }, [kod]);
-  const { senaryoId, senaryo, kilitli } = useSenaryo();
+  const { senaryoId, senaryo } = useSenaryo();
+  // Düzenleme kilidi: hücreler kendi içinde kapanır (GirdiHucresi); burada Kaydet ve anında kaydeden kartlar kapatılır.
+  // Taslak silinmez: süre dolarsa değerler ekranda kalır, kilit yeniden açılınca kaydedilir.
+  const { kilitli: yazmaKilitli, neden: kilitNedeni } = useYazmaKilidi();
   const urun = useUrun(kod, senaryoId);
   const recete = useRecete(kod, senaryoId);
   const veriYonlendirici = useContext(UNSAFE_DataRouterContext) !== null;
@@ -313,9 +317,9 @@ export default function UrunMaliyeti() {
   // Son yeniden hesap başarısız oldu ama eski sonuç elde: sayılar güncel değil.
   const bayat = !!hesaplaHatasi && sonuc !== null;
   const bayatSinif = bayat ? "opacity-60" : undefined;
-  const kaydetKapali = kilitli || !!hesaplaHatasi || !taban || !urun.data;
-  const kaydetNedeni = kilitli
-    ? "Senaryo kilitli"
+  const kaydetKapali = yazmaKilitli || !!hesaplaHatasi || !taban || !urun.data;
+  const kaydetNedeni = yazmaKilitli
+    ? (kilitNedeni ?? "Senaryo kilitli")
     : hesaplaHatasi
       ? "Hesap hatası var: önce değişikliği düzeltin"
       : "Ürün ve hesap bilgisi yüklenince kaydedilebilir";
@@ -382,6 +386,7 @@ export default function UrunMaliyeti() {
       )}
 
       <KilitSeridi />
+      <DuzenlemeKilidi />
 
       {senaryoDisi && (
         <p
@@ -427,7 +432,7 @@ export default function UrunMaliyeti() {
           <UretimBilgileriKarti
             key={`${kod}-${senaryoId}`}
             senaryoId={senaryoId}
-            kilitli={kilitli}
+            kilitli={yazmaKilitli}
             sabitKod={kod}
             onMesaj={setHedefMesaji}
             onKaydedildi={() => setHesapTetik((t) => t + 1)}
@@ -552,7 +557,8 @@ export default function UrunMaliyeti() {
           key={`${kod}-${senaryoId}`}
           kod={kod}
           senaryoId={senaryoId}
-          kilitli={kilitli}
+          kilitli={yazmaKilitli}
+          kilitNedeni={kilitNedeni}
           onDegisti={() => setHesapTetik((t) => t + 1)}
         />
       )}

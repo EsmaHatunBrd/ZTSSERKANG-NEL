@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { hataMetni } from "@/api/istemci";
 import { useAileDegistir } from "@/api/sorgular/karsilastirma";
+import { useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { Badge } from "@/bilesenler/ui/badge";
 import { Button } from "@/bilesenler/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/bilesenler/ui/dialog";
@@ -60,11 +61,20 @@ function AileDiyalogu({ kod, mevcut, onKapat }: { kod: string; mevcut: string; o
  *  gruplama anahtarı (`aile`) sunucuda türetilir, kullanıcıya gösterilmez. */
 export function AileRozeti({ kod, aile, aileAd }: { kod: string; aile: string | null | undefined; aileAd?: string | null }) {
   const [acik, setAcik] = useState(false);
+  const kilitli = !useDuzenlemeKilidi().acik;
   const gorunen = aileAd ?? aile ?? "";
   return (
     <span className="inline-flex items-center gap-1">
       <Badge variant="secondary">Aile: {gorunen || "—"}</Badge>
-      <Button type="button" variant="ghost" size="icon-sm" aria-label="Ürün ailesini düzenle" onClick={() => setAcik(true)}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Ürün ailesini düzenle"
+        disabled={kilitli}
+        title={kilitli ? "Düzenleme kilitli" : undefined}
+        onClick={() => setAcik(true)}
+      >
         <Pencil aria-hidden />
       </Button>
       {acik && <AileDiyalogu key={kod} kod={kod} mevcut={gorunen} onKapat={() => setAcik(false)} />}

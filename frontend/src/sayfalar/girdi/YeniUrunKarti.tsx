@@ -50,7 +50,16 @@ const BOS: Form = {
  * Yeni ürün kartı (Faz 5c): kart `PUT /urunler/{kod}` ile açılır (kod tekilliği önce denetlenir); ürün, reçetesi
  * kaydedilince çalışmaya dahil olur — bu yüzden başarıda "Reçeteyi kur" bağlantısı ürün ekranına götürür.
  */
-export function YeniUrunKarti({ senaryoId, onMesaj }: { senaryoId: number; onMesaj: (m: string) => void }) {
+export function YeniUrunKarti({
+  senaryoId,
+  kilitli = false,
+  onMesaj,
+}: {
+  senaryoId: number;
+  /** Düzenleme kilidi kapalı: kart kaydedilemez (ürün kartı senaryodan bağımsızdır; senaryo kilidi etkilemez). */
+  kilitli?: boolean;
+  onMesaj: (m: string) => void;
+}) {
   const id = useId();
   const havuzlar = useGiderHavuzlari(senaryoId);
   const hatlar = useMemo(() => hatListesi(havuzlar.data?.kayitlar), [havuzlar.data]);
@@ -194,7 +203,7 @@ export function YeniUrunKarti({ senaryoId, onMesaj }: { senaryoId: number; onMes
           </p>
         )}
         <div>
-          <Button type="submit" size="sm" disabled={olustur.isPending}>
+          <Button type="submit" size="sm" disabled={olustur.isPending || kilitli} title={kilitli ? "Düzenleme kilitli" : undefined}>
             {olustur.isPending ? "Kaydediliyor…" : "Ürünü kaydet"}
           </Button>
         </div>

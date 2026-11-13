@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarPlus, CalendarRange, CircleCheck, FileSpreadsheet, TriangleAlert, Upload } from "lucide-react";
+import { CalendarPlus, CalendarRange, CircleCheck, FileSpreadsheet, Lock, TriangleAlert, Upload } from "lucide-react";
 import { ApiHatasi, hataMetni, hataMetniVarsa } from "@/api/istemci";
 import { useSmmDonemleri, useSmmReceteKaynagi, useSmmSil, useSmmYeniDonem, useSmmYukle } from "@/api/sorgular/smm";
 import type { SmmDonem } from "@/api/tipler";
@@ -9,6 +9,7 @@ import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { Button } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { paraBicimle } from "@/yardimcilar/para";
+import { kilitTarihi } from "./SmmDevirKilit";
 
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const SECIM_SINIFI = "h-8 rounded-lg border border-input bg-background px-2 text-sm";
@@ -73,6 +74,32 @@ function ReceteKaynagiSecici({ d }: { d: SmmDonem }) {
       </select>
       {degistir.error && <span className="text-destructive">{hataMetni(degistir.error)}</span>}
     </label>
+  );
+}
+
+/** Dönem satırının alt bilgisi: açılışın hangi ayın kapanışından geldiği (o ay kapalı değilse uyarı rozeti) ve kapanış (kim, ne zaman). */
+function DonemDurumu({ d, liste }: { d: SmmDonem; liste: SmmDonem[] }) {
+  const onceki = d.devir_donem_id ? liste.find((x) => x.id === d.devir_donem_id) : undefined;
+  if (!onceki && !d.kilitli) return null;
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      {onceki && <span>Açılış: {onceki.ad} kapanışından</span>}
+      {onceki && !onceki.kilitli && (
+        <span
+          className="inline-flex items-center gap-1 rounded-full bg-kart-sari px-2 py-0.5 font-medium text-foreground"
+          title={`${onceki.ad} kapatılmadı; devir sonradan değişebilir`}
+        >
+          <TriangleAlert className="size-3 text-amber-700" aria-hidden />
+          {onceki.ad} kapalı değil
+        </span>
+      )}
+      {d.kilitli && (
+        <span className="inline-flex items-center gap-1 font-medium text-foreground">
+          <Lock className="size-3" aria-hidden />
+          {["Kapalı", d.kilitleyen, kilitTarihi(d.kilit_zamani)].filter(Boolean).join(" · ")}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -141,6 +168,15 @@ function YeniDonemKarti({ liste }: { liste: SmmDonem[] }) {
           <Link to={`/smm/stok?donem=${yeni.data.id}`} className="font-semibold text-primary underline-offset-4 hover:underline">
             Stok ve envantere git
           </Link>
+        </p>
+      )}
+      {yeni.data?.devir.uyari && (
+        <p role="status" className="flex flex-wrap items-center gap-2 rounded-xl bg-kart-sari px-4 py-3 text-sm">
+          <TriangleAlert className="size-4 shrink-0 text-amber-700" aria-hidden />
+          <span>
+            <b>{yeni.data.devir.uyari}.</b> {yeni.data.devir.onceki} kapanışı değişirse Veri Girişi'nde "Devri yenile" ile açılışı
+            güncelleyin.
+          </span>
         </p>
       )}
     </section>
@@ -285,6 +321,7 @@ export default function SmmDonemler() {
                     <span className="truncate text-xs text-muted-foreground">
                       {d.kalem_sayisi} kalem · {d.kaynak_dosya ?? (d.devir_donem_id ? "önceki dönemden devir" : "—")} · {d.olusturan}
                     </span>
+                    <DonemDurumu d={d} liste={liste} />
                   </span>
                   <ReceteKaynagiSecici d={d} />
                   <Link

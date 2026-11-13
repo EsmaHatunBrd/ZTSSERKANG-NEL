@@ -369,4 +369,27 @@ describe("VeriGirisi — Yeni ürün kartı (Faz 5c)", () => {
     );
     expect(istekler.urunKaydet).toHaveLength(0);
   });
+
+  it("düzenleme kilidi: kilitliyken kartların yazma eylemleri devre dışı, kilit açılınca etkin", async () => {
+    sessionStorage.removeItem("fiyat-calismasi.duzenleme-acik-bitis");
+    sunucu.use(
+      http.post("*/api/v1/duzenleme-kilidi/ac", () =>
+        HttpResponse.json({ kayit_id: 1, sayfa: "/", senaryo_id: 1, kullanici: "Test Kullanıcı" }, { status: 201 }),
+      ),
+    );
+    const u = userEvent.setup();
+    kurSayfa(<VeriGirisi />);
+    expect(await screen.findByRole("group", { name: "Düzenleme kilidi" })).toHaveTextContent("Düzenleme kilitli");
+    const urunKaydet = await screen.findByRole("button", { name: "Ürünü kaydet" });
+    expect(urunKaydet).toBeDisabled();
+    expect(urunKaydet).toHaveAttribute("title", "Düzenleme kilitli");
+    const havuz = await within(await screen.findByRole("region", { name: "Gider havuzu" })).findByLabelText("Havuz");
+    expect(havuz).toBeDisabled();
+    expect(within(screen.getByRole("region", { name: "Parametre" })).getByLabelText("Parametre")).toBeDisabled();
+
+    await u.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ürünü kaydet" })).toBeEnabled());
+    await waitFor(() => expect(havuz).toBeEnabled());
+    expect(screen.getByRole("group", { name: "Düzenleme kilidi" })).toHaveTextContent("Düzenleme açık");
+  });
 });

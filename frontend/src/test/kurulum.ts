@@ -24,6 +24,18 @@ beforeEach(() => {
   }
 });
 
+// Düzenleme kilidi (bilesenler/DuzenlemeKilidi) uygulamada varsayılan KİLİTLİ başlar. Mevcut testler alanların düzenlenebilir
+// olduğunu varsayar: testlerde kilit varsayılan AÇIK (çok uzak bitiş zamanı). Kilit davranışını sınayan testler
+// `sessionStorage.removeItem("fiyat-calismasi.duzenleme-acik-bitis")` ile kilitli duruma döner.
+const DUZENLEME_ANAHTARI = "fiyat-calismasi.duzenleme-acik-bitis";
+beforeEach(() => {
+  try {
+    sessionStorage.setItem(DUZENLEME_ANAHTARI, String(Date.UTC(2999, 0, 1)));
+  } catch {
+    /* sessionStorage yok */
+  }
+});
+
 // jsdom'da ResizeObserver yok; grafik (recharts ResponsiveContainer) içeren sayfalar onsuz çizilemez. Testlerin kendi sahtesi
 // varsa o kullanılır; yoksa sabit boyut bildiren bu varsayılan.
 if (!("ResizeObserver" in globalThis)) {
@@ -48,6 +60,7 @@ if (!("ResizeObserver" in globalThis)) {
 afterEach(() => {
   cleanup();
   try {
+    sessionStorage.removeItem(DUZENLEME_ANAHTARI);
     localStorage.clear();
   } catch {
     /* localStorage yok */

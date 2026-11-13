@@ -8,6 +8,7 @@ import { useParametreEkle, useParametreler, useParametreTanimlari } from "@/api/
 import type { GiderHavuzu, Malzeme, ParametreTanimi } from "@/api/tipler";
 import { useOnayliFiyatEkle } from "@/bilesenler/FiyatSapmaOnayi";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
+import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Badge } from "@/bilesenler/ui/badge";
@@ -472,7 +473,8 @@ function KapasiteKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; kil
  * Her kart ilgili sayfanın mevcut diyalog/mutasyonunu kullanır; kayıt sonrası sorgular o mutasyonlarca tazelenir.
  */
 export default function VeriGirisi() {
-  const { senaryoId, kilitli } = useSenaryo();
+  const { senaryoId } = useSenaryo();
+  const { kilitli, duzenlemeKilitli } = useYazmaKilidi();
   const [mesaj, setMesaj] = useState<string | null>(null);
 
   return (
@@ -482,6 +484,7 @@ export default function VeriGirisi() {
         altBaslik="Yeni ürün kartı, gider havuzu, malzeme fiyatı, parametre, ürün üretim bilgileri, hat kapasitesi ve stokta kalanı Excel'e dönmeden tek yerden girin. Her kayıt nedenle günlüğe düşer."
       />
       <KilitSeridi />
+      <DuzenlemeKilidi />
       {mesaj && (
         <p role="status" className="rounded-md bg-muted p-2 text-sm">
           {mesaj}
@@ -491,7 +494,7 @@ export default function VeriGirisi() {
         <p className="text-muted-foreground">Başlamak için yukarıdan bir senaryo seçin.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          <YeniUrunKarti senaryoId={senaryoId} onMesaj={setMesaj} />
+          <YeniUrunKarti senaryoId={senaryoId} kilitli={duzenlemeKilitli} onMesaj={setMesaj} />
           <HavuzGirisKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
           <FiyatKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
           <ParametreKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />

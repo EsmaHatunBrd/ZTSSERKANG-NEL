@@ -3,10 +3,12 @@ import { expect, test } from "@playwright/test";
 
 // Gerçek kitap: e2e/kurulum.py aynı dosyayı yüklediği için ana ürün sayfalarının reçetesi "Aynı" çıkar ve seçili gelmez;
 // '(2)' varyant sayfaları farklıdır ama varsayılan seçili değildir. Değişiklik sonraki koşuları etkilemez (kurulum DB'yi siler).
-const KITAP = path.resolve(process.cwd(), "..", "Fiyat Çalışma - 2026-2027 - Berrak.xlsx");   // playwright frontend/ klasöründen koşar
+const KITAP = path.resolve(process.cwd(), "..", "Fiyat Çalışma - 2026-2027 - Berrak.xlsx"); // playwright frontend/ klasöründen koşar
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("fiyat-calismasi.kullanici", "E2E Kullanıcı"));
+  // Düzenleme kilidi uygulamada kilitli başlar; yazma yapan senaryolar için sekmede açık başlatılır.
+  await page.addInitScript(() => sessionStorage.setItem("fiyat-calismasi.duzenleme-acik-bitis", String(Date.now() + 3_600_000)));
 });
 
 test("reçete: kitaptan önizle -> aynı sayfalar seçili değil -> varyantı seç, neden, uygula -> yeni versiyon", async ({ page }) => {
@@ -27,7 +29,7 @@ test("reçete: kitaptan önizle -> aynı sayfalar seçili değil -> varyantı se
   await expect(varyant).not.toBeChecked();
   await expect(form.getByRole("checkbox", { name: /^Uygula: 035 \(2\)/ })).not.toBeChecked();
   const asil = form.getByRole("checkbox", { name: /^Uygula: 001 [^(]/ });
-  if (await asil.isChecked()) await asil.uncheck();   // aynı ürün için iki sayfa seçilemez
+  if (await asil.isChecked()) await asil.uncheck(); // aynı ürün için iki sayfa seçilemez
   for (const k of await form.getByRole("checkbox", { checked: true }).all()) await k.uncheck();
   await expect(form.getByRole("button", { name: "Uygula" })).toBeDisabled();
   await varyant.check();

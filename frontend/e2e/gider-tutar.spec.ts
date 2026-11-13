@@ -3,10 +3,14 @@ import { expect, test } from "@playwright/test";
 // Yazma istekleri ve ilk açılış diyaloğu kullanıcı adı ister: testlerde ad önceden kayıtlıdır.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("fiyat-calismasi.kullanici", "E2E Kullanıcı"));
+  // Düzenleme kilidi uygulamada kilitli başlar; yazma yapan senaryolar için sekmede açık başlatılır.
+  await page.addInitScript(() => sessionStorage.setItem("fiyat-calismasi.duzenleme-acik-bitis", String(Date.now() + 3_600_000)));
 });
 
 // Not: e2e/kurulum.py her koşuda veri/e2e.db'yi silip gerçek kitabı yeniden yükler; değişiklik sonraki koşuları etkilemez.
-test("gider: havuzu taban × çarpan ve alt kalem tutarıyla kaydet -> kartta Gider Toplamı ve çarpan satırı güncellenir", async ({ page }) => {
+test("gider: havuzu taban × çarpan ve alt kalem tutarıyla kaydet -> kartta Gider Toplamı ve çarpan satırı güncellenir", async ({
+  page,
+}) => {
   await page.goto("/gider?senaryo=1");
   await expect(page.getByRole("heading", { name: "Gider Dağıtım" })).toBeVisible();
 

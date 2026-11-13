@@ -10,6 +10,7 @@ import { TamKitapFormu } from "./aktar/TamKitapFormu";
 import { UretimAdetleriAktar } from "./aktar/UretimAdetleriAktar";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
+import { DuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 
 const SEKMELER = [
   { kimlik: "tam", etiket: "Tüm çalışma kitabı" },
@@ -64,6 +65,7 @@ export default function ReceteAktar() {
     <div className="flex flex-col gap-4">
       <SayfaBasligi baslik="Veri Aktar" altBaslik="Excel'den veri yükleme ve elle reçete girişi" />
       <KilitSeridi />
+      <DuzenlemeKilidi />
 
       <div role="tablist" aria-label="Aktarım türü" className="flex gap-1 overflow-x-auto border-b">
         {SEKMELER.map((s, i) => (

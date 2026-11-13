@@ -1623,3 +1623,59 @@ describe("Dalga 2-C: yapışkan değişiklik çubuğu", () => {
     expect(olay2.defaultPrevented).toBe(false);
   });
 });
+
+describe("Düzenleme kilidi: ürün ekranı", () => {
+  const acUcu = () =>
+    http.post("*/api/v1/duzenleme-kilidi/ac", () =>
+      HttpResponse.json({ kayit_id: 1, sayfa: "/urunler/URUN-001", senaryo_id: 1, kullanici: "Test Kullanıcı" }, { status: 201 }),
+    );
+
+  it("kilitliyken reçete hücreleri, üretim bilgileri ve stok etkisi devre dışı; kilit açılınca etkin", async () => {
+    sessionStorage.removeItem("fiyat-calismasi.duzenleme-acik-bitis");
+    kur({ yanit: urunExcelHesapYaniti }, [acUcu()]);
+    const tablo = await tabloHazir();
+    expect(screen.getByRole("group", { name: "Düzenleme kilidi" })).toHaveTextContent(
+      "Düzenleme kilitli. Değişiklik yapmak için kilidi açın.",
+    );
+    // Reçete hücreleri girdi olarak kalır (taslak görünür) ama hepsi devre dışıdır.
+    const miktarlar = () => within(tablo).getAllByLabelText(/^Miktar — /);
+    expect(miktarlar().length).toBeGreaterThan(0);
+    for (const g of within(tablo).getAllByRole("textbox")) expect(g).toBeDisabled();
+    expect(miktarlar()[0]).toHaveAttribute("title", "Düzenleme kilitli");
+    expect(await screen.findByLabelText("Üretim hattı")).toBeDisabled();
+    expect(screen.getByLabelText("Vardiya üretim adedi")).toBeDisabled();
+    expect(screen.getByLabelText("Marka")).toBeDisabled();
+    expect(await screen.findByRole("button", { name: /Stokta kalan ekle/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ürün ailesini düzenle" })).toBeDisabled();
+    // Okuma serbest: hesap tarihi ve tablo görünümü kilitlenmez.
+    expect(screen.getByLabelText("Hesap tarihi")).toBeEnabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await waitFor(() => expect(miktarlar()[0]).toBeEnabled());
+    expect(screen.getByLabelText("Üretim hattı")).toBeEnabled();
+    expect(screen.getByLabelText("Vardiya üretim adedi")).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Stokta kalan ekle/ })).toBeEnabled();
+  });
+
+  it("taslak varken kilitlenirse taslak silinmez: hücre değeri ve çubuk kalır, Kaydet 'Düzenleme kilitli' ile pasiftir", async () => {
+    kur({}, [acUcu()]);
+    const tablo = await tabloHazir();
+    const user = userEvent.setup();
+    const fire = within(tablo).getByLabelText(/Fire % .*Pet Şişe/);
+    await user.clear(fire);
+    await user.type(fire, "5");
+    expect(await screen.findByText("1 satırda değişiklik · 1 fire")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kaydet" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Kilitle" }));
+    expect(await screen.findByText("1 satırda değişiklik · 1 fire")).toBeInTheDocument();
+    const kaydet = screen.getByRole("button", { name: "Kaydet" });
+    expect(kaydet).toBeDisabled();
+    expect(kaydet).toHaveAttribute("title", "Düzenleme kilitli");
+    expect(within(tablo).getByLabelText(/Fire % .*Pet Şişe/)).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Kaydet" })).toBeEnabled());
+    expect(screen.getByText("1 satırda değişiklik · 1 fire")).toBeInTheDocument();
+  });
+});

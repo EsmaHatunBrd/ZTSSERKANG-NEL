@@ -10,9 +10,11 @@ import { HavuzKarti } from "./ayarlar/HavuzKarti";
 import { hataMetniVarsa } from "@/api/istemci";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
+import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 
 export default function GiderDagitim() {
-  const { senaryoId, kilitli } = useSenaryo();
+  const { senaryoId } = useSenaryo();
+  const { kilitli, neden: kilitNedeni } = useYazmaKilidi();
   const havuzlar = useGiderHavuzlari(senaryoId);
   const ambalajlar = useAmbalajlar(senaryoId);
   const havuzKaydet = useHavuzKaydet();
@@ -28,6 +30,7 @@ export default function GiderDagitim() {
     <section className="flex flex-col gap-6">
       <SayfaBasligi baslik="Gider Dağıtım" />
       <KilitSeridi />
+      <DuzenlemeKilidi />
 
       {mesaj && (
         <p role="status" className="rounded-md bg-muted p-2 text-sm">
@@ -47,15 +50,14 @@ export default function GiderDagitim() {
             {havuzlar.error.message}
           </p>
         )}
-        {havuzlar.data && havuzlar.data.kayitlar.length === 0 && (
-          <p className="text-muted-foreground">Gider havuzu tanımlı değil.</p>
-        )}
+        {havuzlar.data && havuzlar.data.kayitlar.length === 0 && <p className="text-muted-foreground">Gider havuzu tanımlı değil.</p>}
         {havuzlar.data?.kayitlar.map((h) => (
           <HavuzKarti
             key={h.kod}
             havuz={h}
             payKontrolToplam={payKontrol.get(h.kod)}
             kilitli={kilitli}
+            kilitNedeni={kilitNedeni}
             onDuzenle={() => {
               havuzKaydet.reset();
               setDuzenlenen(h);
@@ -74,6 +76,7 @@ export default function GiderDagitim() {
             variant="outline"
             size="sm"
             disabled={!ambalajlar.data || kilitli}
+            title={kilitNedeni}
             onClick={() => {
               ambalajKaydet.reset();
               setAmbalajAcik(true);

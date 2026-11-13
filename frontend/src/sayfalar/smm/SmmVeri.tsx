@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CircleCheck, CircleDashed, Download, Lock, LockOpen, TriangleAlert, Upload } from "lucide-react";
+import { CircleCheck, CircleDashed, Lock, TriangleAlert, Upload } from "lucide-react";
 import { hataMetniVarsa } from "@/api/istemci";
-import { smmFisAdresi, useSmmAyarlar, useSmmKilit, useSmmVeriDurumu, useSmmVeriYukle } from "@/api/sorgular/smm";
+import { useSmmAyarlar, useSmmVeriDurumu, useSmmVeriYukle } from "@/api/sorgular/smm";
 import type { SmmVeriDurumu } from "@/api/tipler";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { D, paraBicimle } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
 import { DonemSecici, DonemYok, useSmmDonemSecimi } from "./ortak";
+import { DevirBolumu, KapanisBolumu, kilitTarihi } from "./SmmDevirKilit";
 import { SmmMizanBolumu } from "./SmmMizanDuzenle";
 
 type Kaynak = SmmVeriDurumu["kaynaklar"][number];
@@ -165,13 +166,12 @@ function AyarKarti({ v, donemId, kilitli }: { v: SmmVeriDurumu; donemId: number;
 
 /**
  * Aylık veri girişi: dönemin veri kaynakları (alım-satış, iade, üretim, sayım, şahit, gider ve stok mizanı) ayrı ayrı yüklenir; kontrol
- * listesi neyin eksik olduğunu gösterir. Dönem kapatılınca (kilit) değişiklik yapılamaz; SMM fişi Excel olarak indirilir.
+ * listesi neyin eksik olduğunu gösterir. Açılış stoku önceki ayın kapanışıyla uyuşmuyorsa uyarır (devri yenile). Dönem kapatılınca
+ * (kilit) değişiklik yapılamaz; SMM fişi Excel olarak indirilir.
  */
 export default function SmmVeri() {
   const secim = useSmmDonemSecimi();
   const q = useSmmVeriDurumu(secim.donemId);
-  const kilit = useSmmKilit();
-  const [kilitOnayi, setKilitOnayi] = useState(false);
   const v = q.data;
   if (secim.bos) {
     return (
@@ -194,7 +194,9 @@ export default function SmmVeri() {
           {kilitli ? (
             <p className="flex flex-wrap items-center gap-2 rounded-xl bg-muted px-4 py-3 text-sm">
               <Lock className="size-4" aria-hidden />
-              <b>{v.donem.ad}</b> kapatıldı{v.donem.kilitleyen ? ` (${v.donem.kilitleyen})` : ""}; veriler değiştirilemez.
+              <b>{v.donem.ad}</b> kapatıldı
+              {v.donem.kilitleyen ? ` (${[v.donem.kilitleyen, kilitTarihi(v.donem.kilit_zamani)].filter(Boolean).join(" · ")})` : ""};
+              veriler değiştirilemez.
             </p>
           ) : v.eksik.length > 0 ? (
             <p className="flex flex-wrap items-center gap-2 rounded-xl bg-kart-sari px-4 py-3 text-sm">
@@ -210,6 +212,8 @@ export default function SmmVeri() {
               </Link>
             </p>
           )}
+
+          <DevirBolumu key={v.donem.id} v={v} />
 
           {v.grupsuz && v.grupsuz.kalem > 0 && (
             <p className="flex flex-wrap items-center gap-2 rounded-xl bg-kart-sari px-4 py-3 text-sm">
@@ -263,56 +267,7 @@ export default function SmmVeri() {
             kilitli={kilitli}
           />
 
-          <section aria-label="Dönem kapanışı" className="flex flex-col gap-3 rounded-2xl border bg-card p-5 shadow-xs">
-            <h2 className="text-base font-semibold">Dönem kapanışı</h2>
-            <p className="text-sm text-muted-foreground">
-              Veriler tamamlanıp SMM Özeti kontrol edilince dönem kapatılır: kilitli dönemde veri, reçete kaynağı, dağıtım ve elle değerler
-              değiştirilemez. SMM fişi Canias'a aktarım için Excel olarak indirilir.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={smmFisAdresi(v.donem.id)}
-                download
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium hover:bg-accent"
-              >
-                <Download className="size-3.5" /> SMM fişini Excel olarak indir
-              </a>
-              {kilitli ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={kilit.isPending}
-                  onClick={() => kilit.mutate({ donemId: v.donem.id, kilitli: false })}
-                >
-                  <LockOpen className="size-3.5" /> Kilidi aç
-                </Button>
-              ) : (
-                <Button type="button" size="sm" onClick={() => setKilitOnayi(true)}>
-                  <Lock className="size-3.5" /> Dönemi kapat (kilitle)
-                </Button>
-              )}
-            </div>
-            {hataMetniVarsa(kilit.error) && (
-              <p role="alert" className="text-sm text-destructive">
-                {hataMetniVarsa(kilit.error)}
-              </p>
-            )}
-          </section>
-          {kilitOnayi && (
-            <OnayDiyalogu
-              baslik={`${v.donem.ad} kapatılsın mı?`}
-              onayMetni="Kapat ve kilitle"
-              bekliyor={kilit.isPending}
-              onOnayla={() => kilit.mutate({ donemId: v.donem.id, kilitli: true }, { onSuccess: () => setKilitOnayi(false) })}
-              onVazgec={() => setKilitOnayi(false)}
-            >
-              <p>
-                Dönem kilitlenince veriler ve hesap ayarları değiştirilemez.{" "}
-                {v.eksik.length > 0 && <b>Eksik veri var: {v.eksik.join(", ")}.</b>} Gerekirse kilit sonradan açılabilir.
-              </p>
-            </OnayDiyalogu>
-          )}
+          <KapanisBolumu key={v.donem.id} v={v} liste={secim.liste} />
         </>
       )}
     </section>

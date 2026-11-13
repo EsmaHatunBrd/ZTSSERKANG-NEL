@@ -89,7 +89,7 @@ def test_ayarlar(istemci):  # noqa: F811
 
 def test_kilit_ve_fis_excel(istemci):  # noqa: F811
     did = _ekim(istemci)
-    r = istemci.put(f"{A}/smm/donemler/{did}/kilit", json={"kilitli": True})
+    r = istemci.put(f"{A}/smm/donemler/{did}/kilit", json={"kilitli": True, "zorla": True})
     assert r.status_code == 200 and r.json()["kilitli"] is True and r.json()["kilitleyen"]
     # kilitliyken değişiklik yok
     r = istemci.patch(f"{A}/smm/donemler/{did}/stok/HM-1", json={"neden": "deneme", "sayim_miktar": "1"})
