@@ -152,6 +152,8 @@ export type SmmReceteKiyas = Sema["SmmReceteKiyas"];
 export type SmmYeniDonem = Sema["SmmYeniDonemCikis"];
 export type SmmSure = Sema["SmmSure"];
 export type SmmVeriDurumu = Sema["SmmVeriDurumu"];
+export type SmmMizan = Sema["SmmMizan"];
+export type SmmMizanSatiri = Sema["SmmMizanSatiri"];
 
 export type KurRiskiSatiri = Sema["KurRiskiSatiri"];
 export type KurRiskiSonucu = Sema["KurRiskiCikis"];

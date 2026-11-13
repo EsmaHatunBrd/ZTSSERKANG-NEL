@@ -1552,6 +1552,8 @@ class SmmVeriKaynagi(BaseModel):
     yuklendi: bool
     dolu: int
     son: SmmKaynakSon | None
+    elle: int = 0                  # mizan kaynaklarında elle girilmiş/değiştirilmiş satır sayısı
+    elle_uyari: str | None = None  # "N elle satır var, yükleme bunları siler"
 
 
 class SmmDonemBasi(BaseModel):
@@ -1567,6 +1569,14 @@ class SmmVeriAyarlari(BaseModel):
     gider_730: str
 
 
+class SmmGrupsuzKalemler(BaseModel):
+    """Türü / mizan kodu boş olduğu için stok hesabı (150/151/152) bulunamayan, SMM tablosuna girmeyen hareketli kalemler."""
+    kalem: int
+    alim_tutar: str
+    dbs_tutar: str
+    ornek: list[str]
+
+
 class SmmVeriDurumu(BaseModel):
     donem: "SmmDonemCikis"
     donem_basi: SmmDonemBasi
@@ -1574,6 +1584,7 @@ class SmmVeriDurumu(BaseModel):
     eksik: list[str]
     ayarlar: SmmVeriAyarlari
     turler: list[str]
+    grupsuz: SmmGrupsuzKalemler | None = None
 
 
 class SmmAyarGiris(BaseModel):

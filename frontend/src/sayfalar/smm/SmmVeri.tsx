@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { D, paraBicimle } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
 import { DonemSecici, DonemYok, useSmmDonemSecimi } from "./ortak";
+import { SmmMizanBolumu } from "./SmmMizanDuzenle";
 
 type Kaynak = SmmVeriDurumu["kaynaklar"][number];
 const kutu = (x: string) => D(x).toFixed().replace(".", ",");
@@ -21,7 +22,23 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
   const yukle = useSmmVeriYukle(donemId);
   const [dosya, setDosya] = useState<File | null>(null);
   const [anahtar, setAnahtar] = useState(0);
+  const [mizanAcik, setMizanAcik] = useState(false);
+  const [yuklemeOnayi, setYuklemeOnayi] = useState(false);
   const son = k.son;
+  const mizanTur = k.kaynak === "gider_mizan" ? "gider" : k.kaynak === "stok_mizan" ? "stok" : null;
+  const elle = k.elle ?? 0;
+  const gonder = () =>
+    dosya &&
+    yukle.mutate(
+      { kaynak: k.kaynak, dosya },
+      {
+        onSuccess: () => {
+          setDosya(null);
+          setAnahtar((x) => x + 1);
+          setYuklemeOnayi(false);
+        },
+      },
+    );
   return (
     <li className="flex flex-wrap items-center gap-3 py-3">
       {k.yuklendi ? (
@@ -38,8 +55,14 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
           {k.yuklendi ? `${k.dolu} kayıt` : "Henüz yok"}
           {son && ` · ${son.excel ? "SMM Excel'inden" : (son.dosya ?? "elle")} · ${son.kullanici ?? ""}`}
           {son?.zaman && ` · ${new Date(son.zaman).toLocaleString("tr-TR")}`}
+          {elle > 0 && ` · ${elle} elle satır`}
         </span>
       </span>
+      {mizanTur && (
+        <Button type="button" size="sm" variant="ghost" aria-expanded={mizanAcik} onClick={() => setMizanAcik((x) => !x)}>
+          {mizanAcik ? "Satırları gizle" : kilitli ? "Satırları gör" : "Satırları gör / düzenle"}
+        </Button>
+      )}
       {!kilitli && (
         <span className="flex flex-wrap items-center gap-2">
           <Input
@@ -58,18 +81,7 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
             size="sm"
             variant={k.yuklendi ? "outline" : "default"}
             disabled={!dosya || yukle.isPending}
-            onClick={() =>
-              dosya &&
-              yukle.mutate(
-                { kaynak: k.kaynak, dosya },
-                {
-                  onSuccess: () => {
-                    setDosya(null);
-                    setAnahtar((x) => x + 1);
-                  },
-                },
-              )
-            }
+            onClick={() => (elle > 0 ? setYuklemeOnayi(true) : gonder())}
           >
             <Upload className="size-3.5" /> {yukle.isPending ? "Yükleniyor…" : k.yuklendi ? "Yeniden yükle" : "Yükle"}
           </Button>
@@ -79,6 +91,22 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
         <p role="alert" className="w-full pl-8 text-sm text-destructive">
           {hataMetniVarsa(yukle.error)}
         </p>
+      )}
+      {mizanTur && mizanAcik && <SmmMizanBolumu donemId={donemId} tur={mizanTur} kilitli={kilitli} />}
+      {yuklemeOnayi && (
+        <OnayDiyalogu
+          baslik={`${k.ad} yeniden yüklensin mi?`}
+          onayMetni="Yükle ve elle satırları sil"
+          bekliyor={yukle.isPending}
+          hata={hataMetniVarsa(yukle.error)}
+          onOnayla={gonder}
+          onVazgec={() => setYuklemeOnayi(false)}
+        >
+          <p>
+            <b>{k.elle_uyari ?? `${elle} elle satır var, yükleme bunları siler`}.</b> Yükleme bu mizanı dosyadakilerle baştan yazar; elle
+            girdiğiniz ya da düzelttiğiniz satırlar kaybolur (eski değerler günlükte kalır).
+          </p>
+        </OnayDiyalogu>
       )}
     </li>
   );
@@ -183,6 +211,20 @@ export default function SmmVeri() {
             </p>
           )}
 
+          {v.grupsuz && v.grupsuz.kalem > 0 && (
+            <p className="flex flex-wrap items-center gap-2 rounded-xl bg-kart-sari px-4 py-3 text-sm">
+              <TriangleAlert className="size-4 text-amber-700" aria-hidden />
+              <span>
+                <b>{v.grupsuz.kalem} kalemin türü / mizan kodu boş</b>; bunlar SMM tablosuna girmiyor (alım{" "}
+                {paraBicimle(v.grupsuz.alim_tutar, "TL", 0)}, dönem başı {paraBicimle(v.grupsuz.dbs_tutar, "TL", 0)}). Örnek:{" "}
+                {v.grupsuz.ornek.join(", ")}.{" "}
+                <Link to={`/smm/stok?donem=${v.donem.id}`} className="font-semibold text-primary hover:underline">
+                  Stok ve Envanter'de türünü girin
+                </Link>
+              </span>
+            </p>
+          )}
+
           <section aria-label="Veri kaynakları" className="rounded-2xl border bg-card px-5 py-2 shadow-xs">
             <ul className="flex flex-col divide-y">
               <li className="flex items-center gap-3 py-3">
@@ -210,7 +252,8 @@ export default function SmmVeri() {
           </section>
           <p className="-mt-2 text-xs text-muted-foreground">
             Dosya, bugünkü SMM Excel'inin ilgili sayfası (HM-YM ALIŞ SATIŞ, İADELER, ÜRETİM, DSS, ŞAHİT, GİDER MİZAN, STOK MİZAN) ya da aynı
-            düzende tek sayfalık bir rapor olabilir. Yeniden yükleme o kaynağın eski verisinin yerine geçer.
+            düzende tek sayfalık bir rapor olabilir. Yeniden yükleme o kaynağın eski verisinin yerine geçer. Gider ve stok mizanı satırları
+            "Satırları gör / düzenle" ile elle de girilebilir.
           </p>
 
           <AyarKarti

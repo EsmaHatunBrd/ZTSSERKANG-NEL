@@ -33,3 +33,6 @@ docs/ozel/
 Thumbs.db
 desktop.ini
 frontend/e2e/.oturum.json
+# Sunucuya özel kurulum ayarları ve sunucu günlükleri
+kurulum/ayarlar.env
+veri/gunluk/

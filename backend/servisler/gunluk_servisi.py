@@ -26,7 +26,8 @@ _TABLO_TUR = {"urun": "urun", "uretim_hedefi": "hedef", "gider_havuzu": "havuz",
 _TABLO_ETIKET = {"urun": "Ürün kartı", "uretim_hedefi": "Üretim hedefi", "gider_havuzu": "Gider havuzu", "ambalaj_sinifi": "Ambalaj sınıfları",
                  "uretim_kapasitesi": "Üretim kapasitesi", "satis_gecmisi": "Satış geçmişi", "malzeme": "Malzeme kartı", "recete": "Reçete",
                  "senaryo": "Senaryo", "teklif": "Teklif turu", "liste_fiyati": "Liste fiyatı", "smm_donem": "SMM dönemi",
-                 "smm_recete": "SMM reçeteleri", "stok_devri": "Stokta kalan"}
+                 "smm_recete": "SMM reçeteleri", "stok_devri": "Stokta kalan", "smm_kalem": "SMM stok kalemi",
+                 "smm_mizan": "SMM mizan satırı"}
 _ISLEM_ETIKET = {"guncelle": "güncellendi", "olustur": "oluşturuldu", "ekle": "eklendi", "sil": "silindi", "pasiflestir": "pasifleştirildi",
                  "aile_degistir": "ailesi değişti", "kod_degistir": "kodu değişti", "toplu_yukle": "toplu yüklendi", "etkinlestir": "sürümü etkinleştirildi",
                  "kilitle": "kilitlendi", "kilit_ac": "kilidi açıldı", "kopyala": "kopyalanarak oluşturuldu",

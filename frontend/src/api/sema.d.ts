@@ -2324,6 +2324,54 @@ export interface paths {
         patch: operations["kalem_guncelle_api_v1_smm_donemler__donem_id__stok__kod__patch"];
         trace?: never;
     };
+    "/api/v1/smm/donemler/{donem_id}/mizan/{tur}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mizan
+         * @description Dönemin gider ya da stok mizanı satırları, toplamı ve elle satır sayısı.
+         */
+        get: operations["mizan_api_v1_smm_donemler__donem_id__mizan__tur__get"];
+        put?: never;
+        /**
+         * Mizan Satir Ekle
+         * @description Mizana elle satır ekler; hesap kodu varsa 409, dönem kilitliyse 409 (donem_kilitli).
+         */
+        post: operations["mizan_satir_ekle_api_v1_smm_donemler__donem_id__mizan__tur__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/donemler/{donem_id}/mizan/{tur}/{hesap}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Mizan Satir Sil
+         * @description Satırı mizandan çıkarır (eski değeri günlükte kalır); neden sorgu parametresidir.
+         */
+        delete: operations["mizan_satir_sil_api_v1_smm_donemler__donem_id__mizan__tur___hesap__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Mizan Satir Guncelle
+         * @description Satırın adını / bakiyesini değiştirir; neden zorunlu, günlüğe düşer, satır 'elle' işaretlenir.
+         */
+        patch: operations["mizan_satir_guncelle_api_v1_smm_donemler__donem_id__mizan__tur___hesap__patch"];
+        trace?: never;
+    };
     "/api/v1/urunler/{kod}/stok-devri": {
         parameters: {
             query?: never;
@@ -5889,6 +5937,20 @@ export interface components {
             /** Alacak */
             alacak: string;
         };
+        /**
+         * SmmGrupsuzKalemler
+         * @description Türü / mizan kodu boş olduğu için stok hesabı (150/151/152) bulunamayan, SMM tablosuna girmeyen hareketli kalemler.
+         */
+        SmmGrupsuzKalemler: {
+            /** Kalem */
+            kalem: number;
+            /** Alim Tutar */
+            alim_tutar: string;
+            /** Dbs Tutar */
+            dbs_tutar: string;
+            /** Ornek */
+            ornek: string[];
+        };
         /** SmmHavuz */
         SmmHavuz: {
             /** Anahtar */
@@ -6010,6 +6072,69 @@ export interface components {
             /** Birim */
             birim: string | null;
         };
+        /** SmmMizan */
+        SmmMizan: {
+            donem: components["schemas"]["SmmDonemCikis"];
+            /**
+             * Tur
+             * @enum {string}
+             */
+            tur: "gider" | "stok";
+            /** Ad */
+            ad: string;
+            /** Kayitlar */
+            kayitlar: components["schemas"]["SmmMizanSatiri"][];
+            /** Toplam */
+            toplam: string;
+            /** Elle */
+            elle: number;
+            /** Elle Uyari */
+            elle_uyari: string | null;
+        };
+        /** SmmMizanEkleGiris */
+        SmmMizanEkleGiris: {
+            /** Hesap */
+            hesap: string;
+            /** Ad */
+            ad?: string | null;
+            /** Bakiye */
+            bakiye: number | string;
+            /** Neden */
+            neden: string;
+        };
+        /** SmmMizanGuncel */
+        SmmMizanGuncel: {
+            donem: components["schemas"]["SmmDonemCikis"];
+            /**
+             * Tur
+             * @enum {string}
+             */
+            tur: "gider" | "stok";
+            /** Ad */
+            ad: string;
+            /** Kayitlar */
+            kayitlar: components["schemas"]["SmmMizanSatiri"][];
+            /** Toplam */
+            toplam: string;
+            /** Elle */
+            elle: number;
+            /** Elle Uyari */
+            elle_uyari: string | null;
+            /** Degisti */
+            degisti: string[];
+        };
+        /**
+         * SmmMizanGuncelleGiris
+         * @description Yalnız gönderilen alanlar değişir.
+         */
+        SmmMizanGuncelleGiris: {
+            /** Ad */
+            ad?: string | null;
+            /** Bakiye */
+            bakiye?: number | string | null;
+            /** Neden */
+            neden: string;
+        };
         /** SmmMizanKiyas */
         SmmMizanKiyas: {
             /** Hesap */
@@ -6022,6 +6147,17 @@ export interface components {
             sayim: string;
             /** Fark */
             fark: string;
+        };
+        /** SmmMizanSatiri */
+        SmmMizanSatiri: {
+            /** Hesap */
+            hesap: string;
+            /** Ad */
+            ad: string | null;
+            /** Bakiye */
+            bakiye: string;
+            /** Elle */
+            elle: boolean;
         };
         /** SmmOzeti */
         SmmOzeti: {
@@ -6562,6 +6698,7 @@ export interface components {
             ayarlar: components["schemas"]["SmmVeriAyarlari"];
             /** Turler */
             turler: string[];
+            grupsuz?: components["schemas"]["SmmGrupsuzKalemler"] | null;
         };
         /** SmmVeriKaynagi */
         SmmVeriKaynagi: {
@@ -6576,6 +6713,13 @@ export interface components {
             /** Dolu */
             dolu: number;
             son: components["schemas"]["SmmKaynakSon"] | null;
+            /**
+             * Elle
+             * @default 0
+             */
+            elle: number;
+            /** Elle Uyari */
+            elle_uyari?: string | null;
         };
         /** SmmYeniDonemCikis */
         SmmYeniDonemCikis: {
@@ -14266,6 +14410,224 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    mizan_api_v1_smm_donemler__donem_id__mizan__tur__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                donem_id: number;
+                tur: "gider" | "stok";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmMizan"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    mizan_satir_ekle_api_v1_smm_donemler__donem_id__mizan__tur__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path: {
+                donem_id: number;
+                tur: "gider" | "stok";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmmMizanEkleGiris"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmMizan"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    mizan_satir_sil_api_v1_smm_donemler__donem_id__mizan__tur___hesap__delete: {
+        parameters: {
+            query: {
+                neden: string;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path: {
+                donem_id: number;
+                tur: "gider" | "stok";
+                hesap: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmMizan"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    mizan_satir_guncelle_api_v1_smm_donemler__donem_id__mizan__tur___hesap__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path: {
+                donem_id: number;
+                tur: "gider" | "stok";
+                hesap: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmmMizanGuncelleGiris"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmMizanGuncel"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

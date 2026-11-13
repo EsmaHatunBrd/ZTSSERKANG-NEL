@@ -385,3 +385,48 @@ export function useSmmSil() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
   });
 }
+
+export type SmmMizanTuru = "gider" | "stok";
+
+/** Dönemin gider (720 / 730) ya da stok (150 / 151 / 152) mizanı satırları. */
+export function useSmmMizan(donemId: number | null, tur: SmmMizanTuru, acik = true) {
+  return useQuery({
+    queryKey: ["smm", "mizan", donemId, tur],
+    enabled: donemId !== null && acik,
+    queryFn: () =>
+      cagir(api.GET("/api/v1/smm/donemler/{donem_id}/mizan/{tur}", { params: { path: { donem_id: donemId as number, tur } } })),
+  });
+}
+
+export function useSmmMizanEkle(donemId: number, tur: SmmMizanTuru) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (g: { hesap: string; ad?: string | null; bakiye: string; neden: string }) =>
+      cagir(api.POST("/api/v1/smm/donemler/{donem_id}/mizan/{tur}", { params: { path: { donem_id: donemId, tur } }, body: g })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
+  });
+}
+
+export function useSmmMizanGuncelle(donemId: number, tur: SmmMizanTuru) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ hesap, ...g }: { hesap: string; ad?: string | null; bakiye?: string; neden: string }) =>
+      cagir(
+        api.PATCH("/api/v1/smm/donemler/{donem_id}/mizan/{tur}/{hesap}", { params: { path: { donem_id: donemId, tur, hesap } }, body: g }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
+  });
+}
+
+export function useSmmMizanSil(donemId: number, tur: SmmMizanTuru) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ hesap, neden }: { hesap: string; neden: string }) =>
+      cagir(
+        api.DELETE("/api/v1/smm/donemler/{donem_id}/mizan/{tur}/{hesap}", {
+          params: { path: { donem_id: donemId, tur, hesap }, query: { neden } },
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
+  });
+}

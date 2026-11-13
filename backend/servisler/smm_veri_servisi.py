@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from .donusum import decimal_str
 from .hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi
+from .smm_mizan_servisi import elle_sayisi, elle_uyarisi
 from .smm_servisi import MAKS_BAYT, SIFIR, _d, _metin, donem_adi, donem_cikis, donem_getir, kilit_denetle
 
 # kaynak -> ad, aranan sayfa, başlık satırını tanıtan metin (kod sütununda), kod sütunu, sıfırlanacak kalem alanları
@@ -78,8 +79,12 @@ def kaynak_yukle(s: Session, donem_id: int, kaynak: str, icerik: bytes, dosya_ad
     satirlar = _satirlar(icerik, kaynak)
     k = KAYNAKLAR[kaynak]
     okunan = 0
+    elle_silinen = elle_sayisi(d, kaynak)   # yükleme mizanı baştan yazar: elle satırlar ve işaretleri gider
     if kaynak in ("gider_mizan", "stok_mizan"):
         ozet = dict(d.excel_ozet or {})
+        isaret = dict(ozet.get("mizan_elle") or {})
+        isaret.pop("gider" if kaynak == "gider_mizan" else "stok", None)
+        ozet["mizan_elle"] = isaret
         if kaynak == "gider_mizan":
             hesaplar = {}
             for r in satirlar:
@@ -89,6 +94,7 @@ def kaynak_yukle(s: Session, donem_id: int, kaynak: str, icerik: bytes, dosya_ad
             if not ({"720", "730"} & set(hesaplar)):
                 raise DogrulamaHatasi("gider mizanında 720 / 730 bulunamadı")
             ozet["gider_mizan"] = hesaplar
+            ozet.pop("gider_mizan_ad", None)
             d.gider_mizan = {h: hesaplar[h] for h in ("720", "730") if h in hesaplar}
             okunan = len(hesaplar)
         else:
@@ -144,7 +150,8 @@ def kaynak_yukle(s: Session, donem_id: int, kaynak: str, icerik: bytes, dosya_ad
         okunan = len(toplam)
     _kaydet_kaynak(d, kaynak, dosya_adi, okunan, kullanici)
     s.add(m.DegisiklikKaydi(tablo="smm_donem", kayit_id=d.id, islem="veri_yukle", eski=None, kullanici=kullanici,
-                            yeni={"donem": donem_adi(d), "kaynak": k["ad"], "dosya": dosya_adi, "satir": okunan}))
+                            yeni={"donem": donem_adi(d), "kaynak": k["ad"], "dosya": dosya_adi, "satir": okunan,
+                                  **({"elle_silinen": elle_silinen} if elle_silinen else {})}))
     s.flush()
     return veri_durumu(s, donem_id)
 
@@ -164,11 +171,16 @@ def veri_durumu(s: Session, donem_id: int) -> dict:
         else:
             dolu = len(ozet.get("stok_mizan") or [])
         son = vk.get(kod)
+        elle = elle_sayisi(d, kod)
         kaynaklar.append({"kaynak": kod, "ad": k["ad"], "zorunlu": kod in ZORUNLU, "yuklendi": bool(son) or dolu > 0, "dolu": dolu,
-                          "son": son})
+                          "son": son, "elle": elle, "elle_uyari": elle_uyarisi(elle)})
     devir = d.devir_donem_id is not None or (d.kaynak_dosya is not None)
     dbs_dolu = sum(1 for x in kalemler if x.dbs_miktar or x.dbs_tutar)
     gm = d.gider_mizan or {}
+    # Stok hesabı (150/151/152) bulunamayan hareketli kalemler SMM tablosuna girmez: tür / mizan kodu boş (ör. alım raporuyla ilk kez gelen kalem)
+    from .smm_ozet_servisi import grup
+    grupsuz = [x for x in kalemler if grup(x.tur, x.mizan_kodu) is None
+               and (x.dbs_tutar or x.alim_tutar or x.iade_tutar or x.sayim_miktar)]
     return decimal_str({
         "donem": donem_cikis(d, len(kalemler)),
         "donem_basi": {"kaynak": "devir" if d.devir_donem_id else ("excel" if d.kaynak_dosya else "yok"), "dolu": dbs_dolu,
@@ -177,6 +189,8 @@ def veri_durumu(s: Session, donem_id: int) -> dict:
         "eksik": [x["ad"] for x in kaynaklar if x["zorunlu"] and not x["yuklendi"]],
         "ayarlar": {"finansman": d.finansman or SIFIR, "gider_720": _d(gm.get("720")), "gider_730": _d(gm.get("730"))},
         "turler": sorted({x.tur for x in kalemler if x.tur}),
+        "grupsuz": {"kalem": len(grupsuz), "alim_tutar": sum((x.alim_tutar or SIFIR for x in grupsuz), SIFIR),
+                    "dbs_tutar": sum((x.dbs_tutar or SIFIR for x in grupsuz), SIFIR), "ornek": sorted(x.kod for x in grupsuz)[:10]},
     })
 
 
@@ -194,10 +208,14 @@ def ayarlar_guncelle(s: Session, donem_id: int, finansman: Decimal | None = None
     gm = dict(d.gider_mizan or {})
     ozet = dict(d.excel_ozet or {})
     gmo = dict(ozet.get("gider_mizan") or {})
+    isaret = dict(ozet.get("mizan_elle") or {})
     for h, v in (("720", gider_720), ("730", gider_730)):
         if v is not None:
+            if h not in gmo or _d(gmo[h]) != v:
+                isaret["gider"] = sorted(set(isaret.get("gider") or []) | {h})   # elle girilen tutar mizan satırında işaretlenir
             gm[h] = str(v)
             gmo[h] = str(v)
+    ozet["mizan_elle"] = isaret
     d.gider_mizan = gm
     ozet["gider_mizan"] = gmo
     d.excel_ozet = ozet
