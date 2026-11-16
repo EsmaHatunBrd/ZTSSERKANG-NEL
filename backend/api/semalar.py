@@ -2626,3 +2626,36 @@ class OnemliMalzemelerCikis(BaseModel):
     hatali_urun: int                # hesaplanamadığı için hesaba girmeyen ürün sayısı
     satirlar: list[OnemliMalzemeSatiri]
     esik_icindeki_sayi: int
+
+
+# ---------------------------------------------------------------- Onay çıktısı (yeminli mali müşavir için) — 16.11.2026
+class OnayCiktisiEkleri(BaseModel):
+    """Çıktıya eklenecek bölümler; hepsi varsayılan açık. `mutabakat` yalnız SMM çıktısında kullanılır."""
+    kapak: bool = True
+    mutabakat: bool = True
+    elle_degisiklikler: bool = True
+    gunluk_ozeti: bool = True
+
+
+class OnayCiktisiImzalari(BaseModel):
+    """İmza tablosundaki adlar (isteğe bağlı); boşsa çizgi boş kalır."""
+    hazirlayan: str | None = Field(None, max_length=120)
+    kontrol_eden: str | None = Field(None, max_length=120)
+    onaylayan: str | None = Field(None, max_length=120)
+
+
+class OnayCiktisiFiyatGiris(BaseModel):
+    """Fiyat Çalışması onay çıktısı. urunler: yalnız bu ürün kodları (yoksa çalışmanın tüm ürünleri)."""
+    senaryo_id: int
+    urunler: list[str] | None = Field(None, min_length=1, max_length=2000)
+    tur: Literal["excel", "pdf"]
+    ekler: OnayCiktisiEkleri = Field(default_factory=OnayCiktisiEkleri)
+    imzalar: OnayCiktisiImzalari = Field(default_factory=OnayCiktisiImzalari)
+
+
+class OnayCiktisiSmmGiris(BaseModel):
+    """Maliyet muhasebesi (SMM) onay çıktısı: bir dönem."""
+    donem_id: int
+    tur: Literal["excel", "pdf"]
+    ekler: OnayCiktisiEkleri = Field(default_factory=OnayCiktisiEkleri)
+    imzalar: OnayCiktisiImzalari = Field(default_factory=OnayCiktisiImzalari)

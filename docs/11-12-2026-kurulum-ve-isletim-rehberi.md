@@ -28,6 +28,9 @@ powershell -ExecutionPolicy Bypass -File kurulum\<betik>.ps1
 - Kurulum ve güncelleme sırasında internet (PyPI ve npm paket depoları). Çalışırken internet gerekmez.
 - Disk: uygulama ~1 GB (bağımlılıklarla); veri küçük (veritabanı birkaç MB, yedekler için birkaç yüz MB ayırın).
 - Sunucuyu çalıştıracak bir Windows hesabı (proje klasörüne yazma yetkili). Otomatik başlatma için bu hesabın şifresi gerekir.
+- Onay çıktısı PDF'i (16.11.2026) `fpdf2` ile sunucuda üretilir (`pyproject.toml` bağımlılığı; `kur.ps1` kurar, tarayıcı gerekmez). Türkçe
+  karakterler için Windows'un Arial yazı tipini (`C:\Windows\Fonts\arial.ttf`, `arialbd.ttf`) kullanır; başka bir TrueType yazı tipi
+  istenirse `PDF_YAZI_TIPI` / `PDF_YAZI_TIPI_KALIN` ortam değişkenleriyle tam yolu verilir.
 
 ## 2. Kurulum
 

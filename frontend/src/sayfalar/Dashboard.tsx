@@ -23,6 +23,7 @@ import { GerceklesenSeridi } from "./dashboard/GerceklesenSeridi";
 import { VeriKontroluSeridi } from "./dashboard/VeriKontroluSeridi";
 import { GenelGrafikler } from "./dashboard/GenelGrafikler";
 import { MaliyetKartlariDugmesi } from "./dashboard/MaliyetKartlariDugmesi";
+import { OnayCiktisiFiyatDugmesi } from "./dashboard/OnayCiktisiFiyatDugmesi";
 import { OneCikanlar } from "./dashboard/OneCikanlar";
 import { UstKartlar } from "./dashboard/UstKartlar";
 import { UyariHucresi } from "./dashboard/UyariHucresi";
@@ -428,6 +429,7 @@ export default function Dashboard() {
               Excel&apos;e aktar
             </a>
             {senaryoId !== null && <MaliyetKartlariDugmesi senaryoId={senaryoId} />}
+            {senaryo && <OnayCiktisiFiyatDugmesi senaryo={senaryo} />}
           </>
         }
       />

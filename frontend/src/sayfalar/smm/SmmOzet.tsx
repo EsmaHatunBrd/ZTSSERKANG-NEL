@@ -2,6 +2,7 @@ import { CircleCheck, Download, Factory, Lock, PackageCheck, Sigma, TriangleAler
 import { hataMetni } from "@/api/istemci";
 import { smmFisAdresi, useSmmOzet } from "@/api/sorgular/smm";
 import type { SmmOzeti } from "@/api/tipler";
+import { OnayCiktisiDugmesi } from "@/bilesenler/OnayCiktisiDiyalogu";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { cn } from "@/lib/utils";
 import { Kart } from "@/sayfalar/dashboard/UstKartlar";
@@ -70,6 +71,15 @@ export default function SmmOzet() {
         altBaslik="Dönem sonu stok değerlemesi, satılan mamul maliyeti tablosu, stok mizanıyla karşılaştırma ve SMM fişi taslağı."
         eylemler={
           <span className="flex flex-wrap items-center gap-2">
+            {secim.donemId !== null && (
+              <OnayCiktisiDugmesi
+                kapsam={{
+                  modul: "smm",
+                  donemId: secim.donemId,
+                  donemler: secim.liste.map((d) => ({ id: d.id, ad: d.ad, kilitli: Boolean(d.kilitli) })),
+                }}
+              />
+            )}
             {secim.donemId !== null && (
               <a
                 href={smmFisAdresi(secim.donemId)}

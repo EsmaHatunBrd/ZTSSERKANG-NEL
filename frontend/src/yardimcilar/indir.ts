@@ -6,12 +6,13 @@ export function dosyaAdi(baslik: string | null): string | null {
 
 /**
  * Sunucunun ürettiği dosyayı indirir ve bitince döner (düğmede "Hazırlanıyor…" göstermek için; düz `<a download>` bitişi bildirmez).
- * Hata yanıtında sunucunun mesajıyla `Error` fırlatır.
+ * Hata yanıtında sunucunun mesajıyla `Error` fırlatır. `secenek`: POST ile indirilen dosyalar için yöntem, gövde ve başlıklar
+ * (ör. onay çıktısı).
  */
-export async function dosyaIndir(adres: string, varsayilanAd: string): Promise<void> {
+export async function dosyaIndir(adres: string, varsayilanAd: string, secenek: RequestInit = {}): Promise<void> {
   let yanit: Response;
   try {
-    yanit = await globalThis.fetch(adres, { credentials: "same-origin" });
+    yanit = await globalThis.fetch(adres, { credentials: "same-origin", ...secenek });
   } catch {
     throw new Error("Sunucuya ulaşılamadı");
   }

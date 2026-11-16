@@ -36,7 +36,7 @@ export const api = createClient<paths>({
 });
 
 /** Yazma sayılmayan POST uçları (hesaplama / önizleme): kullanıcı adı olmadan da çalışır. */
-const YAZMA_DEGIL = [/\/hesapla$/, /\/import\/fiyat-listesi$/];
+const YAZMA_DEGIL = [/\/hesapla$/, /\/import\/fiyat-listesi$/, /\/onay-ciktisi\/(fiyat|smm)$/];
 
 export const KULLANICI_YOK_MESAJI = "Önce üst bardan adınızı girin";
 
@@ -68,8 +68,8 @@ export function yanitDinle(dinleyici: (b: YanitBilgisi) => void): () => void {
   return () => yanitDinleyicileri.delete(dinleyici);
 }
 
-/** Hesaplama ve önizleme POST'ları veri yazmaz. */
-const SALT_OKUNUR_POST = [/\/hesapla$/, /\/onizle$/, /\/import\/fiyat-listesi$/];
+/** Hesaplama, önizleme ve onay çıktısı POST'ları veri yazmaz. */
+const SALT_OKUNUR_POST = [/\/hesapla$/, /\/onizle$/, /\/import\/fiyat-listesi$/, /\/onay-ciktisi\/(fiyat|smm)$/];
 
 function yanitiBildir(request: Request, response: Response): void {
   if (yanitDinleyicileri.size === 0) return;

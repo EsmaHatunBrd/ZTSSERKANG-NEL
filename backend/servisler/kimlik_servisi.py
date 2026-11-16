@@ -24,8 +24,8 @@ EN_KISA_SIFRE = 8
 _SCRYPT = (2 ** 14, 8, 1)
 _KULLANICI_ADI = re.compile(r"^[a-z0-9._-]{3,64}$")
 
-# Veri yazmayan POST'lar: her rol kullanabilir (önizleme hesabı, aktarım önizlemeleri).
-_SALT_OKUNUR_POST = re.compile(r"(/hesapla|/onizle|/import/fiyat-listesi)$")
+# Veri yazmayan POST'lar: her rol kullanabilir (önizleme hesabı, aktarım önizlemeleri, onay çıktısı indirme).
+_SALT_OKUNUR_POST = re.compile(r"(/hesapla|/onizle|/import/fiyat-listesi|^/api/v1/onay-ciktisi/(fiyat|smm))$")
 # Satın alma rolünün yazabildiği uçlar: malzeme kartı, fiyatları, fiyat listesi ve S.ALMA BF aktarımı.
 _SATIN_ALMA_YAZAR = re.compile(r"^/api/v1/(malzemeler(/[^/]+/(fiyatlar|pasif))?|import/fiyat-listesi/uygula|satin-alma/uygula|duzenleme-kilidi/ac)$")
 _YAZMA = ("POST", "PUT", "PATCH", "DELETE")

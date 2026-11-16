@@ -2703,6 +2703,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/onay-ciktisi/fiyat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fiyat
+         * @description Fiyat Çalışması onay çıktısı. Excel: Kapak · Teklif Kapak · Özet + ürün başına kart · Satın Alma Fiyatları · Parametreler ·
+         *     Gider Dağıtım · (ekler). PDF: aynı içerik. Çalışma kilitliyse KESİN, değilse TASLAK. Bilinmeyen çalışma 404; çalışmada olmayan ürün 422.
+         */
+        post: operations["fiyat_api_v1_onay_ciktisi_fiyat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onay-ciktisi/smm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Smm
+         * @description Maliyet muhasebesi onay çıktısı. Excel: Kapak · Stok ve Envanter · Üretim 20/40/50 · DSS · SMM Tablosu · Gider Mizanı ·
+         *     Stok Mizanı · Fiş Taslağı · (Mutabakat · ekler). PDF: aynı içerik. Dönem kilitliyse KESİN, değilse TASLAK. Bilinmeyen dönem 404.
+         */
+        post: operations["smm_api_v1_onay_ciktisi_smm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5129,6 +5171,76 @@ export interface components {
             kayitlar: components["schemas"]["MetinParametreCikis"][];
             /** Toplam */
             toplam: number;
+        };
+        /**
+         * OnayCiktisiEkleri
+         * @description Çıktıya eklenecek bölümler; hepsi varsayılan açık. `mutabakat` yalnız SMM çıktısında kullanılır.
+         */
+        OnayCiktisiEkleri: {
+            /**
+             * Kapak
+             * @default true
+             */
+            kapak: boolean;
+            /**
+             * Mutabakat
+             * @default true
+             */
+            mutabakat: boolean;
+            /**
+             * Elle Degisiklikler
+             * @default true
+             */
+            elle_degisiklikler: boolean;
+            /**
+             * Gunluk Ozeti
+             * @default true
+             */
+            gunluk_ozeti: boolean;
+        };
+        /**
+         * OnayCiktisiFiyatGiris
+         * @description Fiyat Çalışması onay çıktısı. urunler: yalnız bu ürün kodları (yoksa çalışmanın tüm ürünleri).
+         */
+        OnayCiktisiFiyatGiris: {
+            /** Senaryo Id */
+            senaryo_id: number;
+            /** Urunler */
+            urunler?: string[] | null;
+            /**
+             * Tur
+             * @enum {string}
+             */
+            tur: "excel" | "pdf";
+            ekler?: components["schemas"]["OnayCiktisiEkleri"];
+            imzalar?: components["schemas"]["OnayCiktisiImzalari"];
+        };
+        /**
+         * OnayCiktisiImzalari
+         * @description İmza tablosundaki adlar (isteğe bağlı); boşsa çizgi boş kalır.
+         */
+        OnayCiktisiImzalari: {
+            /** Hazirlayan */
+            hazirlayan?: string | null;
+            /** Kontrol Eden */
+            kontrol_eden?: string | null;
+            /** Onaylayan */
+            onaylayan?: string | null;
+        };
+        /**
+         * OnayCiktisiSmmGiris
+         * @description Maliyet muhasebesi (SMM) onay çıktısı: bir dönem.
+         */
+        OnayCiktisiSmmGiris: {
+            /** Donem Id */
+            donem_id: number;
+            /**
+             * Tur
+             * @enum {string}
+             */
+            tur: "excel" | "pdf";
+            ekler?: components["schemas"]["OnayCiktisiEkleri"];
+            imzalar?: components["schemas"]["OnayCiktisiImzalari"];
         };
         /**
          * OnemliMalzemeSatiri
@@ -16084,6 +16196,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DuzenlemeKilidiAcCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    fiyat_api_v1_onay_ciktisi_fiyat_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnayCiktisiFiyatGiris"];
+            };
+        };
+        responses: {
+            /** @description Excel (.xlsx) ya da PDF dosyası */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    "application/pdf": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    smm_api_v1_onay_ciktisi_smm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnayCiktisiSmmGiris"];
+            };
+        };
+        responses: {
+            /** @description Excel (.xlsx) ya da PDF dosyası */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    "application/pdf": string;
                 };
             };
             /** @description Not Found */

@@ -193,3 +193,9 @@ export type SmmKarsilastirma = Sema["SmmKarsilastirma"];
 export type SmmKarsilastirmaSatiri = Sema["SmmKarsilastirmaSatiri"];
 export type SmmMaliyetKarti = Sema["SmmMaliyetKarti"];
 export type SmmKartAsamasi = Sema["SmmKartAsamasi"];
+
+// Onay çıktısı (16.11.2026): yeminli mali müşavir için değerli Excel / PDF; POST gövdesi, yanıt dosya.
+export type OnayCiktisiFiyatGiris = Sema["OnayCiktisiFiyatGiris"];
+export type OnayCiktisiSmmGiris = Sema["OnayCiktisiSmmGiris"];
+export type OnayCiktisiEkleri = Sema["OnayCiktisiEkleri"];
+export type OnayCiktisiImzalari = Sema["OnayCiktisiImzalari"];

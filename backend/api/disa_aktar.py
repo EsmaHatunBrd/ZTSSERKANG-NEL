@@ -68,6 +68,16 @@ def teklif_kapak_xlsx(s: OturumDep, sen: SenaryoDep, tarih: date | None = None, 
     wb = Workbook()
     ws = wb.active
     ws.title = "Teklif Kapak"
+    teklif_kapak_sayfasi(ws, s, sen, tarih, tum)
+    tampon = BytesIO()
+    wb.save(tampon)
+    tampon.seek(0)
+    return StreamingResponse(tampon, media_type=XLSX,
+                             headers={"Content-Disposition": f'attachment; filename="teklif-kapak-{sen.id}.xlsx"'})
+
+
+def teklif_kapak_sayfasi(ws, s, sen, tarih: date | None = None, tum: bool = False, kodlar: set[str] | None = None) -> int:
+    """'Teklif Kapak' düzenini verilen sayfaya yazar (onay çıktısı da kullanır). kodlar: yalnız bu ürünler (None: hepsi). Döner: ürün satırı sayısı."""
     ws["B1"] = f"{sen.sezon.ad} SEZONU FİYAT ÇALIŞMALARI - {_buyuk(sen.ad)}"
     ws["G1"] = "GİDERLER"
     for h, v in TK_BASLIK_1.items():
@@ -83,7 +93,8 @@ def teklif_kapak_xlsx(s: OturumDep, sen: SenaryoDep, tarih: date | None = None, 
     for h, g in TK_GENISLIK.items():
         ws.column_dimensions[h].width = g
     hedefler = {k.urun_kodu: k.hedef_uretim for k in s.scalars(select(m.UretimKapasitesi).where(m.UretimKapasitesi.senaryo_id == sen.id))}
-    satirlar = sorted(dashboard_satirlari(s, sen.id, tarih, tum=tum), key=lambda r: (r["hat"] or "", r["kod"]))
+    satirlar = sorted((r for r in dashboard_satirlari(s, sen.id, tarih, tum=tum) if kodlar is None or r["kod"] in kodlar),
+                      key=lambda r: (r["hat"] or "", r["kod"]))
     for no, r in enumerate(satirlar, start=1):
         i = no + 3
         ws[f"A{i}"], ws[f"B{i}"], ws[f"C{i}"], ws[f"D{i}"] = r["hat"], no, r["kod"], r["ad"]
@@ -115,11 +126,7 @@ def teklif_kapak_xlsx(s: OturumDep, sen: SenaryoDep, tarih: date | None = None, 
         for h in "OT":
             ws[f"{h}{i}"].number_format = "#,##0"
     ws.freeze_panes = "A4"
-    tampon = BytesIO()
-    wb.save(tampon)
-    tampon.seek(0)
-    return StreamingResponse(tampon, media_type=XLSX,
-                             headers={"Content-Disposition": f'attachment; filename="teklif-kapak-{sen.id}.xlsx"'})
+    return len(satirlar)
 
 
 # ---------------------------------------------------------------- Analiz sonuçları (hedef fiyat, kârlılık, kur riski)
@@ -449,12 +456,23 @@ def _kart_sayfasi(ws, u, c, g: dict, sen, t: date, not_: str):
 def maliyet_kartlari_kitabi(s, sen, t: date) -> BytesIO:
     """Tüm senaryo üyesi ürünlerin maliyet kartları tek kitapta: "Özet" + hesaplanan ürün başına bir sayfa. Tek toplu hesap
     (`toplu_hesapla`); ürün sayfası ürün ekranının görünümünden (`_hesap_yaniti`) yazılır: yeni hesap kuralı yok, formül yok."""
-    hesaplar = hs.toplu_hesapla(s, sen.id, t)
-    urunler = {u.kod: u for u in hs.urunler(s, aktif=False)}
-    not_ = f"Değerler {t:%d.%m.%Y} itibarıyla uygulamadan alınmıştır (formül yoktur)."
     wb = Workbook()
     oz = wb.active
     oz.title = "Özet"
+    maliyet_kartlari_sayfalari(wb, oz, s, sen, t)
+    tampon = BytesIO()
+    wb.save(tampon)
+    tampon.seek(0)
+    return tampon
+
+
+def maliyet_kartlari_sayfalari(wb, oz, s, sen, t: date, kodlar: set[str] | None = None, kullanilan: set[str] | None = None) -> list:
+    """Özet sayfasını (`oz`, adı "Özet" olmalı: kartlardaki geri dönüş köprüsü) ve hesaplanan her ürünün kart sayfasını `wb`'ye yazar
+    (onay çıktısı da kullanır). kodlar: yalnız bu ürünler (None: senaryo üyelerinin hepsi). kullanilan: başka sayfa adlarıyla çakışmayı
+    önlemek için dolu verilebilir (casefold). Döner: (kod, hesap ya da hata) listesi."""
+    hesaplar = [(kod, c) for kod, c in hs.toplu_hesapla(s, sen.id, t) if kodlar is None or kod in kodlar]
+    urunler = {u.kod: u for u in hs.urunler(s, aktif=False)}
+    not_ = f"Değerler {t:%d.%m.%Y} itibarıyla uygulamadan alınmıştır (formül yoktur)."
     oz["A1"] = f"Maliyet kartları — {sen.sezon.ad} — {sen.ad}"
     oz["A1"].font = Font(bold=True, size=13)
     oz["A2"] = not_
@@ -465,7 +483,7 @@ def maliyet_kartlari_kitabi(s, sen, t: date) -> BytesIO:
         h.alignment = Alignment(wrap_text=True, vertical="center")
         oz.column_dimensions[get_column_letter(j)].width = genislik
     oz.freeze_panes = "A5"
-    kullanilan = {"özet"}
+    kullanilan = {"özet"} if kullanilan is None else kullanilan | {"özet"}
     for i, (kod, c) in enumerate(hesaplar, start=5):
         u = urunler[kod]
         oz.cell(row=i, column=1, value=kod)
@@ -486,10 +504,7 @@ def maliyet_kartlari_kitabi(s, sen, t: date) -> BytesIO:
         _ic_baglanti(oz.cell(row=i, column=14), ad, ad)
         _kart_sayfasi(wb.create_sheet(ad), u, c, g, sen, t, not_)
     oz.auto_filter.ref = f"A4:{get_column_letter(len(KART_OZET_SUTUNLARI))}{max(len(hesaplar), 1) + 4}"
-    tampon = BytesIO()
-    wb.save(tampon)
-    tampon.seek(0)
-    return tampon
+    return hesaplar
 
 
 @router.get("/disa-aktar/maliyet-kartlari", response_model=None, responses=XLSX_YANIT)

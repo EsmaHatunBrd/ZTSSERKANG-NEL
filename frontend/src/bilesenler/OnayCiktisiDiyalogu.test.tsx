@@ -1,0 +1,137 @@
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { http, HttpResponse, delay } from "msw";
+import { sunucu } from "@/test/msw/sunucu";
+import { OnayCiktisiDiyalogu, type OnayKapsami } from "./OnayCiktisiDiyalogu";
+
+beforeAll(() => sunucu.listen({ onUnhandledFrame: "error" }));
+afterEach(() => sunucu.resetHandlers());
+afterAll(() => sunucu.close());
+beforeEach(() => localStorage.clear());
+
+const FIYAT: OnayKapsami = {
+  modul: "fiyat",
+  senaryoId: 7,
+  senaryoAdi: "2026-2027 · Bütçe",
+  kilitli: false,
+  urunler: [
+    { kod: "U-1", ad: "Biber turşusu" },
+    { kod: "U-2", ad: "Salatalık turşusu" },
+    { kod: "U-3", ad: "Karışık turşu" },
+  ],
+};
+const SMM: OnayKapsami = {
+  modul: "smm",
+  donemId: 2,
+  donemler: [
+    { id: 2, ad: "Ekim 2026", kilitli: false },
+    { id: 1, ad: "Eylül 2026", kilitli: true },
+  ],
+};
+
+/** POST gövdelerini yakalar; dosya yanıtı döner. */
+function yakala(modul: "fiyat" | "smm", durum = 200) {
+  const govdeler: Record<string, unknown>[] = [];
+  sunucu.use(
+    http.post(`*/api/v1/onay-ciktisi/${modul}`, async ({ request }) => {
+      govdeler.push((await request.json()) as Record<string, unknown>);
+      await delay(300); // "Hazırlanıyor…" durumu yük altında da görülebilsin
+      if (durum !== 200) return HttpResponse.json({ hata: "bulunamadi", mesaj: "dönem bulunamadı", alanlar: {} }, { status: durum });
+      return new HttpResponse(new Uint8Array([37, 80, 68, 70]), {
+        headers: { "Content-Type": "application/pdf", "Content-Disposition": 'attachment; filename="onay-ciktisi-smm-2026-10.pdf"' },
+      });
+    }),
+  );
+  return govdeler;
+}
+
+function indirmeyiYakala() {
+  const adresler = URL as unknown as { createObjectURL?: unknown; revokeObjectURL?: unknown };
+  const eski = { c: adresler.createObjectURL, r: adresler.revokeObjectURL };
+  adresler.createObjectURL = vi.fn(() => "blob:deneme");
+  adresler.revokeObjectURL = vi.fn();
+  const indirilen: string[] = [];
+  const tikla = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+    indirilen.push(this.download);
+  });
+  return {
+    indirilen,
+    geriAl: () => {
+      tikla.mockRestore();
+      adresler.createObjectURL = eski.c;
+      adresler.revokeObjectURL = eski.r;
+    },
+  };
+}
+
+describe("OnayCiktisiDiyalogu", () => {
+  it("türler: Excel (rakamlar) seçili, PDF seçilebilir, formüllü Excel devre dışı ve 'Yakında'", async () => {
+    render(<OnayCiktisiDiyalogu kapsam={FIYAT} onKapat={() => {}} />);
+    expect(screen.getByRole("radio", { name: "Excel (rakamlar)" })).toBeChecked();
+    const formullu = screen.getByRole("radio", { name: /Excel \(formüllü\)/ });
+    expect(formullu).toBeDisabled();
+    expect(screen.getByText("Yakında")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: "PDF (yazdırmaya ve imzaya hazır)" }));
+    expect(screen.getByRole("radio", { name: "PDF (yazdırmaya ve imzaya hazır)" })).toBeChecked();
+    // ekler varsayılan açık; Fiyat'ta mutabakat yok
+    for (const ad of ["Kapak sayfası", "Elle yapılan değişiklikler", "Değişiklik günlüğü özeti (son 90 gün)"]) {
+      expect(screen.getByRole("checkbox", { name: ad })).toBeChecked();
+    }
+    expect(screen.queryByRole("checkbox", { name: "Mutabakat" })).not.toBeInTheDocument();
+  });
+
+  it("taslak / kesin uyarısı dönem seçimine göre değişir", async () => {
+    render(<OnayCiktisiDiyalogu kapsam={SMM} onKapat={() => {}} />);
+    expect(screen.getByTestId("onay-durumu")).toHaveTextContent("Bu dönem kapatılmadığı için çıktı TASLAK damgalı olur.");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Dönem" }), "1");
+    expect(screen.getByTestId("onay-durumu")).toHaveTextContent("Bu dönem kapatıldı: çıktı KESİN olarak işaretlenir.");
+    expect(screen.getByRole("checkbox", { name: "Mutabakat" })).toBeChecked();
+  });
+
+  it("Fiyat: seçili ürünler, ek ve imza seçimleri gövdeye doğru gider; 'Hazırlanıyor…' gösterilir", async () => {
+    const govdeler = yakala("fiyat");
+    const ind = indirmeyiYakala();
+    try {
+      render(<OnayCiktisiDiyalogu kapsam={FIYAT} onKapat={() => {}} />);
+      expect(screen.getByTestId("onay-durumu")).toHaveTextContent("Bu çalışma kapatılmadığı için çıktı TASLAK damgalı olur.");
+      await userEvent.click(screen.getByRole("radio", { name: /Yalnız seçtiğim ürünler/ }));
+      // seçim yokken indirilemez
+      expect(screen.getByRole("button", { name: "İndir" })).toBeDisabled();
+      await userEvent.type(screen.getByRole("textbox", { name: "Ürün ara" }), "turşusu");
+      expect(screen.queryByText("Karışık turşu")).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("checkbox", { name: /U-1/ }));
+      await userEvent.click(screen.getByRole("checkbox", { name: /U-2/ }));
+      await userEvent.click(screen.getByRole("checkbox", { name: "Elle yapılan değişiklikler" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "Hazırlayan" }), "  Ayşe Deneme ");
+      await userEvent.click(screen.getByRole("radio", { name: "PDF (yazdırmaya ve imzaya hazır)" }));
+      await userEvent.click(screen.getByRole("button", { name: "İndir" }));
+      expect(await screen.findByRole("button", { name: "Hazırlanıyor…" })).toBeDisabled();
+      await waitFor(() => expect(screen.getByRole("button", { name: "İndir" })).toBeEnabled());
+      expect(govdeler).toEqual([
+        {
+          senaryo_id: 7,
+          tur: "pdf",
+          urunler: ["U-1", "U-2"],
+          ekler: { kapak: true, mutabakat: true, elle_degisiklikler: false, gunluk_ozeti: true },
+          imzalar: { hazirlayan: "Ayşe Deneme" },
+        },
+      ]);
+      expect(ind.indirilen).toEqual(["onay-ciktisi-smm-2026-10.pdf"]);
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    } finally {
+      ind.geriAl();
+    }
+  });
+
+  it("SMM: tüm seçimlerle gövde; sunucu hatası role=alert ile gösterilir", async () => {
+    const govdeler = yakala("smm", 404);
+    render(<OnayCiktisiDiyalogu kapsam={SMM} onKapat={() => {}} />);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Kapak sayfası" }));
+    await userEvent.click(screen.getByRole("button", { name: "İndir" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("dönem bulunamadı");
+    expect(govdeler).toEqual([
+      { donem_id: 2, tur: "excel", ekler: { kapak: false, mutabakat: true, elle_degisiklikler: true, gunluk_ozeti: true }, imzalar: {} },
+    ]);
+  });
+});

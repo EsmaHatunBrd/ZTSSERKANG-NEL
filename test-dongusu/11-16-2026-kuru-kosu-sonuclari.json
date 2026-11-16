@@ -1,0 +1,2333 @@
+{
+ "senaryolar": {
+  "butce": 1,
+  "hesap_001_a": 1,
+  "hesap_001_b": 3,
+  "gercek": 2,
+  "ekim": 1,
+  "kasim": 2
+ },
+ "adimlar": {
+  "0.2 ilk genel direktör": {
+   "cikti": [
+    "Genel Direktör hesabı açıldı.",
+    "  kullanıcı adı: direktor"
+   ],
+   "hata": null
+  },
+  "0.3 şifre değişmeden yazma": {
+   "http": 403,
+   "kod": "sifre_degismeli"
+  },
+  "0.4 kullanıcılar": {
+   "kullanici": [
+    [
+     "direktor",
+     "genel_direktor"
+    ],
+    [
+     "muhasebe1",
+     "muhasebe"
+    ],
+    [
+     "satinalma1",
+     "satin_alma"
+    ],
+    [
+     "izleyici1",
+     "izleyici"
+    ]
+   ]
+  },
+  "1.2 tam kitap içe aktarma": {
+   "senaryo_id": 1,
+   "malzeme": 32,
+   "fiyat": 30,
+   "havuz": 11,
+   "ambalaj": 5,
+   "urun": 7,
+   "recete": 7,
+   "parametre": 17,
+   "atlanan": [
+    "001 (2)"
+   ],
+   "uyarilar": [],
+   "urun_parametre_farklari": [
+    {
+     "ad": "006",
+     "anahtar": "enflasyon",
+     "deger": "0.25"
+    }
+   ],
+   "kapasite": 7,
+   "revize": 2,
+   "satis_notu": 1
+  },
+  "1.3 genel bakış": {
+   "urun_sayisi": 7,
+   "urunler": {
+    "03.99.001": {
+     "maliyet_tl": "25.49",
+     "satis_tl": "30.58"
+    },
+    "03.99.002": {
+     "maliyet_tl": "39.91",
+     "satis_tl": "47.89"
+    },
+    "03.99.003": {
+     "maliyet_tl": "32.20",
+     "satis_tl": "38.64"
+    },
+    "03.99.004": {
+     "maliyet_tl": "29.89",
+     "satis_tl": "35.86"
+    },
+    "03.99.005": {
+     "maliyet_tl": "73.54",
+     "satis_tl": "88.25"
+    },
+    "03.99.006": {
+     "maliyet_tl": "84.19",
+     "satis_tl": "101.03"
+    },
+    "03.99.007": {
+     "maliyet_tl": "27.57",
+     "satis_tl": "33.08"
+    }
+   },
+   "anahtarlar": [
+    "ad",
+    "ambalaj_etiket",
+    "ambalaj_hacmi",
+    "enflasyon_durumu",
+    "enflasyon_fark_yuzde",
+    "faaliyet",
+    "finans",
+    "gecen_yil_tl",
+    "gecici_kod",
+    "gider_yuzdesi",
+    "gug",
+    "hat",
+    "hata",
+    "hedef_adet_maliyet_tl",
+    "id",
+    "kod",
+    "maliyet_eur",
+    "maliyet_tl",
+    "maliyet_tl_firesiz",
+    "maliyet_usd",
+    "maliyet_usd_firesiz",
+    "ortalama_maliyet_tl",
+    "recete_maliyeti",
+    "satis_tl",
+    "stok_etkisi",
+    "uretim_adedi",
+    "uyari_sayisi"
+   ]
+  },
+  "1.3 hesap anahtarları": {
+   "anahtarlar": [
+    "fiyatlar",
+    "fiyatlar_firesiz",
+    "hesap_tarihi",
+    "kullanilan_parametreler",
+    "notlar",
+    "parametreler",
+    "satirlar",
+    "satis_ortalamadan",
+    "senaryo_id",
+    "stok_devri",
+    "toplamlar",
+    "toplamlar_firesiz",
+    "uretim",
+    "urun_kodu",
+    "uyarilar"
+   ],
+   "sonuc": []
+  },
+  "1.3 hesap 03.99.001": {
+   "malzeme": "18.55",
+   "direkt_iscilik": "0.65",
+   "gug": "1.01",
+   "uretim_gideri": "1.66",
+   "diger": "1.03",
+   "giydirilmis": "21.24",
+   "finansman_tl": "4.25",
+   "maliyet_tl": "25.49",
+   "maliyet_usd": "0.51",
+   "maliyet_eur": "0.45",
+   "uyarilar": [],
+   "satir": 23
+  },
+  "1.3 hesap 03.99.002": {
+   "malzeme": "29.05",
+   "direkt_iscilik": "1.02",
+   "gug": "1.55",
+   "uretim_gideri": "2.57",
+   "diger": "1.64",
+   "giydirilmis": "33.26",
+   "finansman_tl": "6.65",
+   "maliyet_tl": "39.91",
+   "maliyet_usd": "0.81",
+   "maliyet_eur": "0.70",
+   "uyarilar": [
+    "99.20.015 (Test Shrink Kılıf): birim fiyatı 0"
+   ],
+   "satir": 23
+  },
+  "1.3 hesap 03.99.003": {
+   "malzeme": "23.74",
+   "direkt_iscilik": "0.85",
+   "gug": "1.21",
+   "uretim_gideri": "2.07",
+   "diger": "1.03",
+   "giydirilmis": "26.83",
+   "finansman_tl": "5.37",
+   "maliyet_tl": "32.20",
+   "maliyet_usd": "0.65",
+   "maliyet_eur": "0.56",
+   "uyarilar": [],
+   "satir": 21
+  },
+  "1.3 hesap 03.99.004": {
+   "malzeme": "22.28",
+   "direkt_iscilik": "0.68",
+   "gug": "1.02",
+   "uretim_gideri": "1.71",
+   "diger": "0.92",
+   "giydirilmis": "24.90",
+   "finansman_tl": "4.98",
+   "maliyet_tl": "29.89",
+   "maliyet_usd": "0.60",
+   "maliyet_eur": "0.52",
+   "uyarilar": [
+    "99.11.010 (Test Biber Salçası): birim fiyatı 0"
+   ],
+   "satir": 23
+  },
+  "1.3 hesap 03.99.005": {
+   "malzeme": "57.06",
+   "direkt_iscilik": "0.95",
+   "gug": "2.05",
+   "uretim_gideri": "3.00",
+   "diger": "1.23",
+   "giydirilmis": "61.29",
+   "finansman_tl": "12.26",
+   "maliyet_tl": "73.54",
+   "maliyet_usd": "1.49",
+   "maliyet_eur": "1.29",
+   "uyarilar": [],
+   "satir": 19
+  },
+  "1.3 hesap 03.99.006": {
+   "malzeme": "60.67",
+   "direkt_iscilik": "2.23",
+   "gug": "7.26",
+   "uretim_gideri": "9.49",
+   "diger": "0.00",
+   "giydirilmis": "70.16",
+   "finansman_tl": "14.03",
+   "maliyet_tl": "84.19",
+   "maliyet_usd": "1.70",
+   "maliyet_eur": "1.47",
+   "uyarilar": [],
+   "satir": 19
+  },
+  "1.3 hesap 03.99.007": {
+   "malzeme": "20.29",
+   "direkt_iscilik": "0.65",
+   "gug": "1.01",
+   "uretim_gideri": "1.66",
+   "diger": "1.03",
+   "giydirilmis": "22.98",
+   "finansman_tl": "4.60",
+   "maliyet_tl": "27.57",
+   "maliyet_usd": "0.56",
+   "maliyet_eur": "0.48",
+   "uyarilar": [],
+   "satir": 23
+  },
+  "1.4 veri kontrolü": {
+   "ozet": {
+    "hata": 0,
+    "dikkat": 2,
+    "tamam": 12,
+    "bilgi": 1
+   },
+   "kontroller": {
+    "hesaplanamayan": [
+     "tamam",
+     0,
+     []
+    ],
+    "parametre_eksik": [
+     "tamam",
+     0,
+     []
+    ],
+    "fiyatsiz": [
+     "dikkat",
+     2,
+     [
+      "99.11.010 · Test Biber Salçası",
+      "99.20.015 · Test Shrink Kılıf"
+     ]
+    ],
+    "eksik_fiyat_etkisi": [
+     "dikkat",
+     2,
+     [
+      "03.99.002 · Test Berrak Turşu 720 ml",
+      "03.99.004 · Test Domates Sos 340 g"
+     ]
+    ],
+    "hedef_alti": [
+     "tamam",
+     0,
+     []
+    ],
+    "malzeme_karti": [
+     "tamam",
+     0,
+     []
+    ],
+    "pay": [
+     "tamam",
+     0,
+     []
+    ],
+    "hat": [
+     "tamam",
+     0,
+     []
+    ],
+    "parametre_uyari": [
+     "tamam",
+     0,
+     []
+    ],
+    "recetesiz": [
+     "tamam",
+     0,
+     []
+    ],
+    "gecici_kod": [
+     "tamam",
+     0,
+     []
+    ],
+    "uretim_adetleri": [
+     "tamam",
+     0,
+     []
+    ],
+    "ambalaj_tutarsiz": [
+     "tamam",
+     0,
+     []
+    ],
+    "fiyat_egilimi": [
+     "tamam",
+     0,
+     []
+    ],
+    "elle_hucre": [
+     "bilgi",
+     3,
+     [
+      "03.99.003 · Test Közlenmiş Biber 370 ml",
+      "03.99.004 · Test Domates Sos 340 g",
+      "03.99.005 · Test Siyah Zeytin 500 g"
+     ]
+    ]
+   }
+  },
+  "1.4 malzemeler": {
+   "toplam": 32,
+   "anahtar": [
+    "kayitlar",
+    "toplam"
+   ]
+  },
+  "1.5 gider havuzları": {
+   "havuz": [
+    [
+     "amortisman",
+     "6000000.00",
+     null,
+     []
+    ],
+    [
+     "diger_gug",
+     "4000000.00",
+     "3200000",
+     [
+      "1.25"
+     ]
+    ],
+    [
+     "dogalgaz",
+     "1500000.00",
+     "1000000",
+     [
+      "1.5"
+     ]
+    ],
+    [
+     "dolum_iscilik",
+     "9720000.00",
+     "6000000",
+     [
+      "1.35",
+      "1.2"
+     ]
+    ],
+    [
+     "elektrik",
+     "3640000.00",
+     "2600000",
+     [
+      "1.4"
+     ]
+    ],
+    [
+     "endirekt_iscilik",
+     "5000000.00",
+     "4000000",
+     [
+      "1.25"
+     ]
+    ],
+    [
+     "etiket_iscilik",
+     "1800000.00",
+     null,
+     []
+    ],
+    [
+     "mal_kabul_gug",
+     "1200000.00",
+     null,
+     []
+    ],
+    [
+     "mal_kabul_iscilik",
+     "2400000.00",
+     null,
+     []
+    ],
+    [
+     "pazarlama",
+     "12500000.00",
+     "10000000",
+     [
+      "1.25"
+     ]
+    ],
+    [
+     "yonetim",
+     "10400000.00",
+     "8000000",
+     [
+      "1.3"
+     ]
+    ]
+   ]
+  },
+  "1.5 parametreler": {
+   "ornek": "{\"maliyet_sapma\": \"0.03\", \"teklif_kar.3\": \"0.14\", \"teklif_kar.2\": \"0.17\", \"teklif_kar.1\": \"0.2\", \"stok_ay.EUR\": \"6\", \"stok_ay.USD\": \"6\", \"stok_ay.TL\": \"6\", \"faiz.EUR\": \"0.06\", \"faiz.USD\": \"0.06\", \"faiz.TL\": \"0.4\", \"kur.CHF\": \"52\", \"kur.GBP\": \"56\", \"kur.EUR\": \"49\", \"kur.USD\": \"42.5\", \"vardiya_saati\": \"7.5\", \"satis_kar\": \"0.2\", \"enflasyon\": \"0.3\"}"
+  },
+  "2.1 düzenleme kilidi": {
+   "muhasebe": 201,
+   "izleyici": 403
+  },
+  "2.2 fiyat listesi önizleme": {
+   "degisen": 8,
+   "yeni": 0,
+   "ayni": 22,
+   "hatali": [],
+   "revize": 9,
+   "degisen_liste": [
+    [
+     "99.10.001",
+     "18.5",
+     "20.72"
+    ],
+    [
+     "99.10.004",
+     "14",
+     "16.1"
+    ],
+    [
+     "99.11.002",
+     "22.5",
+     "23.1"
+    ],
+    [
+     "99.11.006",
+     "38",
+     "44.84"
+    ],
+    [
+     "99.20.001",
+     "6.4",
+     "7.3"
+    ],
+    [
+     "99.20.002",
+     "9.1",
+     "10.1"
+    ],
+    [
+     "99.20.007",
+     "11.5",
+     "13.8"
+    ],
+    [
+     "99.20.011",
+     "95",
+     "133"
+    ]
+   ]
+  },
+  "2.2 fiyat listesi uygula": {
+   "yazilan": 8,
+   "kodlar": [
+    "99.10.001",
+    "99.10.004",
+    "99.11.002",
+    "99.11.006",
+    "99.20.001",
+    "99.20.002",
+    "99.20.007",
+    "99.20.011"
+   ],
+   "maliyet": [
+    [
+     "03.99.001",
+     "25.49",
+     "27.85"
+    ],
+    [
+     "03.99.002",
+     "39.91",
+     "42.77"
+    ],
+    [
+     "03.99.003",
+     "32.20",
+     "33.94"
+    ],
+    [
+     "03.99.004",
+     "29.89",
+     "31.84"
+    ],
+    [
+     "03.99.005",
+     "73.54",
+     "73.54"
+    ],
+    [
+     "03.99.006",
+     "84.19",
+     "86.39"
+    ],
+    [
+     "03.99.007",
+     "27.57",
+     "29.32"
+    ]
+   ]
+  },
+  "2.3 tek fiyat 99.10.001 20,72->21,50": {
+   "http": 201,
+   "maliyet_once": "27.85",
+   "maliyet_sonra": "28.07"
+  },
+  "2.4 büyük değişiklik onaysız": {
+   "http": 422,
+   "yanit": {
+    "hata": "dogrulama",
+    "mesaj": "fiyat bir önceki fiyattan eşikten fazla farklı; onaylayıp yeniden gönderin",
+    "alanlar": {
+     "eski_fiyat": "2.9",
+     "yeni_fiyat": "3.6",
+     "para_birimi": "TL",
+     "oran": "0.241379310344827586206896552",
+     "esik": "0.15"
+    },
+    "kod": "fiyat_sapma"
+   }
+  },
+  "2.4 büyük değişiklik onaylı": {
+   "http": 201
+  },
+  "2.5 satın alma önizleme": {
+   "yeni_malzeme": [
+    "99.20.016"
+   ],
+   "fiyat_yeni": [
+    "99.11.010",
+    "99.20.015",
+    "99.20.016"
+   ],
+   "fiyat_degisen": [],
+   "ayni": 0,
+   "hatali": []
+  },
+  "2.5 satın alma uygula": {
+   "malzeme_eklenen": 1,
+   "kart_guncellenen": 0,
+   "fiyat_yazilan": 3,
+   "kodlar": [
+    "99.11.010",
+    "99.20.015",
+    "99.20.016"
+   ],
+   "ayni": 0,
+   "revize_yazilan": 0
+  },
+  "2.5 veri kontrolü sonrası": {
+   "fiyatsiz": [
+    "tamam",
+    0,
+    []
+   ],
+   "ozet": {
+    "hata": 0,
+    "dikkat": 0,
+    "tamam": 13,
+    "bilgi": 2
+   }
+  },
+  "2.6 reçete anahtarları": {
+   "anahtar": [
+    "id",
+    "kaynak",
+    "satirlar",
+    "versiyon"
+   ],
+   "satir_anahtar": [
+    "ad",
+    "birim",
+    "birim_fiyat_elle",
+    "brut_miktar_elle",
+    "dugum_tipi",
+    "fire_kaynagi",
+    "fire_orani",
+    "fire_override",
+    "malzeme_kodu",
+    "miktar",
+    "para_birimi_elle",
+    "seviye",
+    "sira",
+    "zs_elle"
+   ],
+   "satir": 11
+  },
+  "2.6 reçete kaydet": {
+   "hesap_id": 1,
+   "yazilan": {
+    "urun": 0,
+    "hedef": 0,
+    "recete": 11,
+    "parametre": 0,
+    "havuz": 0
+   },
+   "maliyet_once": "28.07",
+   "maliyet_sonra": "28.34"
+  },
+  "2.7 elle hücre": {
+   "elle_maliyet": "28.65",
+   "listeye_donunce": "28.34",
+   "hesap_id": 2,
+   "hesap_id_2": 3
+  },
+  "2.8 gider elle formüle dön": {
+   "elle_hucre_once": [
+    "bilgi",
+    3,
+    [
+     "03.99.003 · Test Közlenmiş Biber 370 ml",
+     "03.99.004 · Test Domates Sos 340 g",
+     "03.99.005 · Test Siyah Zeytin 500 g"
+    ]
+   ],
+   "elle_hucre_sonra": [
+    "bilgi",
+    2,
+    [
+     "03.99.003 · Test Közlenmiş Biber 370 ml",
+     "03.99.005 · Test Siyah Zeytin 500 g"
+    ]
+   ],
+   "maliyet_once": "33.96",
+   "maliyet_sonra": "33.98"
+  },
+  "2.9 geçmiş hesaplar": {
+   "sayi": 3,
+   "ornek": [
+    {
+     "id": 3,
+     "hesap_tarihi": "2026-11-16",
+     "olusturan": "muhasebe1",
+     "maliyet_tl": "28.33699226479125979727140926",
+     "satis_tl": "34.00439071774951175672569111",
+     "son_tur_no": null,
+     "son_kar_orani": null,
+     "son_musteri": null,
+     "son_durum": null
+    }
+   ]
+  },
+  "2.9 kıyas": {
+   "yanit": "{\"a\": {\"id\": 1, \"urun_kodu\": \"03.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml\", \"senaryo_id\": 1, \"hesap_tarihi\": \"2026-11-16\", \"olusturma_zamani\": \"2026-11-16T06:59:59+00:00\", \"olusturan\": \"muhasebe1\"}, \"b\": {\"id\": 3, \"urun_kodu\": \"03.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml\", \"senaryo_id\": 1, \"hesap_tarihi\": \"2026-11-16\", \"olusturma_zamani\": \"2026-11-16T06:59:59+00:00\", \"olusturan\": \"muhasebe1\"}, \"uyari\": null, \"toplamlar\": [{\"alan\": \"malzeme_toplami\", \"etiket\": \"Malzeme toplamı\", \"a\": \"20.92827105772963727500569606\", \"b\": \"20.92827105772963727500569606\", \"fark\": \"0E-26\"}, {\"alan\": \"direkt_iscilik_toplami\", \"etiket\": \"Direkt işçilik\", \"a\": \"0.6456\", \"b\": \"0.6456\", \"fark\": \"0.0000\"}, {\"alan\": \"gug_toplami\", \"etiket\": \"GÜG\", \"a\": \"1.013383333333333333333333333\", \"b\": \"1.013383333333333333333333333\", \"fark\": \"0E-27\"}, {\"alan\": \"uretim_gideri_toplami\", \"etiket\": \"Üretim gideri\", \"a\": \"1.658983333333333333333333333\", \"b\": \"1.658983333333333333333333333\", \"fark\": \"0E-27\"}, {\"alan\": \"diger_giderler_toplami\", \"etiket\": \"Diğer giderler\", \"a\": \"1.026905829596412556053811659\", \"b\": \"1.026905829596412556053811659\", \"fark\": \"0E-27\"}, {\"alan\": \"giydirilmis_maliyet\", \"etiket\": \"Giydirilmiş"
+  },
+  "2.10 üretim adetleri önizleme": {
+   "yeni": [
+    "03.99.099"
+   ],
+   "degisen": [
+    {
+     "urun_kodu": "03.99.001",
+     "alan": "hedef_uretim",
+     "eski": "18000",
+     "yeni": "19800"
+    },
+    {
+     "urun_kodu": "03.99.004",
+     "alan": "hedef_uretim",
+     "eski": "20000",
+     "yeni": "18000"
+    }
+   ],
+   "ayni": 5,
+   "uyarilar": []
+  },
+  "2.10 üretim adetleri uygula": {
+   "eklenen": 1,
+   "guncellenen": 2,
+   "uyarilar": [],
+   "eslesmeyen": [
+    "dikkat",
+    1,
+    [
+     "03.99.099 · Test Eşleşmeyen Ürün (kartı yok)"
+    ]
+   ]
+  },
+  "2.11 gider önizleme": {
+   "degisen": [
+    [
+     "elektrik",
+     "3640000.0",
+     "4186000.000",
+     [
+      "1.4",
+      "1.15"
+     ]
+    ]
+   ],
+   "ambalaj": {
+    "eski_adet": 5,
+    "yeni_adet": 5,
+    "degisen": [
+     {
+      "ad": "720 ml",
+      "alan": "uretim_adedi",
+      "eski": "4000000",
+      "yeni": "3600000"
+     }
+    ]
+   }
+  },
+  "2.11 gider uygula": {
+   "havuz": 1,
+   "ambalaj": 5,
+   "havuz_kodlari": [
+    "elektrik"
+   ],
+   "maliyet": [
+    [
+     "03.99.001",
+     "28.34",
+     "28.40"
+    ],
+    [
+     "03.99.002",
+     "44.86",
+     "44.96"
+    ],
+    [
+     "03.99.003",
+     "33.94",
+     "34.01"
+    ],
+    [
+     "03.99.004",
+     "33.98",
+     "34.04"
+    ],
+    [
+     "03.99.005",
+     "73.54",
+     "73.65"
+    ],
+    [
+     "03.99.006",
+     "87.08",
+     "87.32"
+    ],
+    [
+     "03.99.007",
+     "29.32",
+     "29.38"
+    ]
+   ]
+  },
+  "2.12 reçete önizleme": {
+   "sayfalar": [
+    {
+     "sayfa": "004",
+     "kod": "03.99.004",
+     "ad": "Test Domates Sos 340 g",
+     "durum": "degisti",
+     "satir_sayisi": 11,
+     "elle_fiyat": 0,
+     "elle_brut": 0,
+     "eklenen": [
+      {
+       "kod": "99.11.004",
+       "ad": "Test Sarımsak",
+       "alanlar": []
+      }
+     ],
+     "cikan": [
+      {
+       "kod": "99.11.006",
+       "ad": "Test Toz Şeker",
+       "alanlar": []
+      }
+     ],
+     "degisen": [
+      {
+       "kod": "99.10.004",
+       "ad": "Test Domates",
+       "alanlar": [
+        "miktar"
+       ]
+      }
+     ],
+     "uyarilar": [],
+     "secili": true
+    }
+   ],
+   "hatali": []
+  },
+  "2.12 reçete uygula": {
+   "uygulanan": [
+    {
+     "sayfa": "004",
+     "kod": "03.99.004",
+     "versiyon": 2
+    }
+   ],
+   "yeni_urun": 0,
+   "maliyet_once": "34.04",
+   "maliyet_sonra": "33.69"
+  },
+  "2.13 satış geçmişi": {
+   "eklenen": 255,
+   "hatalar": [],
+   "toplam": 255
+  },
+  "2.14 stok devri önizleme": {
+   "yeni": 3,
+   "degisen": 0,
+   "hatalar": []
+  },
+  "2.14 stok devri uygula": {
+   "eklenen": 3,
+   "guncellenen": 0,
+   "ayni": 0
+  },
+  "2.14 stok kartı 03.99.001": {
+   "urun_kodu": "03.99.001",
+   "adet": "25000",
+   "birim_maliyet": "15.8",
+   "enflasyon": null,
+   "uretim_adedi": null,
+   "enflasyon_kullanilan": "0.3",
+   "uretim_adedi_kullanilan": "588200",
+   "uretim_adedi_kaynagi": "satis_gecmisi",
+   "guncel_stok_maliyeti": "20.54",
+   "bu_yil_maliyet": "28.40343333021739298485448070",
+   "ortalama_maliyet": "28.08284325641531401450000905",
+   "stok_payi": "0.04076973255055446836268754077",
+   "stok_etkisi": true,
+   "aciklama": null
+  },
+  "2.14 stok kartı 03.99.003": {
+   "urun_kodu": "03.99.003",
+   "adet": "8000",
+   "birim_maliyet": "17.2",
+   "enflasyon": "0.35",
+   "uretim_adedi": "120000",
+   "enflasyon_kullanilan": "0.35",
+   "uretim_adedi_kullanilan": "120000",
+   "uretim_adedi_kaynagi": "elle",
+   "guncel_stok_maliyeti": "23.220",
+   "bu_yil_maliyet": "34.01038772838672936929383998",
+   "ortalama_maliyet": "33.33598849536255878371297498",
+   "stok_payi": "0.0625",
+   "stok_etkisi": true,
+   "aciklama": null
+  },
+  "3.1 teklif 1": {
+   "id": 1,
+   "tur": null,
+   "durum": "taslak",
+   "kar_orani": "0.20",
+   "fiyat_tl": "34.00439071774951175672569111",
+   "fiyat_usd": "0.6867553419467058256750482714",
+   "anahtar": [
+    "durum",
+    "fiyat_eur",
+    "fiyat_tl",
+    "fiyat_usd",
+    "id",
+    "kar_orani",
+    "maliyet_hesabi_id",
+    "musteri",
+    "notu",
+    "olusturan",
+    "tur_no"
+   ]
+  },
+  "3.1 teklif 2": {
+   "id": 2,
+   "tur": null,
+   "durum": "taslak",
+   "kar_orani": "0.17",
+   "tum": {
+    "id": 2,
+    "maliyet_hesabi_id": 3,
+    "tur_no": 2,
+    "kar_orani": "0.17",
+    "fiyat_tl": "33.15428094980577396280754883",
+    "fiyat_usd": "0.6695864583980381800331720646",
+    "fiyat_eur": "0.5807637649370739316614247500",
+    "musteri": "Test Market A.Ş.",
+    "durum": "taslak",
+    "notu": "2. tur",
+    "olusturan": "muhasebe1"
+   }
+  },
+  "3.2 durum": {
+   "gonderildi": {
+    "id": 1,
+    "maliyet_hesabi_id": 3,
+    "tur_no": 1,
+    "kar_orani": "0.20",
+    "fiyat_tl": "34.00439071774951175672569111",
+    "fiyat_usd": "0.6867553419467058256750482714",
+    "fiyat_eur": "0.5956551435252040324732561538",
+    "musteri": "Test Market A.Ş.",
+    "durum": "gonderildi",
+    "notu": "1. tur",
+    "olusturan": "muhasebe1"
+   },
+   "red": 200,
+   "kabul": 200
+  },
+  "3.3 teklifler süzgeç None": {
+   "toplam": 2
+  },
+  "3.3 teklifler süzgeç kabul": {
+   "toplam": 1
+  },
+  "3.3 teklifler süzgeç red": {
+   "toplam": 1
+  },
+  "3.3 teklifler süzgeç taslak": {
+   "toplam": 0
+  },
+  "3.4 teklif kapak": {
+   "http": 200,
+   "bayt": 7195,
+   "tur": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  },
+  "3.5 kayıtlı hesap": {
+   "http": 200
+  },
+  "4.1 ya olursa kur +10": {
+   "ozet": "{\"varsayimlar\": {\"kur\": \"0.10\", \"ambalaj\": \"0\", \"hammadde\": \"0\", \"adet\": \"0\"}, \"marj_esigi\": \"0.10\", \"ozet\": {\"urun_sayisi\": 7, \"etkilenen\": 5, \"ort_fark_yuzde\": \"0.0007279337620239520127850147143\", \"en_yuksek_fark_yuzde\": \"0.002788570190836520586089336\", \"esik_alti\": 0, \"hatali\": 0}}",
+   "ilk": "{\"kod\": \"03.99.004\", \"ad\": \"Test Domates Sos 340 g\", \"hat\": \"Sos Hattı\", \"hata\": null, \"maliyet_once\": \"33.68500470551964127584562546\", \"maliyet_sonra\": \"33.77893770551964127584562546\", \"fark_tl\": \"0.09393300000000000000000000\", \"fark_yuzde\": \"0.002788570190836520586089336\", \"satis_once\": \"40.42200564662356953101475055\", \"satis_sonra\": \"40.53472524662356953101475055\", \"kar_orani\": \"0.2\", \"mevcut_fiyatla_kar\": \"0.196663021170687049938900203\", \"esik_alti\": false}"
+  },
+  "4.2 zam etkisi kavanoz 370 %10": {
+   "ozet": "{\"malzeme\": {\"kod\": \"99.20.001\", \"ad\": \"Test Kavanoz 370 ml\", \"tip\": \"0008-Ambalaj Malzeme\", \"birim\": \"AD\", \"fiyat\": \"7.3\", \"para_birimi\": \"TL\", \"yeni_fiyat\": \"8.030\"}, \"oran\": \"0.10\", \"marj_esigi\": \"0.10\", \"ozet\": {\"urun_sayisi\": 3, \"etkilenen\": 3, \"ort_fark_yuzde\": \"0.03782319966929045993513237833\", \"en_yuksek_fark_yuzde\": \"0.040498731858562471990732005\", \"esik_alti\": 0, \"hatali\": 0}}",
+   "kayit": "[{\"kod\": \"03.99.001\", \"ad\": \"Test Berrak Turşu 370 ml\", \"hat\": \"Kavanoz Hattı\", \"hata\": null, \"maliyet_once\": \"28.40343333021739298485448070\", \"maliyet_sonra\": \"29.55373636052042328788478372\", \"fark_tl\": \"1.15030303030303030303030302\", \"fark_yuzde\": \"0.040498731858562471990732005\", \"satis_once\": \"34.08411999626087158182537684\", \"satis_sonra\": \"35.46448363262450794546174046\", \"kar_orani\": \"0.2\", \"mevcut_fiyatla_kar\": \"0.153293092300586219306569480\", \"esik_alti\": false}, {\"kod\": \"03.99.007\", \"ad\": \"Test Berrak Kornişon 370 ml\", \"hat\": \"Kavanoz Hattı\", \"hata\": null, \"maliyet_once\": \"29.38287382645799448861387919\", \"maliyet_sonra\": \"30.53317685676102479164418221\", \"fark_tl\": \"1.15030303030303030303030302\", \"fark_yuzde\": \"0.039148758460352937548614085\", \"satis_once\": \"35.25944859174959338633665503\", \"satis_sonra\": \"36.63981222811322974997301865\", \"kar_orani\": \"0.2\", \"mevcut_fiyatla_kar\": \"0.1"
+  },
+  "4.3 kur riski": {
+   "ozet": "{\"oran\": \"0.10\", \"kurlar\": {\"CHF\": \"52\", \"EUR\": \"49\", \"GBP\": \"56\", \"USD\": \"42.5\"}, \"adet_kaynagi\": \"satis_gecmisi\", \"ozet\": {\"urun_sayisi\": 7, \"doviz_payi_ort\": \"0.007818069096727009628689865516\", \"yillik_maliyet\": \"61890460.90710133050945903592\", \"yillik_etki\": \"48386.38998000000000000000000\", \"adetsiz_urun\": 0, \"hatali\": 0}, \"para_birimleri\": [{\"para_birimi\": \"EUR\", \"yillik_etki\": \"39617.24088000000000000000000\", \"pay\": \"0.8187682713336408321983271875\"}, {\"para_birimi\": \"USD\", \"yillik_etki\": \"8769.149100000000000000000000\", \"pay\": \"0.1812317286663591678016728125\"}, {\"para_birimi\": \"CHF\", \"yillik_etki\": \"0E-26\", \"pay\": \"0.000\"}, {\"para_birimi\": \"GBP\", \"yillik_etki\": \"0E-26\", \"pay\": \"0.000\"}]}"
+  },
+  "4.4 kârlılık": {
+   "ozet": "{\"esik_marj\": \"0.10\", \"esik_adet\": \"125400\", \"adet_kaynagi\": \"satis_gecmisi\", \"ozet\": {\"yuksek_adet_yuksek_marj\": 2, \"yuksek_adet_dusuk_marj\": 2, \"dusuk_adet_yuksek_marj\": 1, \"dusuk_adet_dusuk_marj\": 2, \"adetsiz\": 0, \"hatali\": 0}}",
+   "kayitlar": [
+    [
+     "03.99.001",
+     "yuksek_adet_yuksek_marj",
+     "0.264642053302043247608577094",
+     "613200",
+     "satis_gecmisi"
+    ],
+    [
+     "03.99.005",
+     "dusuk_adet_yuksek_marj",
+     "0.384894739944533727719623214",
+     "119000",
+     "satis_gecmisi"
+    ],
+    [
+     "03.99.006",
+     "dusuk_adet_dusuk_marj",
+     "0.073848064867920714033459798",
+     "113900",
+     "satis_gecmisi"
+    ],
+    [
+     "03.99.007",
+     "yuksek_adet_yuksek_marj",
+     "0.163180970073978875300983019",
+     "125400",
+     "satis_gecmisi"
+    ],
+    [
+     "03.99.002",
+     "yuksek_adet_dusuk_marj",
+     "0.076850933770861827132378768",
+     "126400",
+     "satis_gecmisi"
+    ],
+    [
+     "03.99.003",
+     "dusuk_adet_dusuk_marj",
+     "0.013236283092152658722138502",
+     "118100",
+     "satis_gecmisi"
+    ],
+    [
+     "03.99.004",
+     "yuksek_adet_dusuk_marj",
+     "-0.1358877713018003870766447785",
+     "367500",
+     "satis_gecmisi"
+    ]
+   ]
+  },
+  "4.5 hedef fiyat": {
+   "ozet": "{\"marj\": \"0.25\", \"bolen_yurtici\": \"0.63\", \"bolen_yurtdisi\": \"0.90\", \"yuvarlama\": \"0.01\", \"adet_kaynagi\": \"satis_gecmisi\", \"ozet\": {\"urun_sayisi\": 7, \"zam_gereken\": 5, \"fiyatsiz\": 0, \"hatali\": 0, \"yillik_ek_gelir\": \"8783861.862192109875637335918\", \"ort_zam\": \"0.1049266978270718106440464911\"}}",
+   "kayitlar": [
+    [
+     "03.99.004",
+     "29.10762448979591836734693878",
+     "42.10625588189955159480703182",
+     "0.446571357846824079296948747"
+    ],
+    [
+     "03.99.006",
+     "93.76931518876207199297629500",
+     "109.1510501537935748462064251",
+     "0.164038043085494886624041105"
+    ],
+    [
+     "03.99.002",
+     "48.41535601265822784810126582",
+     "56.20016022449806115767888620",
+     "0.160792047254686941458514267"
+    ],
+    [
+     "03.99.003",
+     "34.46055884843353090601185436",
+     "42.51298466048341171161729998",
+     "0.233670784257055624253525273"
+    ],
+    [
+     "03.99.007",
+     "34.17759968102073365231259968",
+     "36.72859228307249311076734899",
+     "0.074639314225110983529421572"
+    ],
+    [
+     "03.99.001",
+     "35.92017624755381604696673190",
+     "35.50429166277174123106810088",
+     "-0.0115780218314044822402696734"
+    ],
+    [
+     "03.99.005",
+     "101.9956739495798319327731092",
+     "92.06085398380606334702100434",
+     "-0.0974043268804215276575167712"
+    ]
+   ]
+  },
+  "4.6 fiyat eğilimi": {
+   "ozet": "{\"senaryo_id\": 1, \"ay\": 12, \"tarih\": \"2026-11-16\", \"pencere_basi\": \"2025-11-16\", \"enflasyon_yuzde\": \"30.0\", \"satirlar\": [{\"kod\": \"99.20.011\", \"ad\": \"Test Streç Film\", \"tip\": \"0008-Ambalaj Malzeme\", \"para_birimi\": \"TL\", \"ilk_fiyat\": \"95\", \"ilk_tarih\": \"2026-06-01\", \"son_fiyat\": \"133\", \"son_tarih\": \"2026-11-15\", \"kayit_sayisi\": 2, \"degisim_yuzde\": \"40.00\", \"yillik_yuzde\": \"40.00\", \"esik_yuzde\": \"30.0\", \"enflasyonu_asiyor\": true, \"kullanan_urun_sayisi\": 0}, {\"kod\": \"99.20.004\", \"ad\": \"Test Kapak 82 mm\", \"tip\": \"0008-Ambalaj Malzeme\", \"para_birimi\": \"TL\", \"ilk_fiyat\": \"2.9\", \"ilk_tarih\": \"2026-06-01\", \"son_fiyat\": \"3.6\", \"son_tarih\": \"2026-11-16\", \"kayit_sayisi\": 2, \"degisim_yuzde\": \"24.14\", \"yillik_yuzde\": \"24.14\", \"esik_yuzde\": \"30.0\", \"enflasyonu_asiyor\": false, \"kullanan_urun_sayisi\": 1}, {\"kod\": \"99.20.007\", \"ad\": \"Test Koli 12'li\", \"tip\": \"0008-Ambalaj Malzeme\", \"para_birimi\": \"TL\", \"i",
+   "kayitlar": [
+    [
+     "99.20.011",
+     "40.00",
+     true
+    ],
+    [
+     "99.20.004",
+     "24.14",
+     false
+    ],
+    [
+     "99.20.007",
+     "20.00",
+     false
+    ],
+    [
+     "99.11.006",
+     "18.00",
+     false
+    ],
+    [
+     "99.10.001",
+     "16.22",
+     false
+    ],
+    [
+     "99.10.004",
+     "15.00",
+     false
+    ],
+    [
+     "99.20.001",
+     "14.06",
+     false
+    ],
+    [
+     "99.20.002",
+     "10.99",
+     false
+    ],
+    [
+     "99.11.002",
+     "10.00",
+     false
+    ],
+    [
+     "99.20.003",
+     "6.98",
+     false
+    ],
+    [
+     "99.10.002",
+     "0",
+     false
+    ],
+    [
+     "99.10.003",
+     "0",
+     false
+    ],
+    [
+     "99.10.005",
+     "0",
+     false
+    ],
+    [
+     "99.10.006",
+     "0",
+     false
+    ],
+    [
+     "99.10.007",
+     "0",
+     false
+    ]
+   ]
+  },
+  "4.7 önemli malzemeler": {
+   "ozet": "{\"senaryo_id\": 1, \"esik\": \"0.8\", \"tarih\": \"2026-11-16\", \"adet_kaynagi\": \"satis_gecmisi\", \"toplam_tutar_tl\": \"46026345.91174049010598963980\", \"adetsiz_urun\": 0, \"hatali_urun\": 0, \"satirlar\": [{\"sira\": 1, \"kod\": \"99.20.001\", \"ad\": \"Test Kavanoz 370 ml\", \"tip\": \"0008-Ambalaj Malzeme\", \"para_birimi\": \"TL\", \"birim\": \"AD\", \"yillik_miktar\": \"865353.5353535353535353535353\", \"yillik_tutar_tl\": \"8212205.050505050505050505050\", \"pay_yuzde\": \"17.84\", \"kumulatif_yuzde\": \"17.84\", \"esik_icinde\": true, \"kullanan_urun_sayisi\": 3, \"birim_fiyat\": \"7.3\"}, {\"sira\": 2, \"kod\": \"99.10.001\", \"ad\": \"Test Taze Hıyar\", \"tip\": \"0001-Hammadde\", \"para_birimi\": \"TL\", \"birim\": \"KG\", \"yillik_miktar\": \"290928.4210526315789473684211\", \"yillik_tutar_tl\": \"6254961.052631578947368421053\", \"pay_yuzde\": \"13.59\", \"kumulatif_yuzde\": \"31.43\", \"esik_icinde\": true, \"kullanan_urun_sayisi\": 3, \"birim_fiyat\": \"21.5\"}, {\"sira\": 3, \"kod\"",
+   "kayitlar": [
+    [
+     "99.20.001",
+     "17.84",
+     "17.84",
+     true
+    ],
+    [
+     "99.10.001",
+     "13.59",
+     "31.43",
+     true
+    ],
+    [
+     "99.10.005",
+     "13.02",
+     "44.45",
+     true
+    ],
+    [
+     "99.20.003",
+     "8.03",
+     "52.48",
+     true
+    ],
+    [
+     "99.10.004",
+     "7.93",
+     "60.42",
+     true
+    ],
+    [
+     "99.20.009",
+     "7.50",
+     "67.91",
+     true
+    ],
+    [
+     "99.20.010",
+     "6.08",
+     "74.00",
+     true
+    ],
+    [
+     "99.20.007",
+     "3.98",
+     "77.97",
+     true
+    ],
+    [
+     "99.11.002",
+     "3.96",
+     "81.93",
+     true
+    ],
+    [
+     "99.20.002",
+     "3.64",
+     "85.57",
+     false
+    ],
+    [
+     "99.10.003",
+     "2.23",
+     "87.81",
+     false
+    ],
+    [
+     "99.10.002",
+     "1.55",
+     "89.36",
+     false
+    ]
+   ]
+  },
+  "4.8 liste yükle": {
+   "yazilan": 18,
+   "hatalar": []
+  },
+  "4.8 liste çalışması": {
+   "ozet": "{\"yil\": 2026, \"pazar\": \"yurtici\", \"bolen\": \"0.63\", \"bolenler\": {\"yurtici\": \"0.63\", \"yurtdisi\": \"0.90\"}, \"bolen_kayitli\": false, \"varsayilan_bolen\": \"0.63\", \"yuvarlama\": \"0.01\", \"yuvarlama_kayitli\": false, \"varsayilan_yuvarlama\": \"0.01\", \"yuvarlama_secenekleri\": [\"0.01\", \"0.05\", \"0.10\", \"0.25\", \"0.50\", \"1\", \"5\"], \"berrak_disi\": 4, \"ornek_var\": false, \"ozet\": {\"liste_artis_ort\": \"0.1056541027562301831533894107\", \"maliyet_artis_ort\": \"0.275325099554736291444993731\", \"fark\": \"-0.1696709967985061082916043203\", \"karsilastirilan\": 3, \"urun_sayisi\": 3, \"gerisinde\": 3}, \"yillar\": [{\"yil\": 2024, \"liste_artis_ort\": \"0.379980466153168008914742142\", \"maliyet_artis_ort\": \"0.350230575346942525985608904\", \"urun_sayisi\": 3}, {\"yil\": 2025, \"liste_artis_ort\": \"0.4200379463113646242666491393\", \"maliyet_artis_ort\": \"0.4598799584295973983337074857\", \"urun_sayisi\": 3}, {\"yil\": 2026, \"liste_artis_ort\": \"0.10565",
+   "kayitlar": [
+    [
+     "03.99.001",
+     "54.10",
+     "49.9",
+     "0.084168336673346693386773547",
+     "0.291065151373517862947930941"
+    ],
+    [
+     "03.99.002",
+     "85.64",
+     "72.9",
+     "0.174759945130315500685871056",
+     "0.284575090845669969318374542"
+    ],
+    [
+     "03.99.007",
+     "55.97",
+     "52.9",
+     "0.058034026465028355387523629",
+     "0.250335056445021042068675710"
+    ]
+   ]
+  },
+  "4.7 önemli malzemeler excel": {
+   "http": 200,
+   "bayt": 9303
+  },
+  "5.1 gerçekleşen içe aktarma": {
+   "senaryo_id": 2,
+   "malzeme": 32,
+   "fiyat": 30,
+   "urun": 7,
+   "kart_farklari": [],
+   "uyarilar": [],
+   "atlanan": [
+    "001 (2)"
+   ]
+  },
+  "5.2 bütçe vs gerçekleşen": {
+   "ozet": "{\"a\": {\"id\": 1, \"ad\": \"Test Bütçe 2026-2027\", \"tur\": \"fiyat_calismasi\", \"sezon\": \"2026-2027\"}, \"b\": {\"id\": 2, \"ad\": \"Test Gerçekleşen 2026-2027\", \"tur\": \"gerceklesen\", \"sezon\": \"2026-2027\"}, \"esik\": \"5\", \"tarih\": \"2026-11-16\", \"satirlar\": [{\"kod\": \"03.99.001\", \"ad\": \"Test Berrak Turşu 370 ml\", \"hat\": \"Kavanoz Hattı\", \"ambalaj_hacmi\": \"370\", \"gecici_kod\": false, \"durum\": \"iki\", \"hata\": null, \"alanlar\": {\"recete_maliyeti\": {\"a\": \"20.92827105772963727500569606\", \"b\": \"17.11323740331314100185528757\", \"fark\": \"-3.81503365441649627315040849\", \"fark_yuzde\": \"-18.22909137545527742626579191\"}, \"gug\": {\"a\": \"1.684008333333333333333333333\", \"b\": \"1.591837117552334943639291466\", \"fark\": \"-0.092171215780998389694041867\", \"fark_yuzde\": \"-5.473323020828186105217721628\"}, \"faaliyet\": {\"a\": \"1.057248384118190212373037858\", \"b\": \"1.026668161434977578475336323\", \"fark\": \"-0.030580222683212633897701535\", \"fark_yuzde\": \"-2.892435036324828166917970515\"}, \"finans\": {\"a\": \"4.733905555036232164142413450\", \"b\": \"3.946348536460090704793983072\", \"fark\": \"-0.787557018576141459348430378\", \"fark_yuzde\": \"-16.63651734112624663627900448\"}, \"maliyet_tl\": {\"a\": \"28.40343333021739298485448070\", \"b\": \"23.6780912187605",
+   "satirlar": [
+    [
+     "03.99.001",
+     "iki",
+     {
+      "recete_maliyeti": [
+       "20.93",
+       "17.11",
+       "-18.23"
+      ],
+      "maliyet_tl": [
+       "28.40",
+       "23.68",
+       "-16.64"
+      ]
+     }
+    ],
+    [
+     "03.99.002",
+     "iki",
+     {
+      "recete_maliyeti": [
+       "33.17",
+       "27.45",
+       "-17.26"
+      ],
+      "maliyet_tl": [
+       "44.96",
+       "37.85",
+       "-15.82"
+      ]
+     }
+    ],
+    [
+     "03.99.003",
+     "iki",
+     {
+      "recete_maliyeti": [
+       "25.19",
+       "22.29",
+       "-11.49"
+      ],
+      "maliyet_tl": [
+       "34.01",
+       "30.42",
+       "-10.56"
+      ]
+     }
+    ],
+    [
+     "03.99.004",
+     "iki",
+     {
+      "recete_maliyeti": [
+       "25.37",
+       "21.86",
+       "-13.85"
+      ],
+      "maliyet_tl": [
+       "33.69",
+       "29.34",
+       "-12.91"
+      ]
+     }
+    ],
+    [
+     "03.99.005",
+     "iki",
+     {
+      "recete_maliyeti": [
+       "57.06",
+       "51.91",
+       "-9.02"
+      ],
+      "maliyet_tl": [
+       "73.65",
+       "67.46",
+       "-8.41"
+      ]
+     }
+    ],
+    [
+     "03.99.006",
+     "iki",
+     {
+      "recete_maliyeti": [
+       "63.08",
+       "63.23",
+       "0.25"
+      ],
+      "maliyet_tl": [
+       "87.32",
+       "88.00",
+       "0.78"
+      ]
+     }
+    ],
+    [
+     "03.99.007",
+     "iki",
+     {
+      "recete_maliyeti": [
+       "21.74",
+       "17.64",
+       "-18.88"
+      ],
+      "maliyet_tl": [
+       "29.38",
+       "24.50",
+       "-16.60"
+      ]
+     }
+    ]
+   ]
+  },
+  "5.3 sapmanın kaynağı 03.99.001": {
+   "yanit": "{\"kod\": \"03.99.001\", \"ad\": \"Test Berrak Turşu 370 ml\", \"a\": {\"id\": 1, \"ad\": \"Test Bütçe 2026-2027\", \"tur\": \"fiyat_calismasi\", \"sezon\": \"2026-2027\"}, \"b\": {\"id\": 2, \"ad\": \"Test Gerçekleşen 2026-2027\", \"tur\": \"gerceklesen\", \"sezon\": \"2026-2027\"}, \"tarih\": \"2026-11-16\", \"alanlar\": {\"recete_maliyeti\": {\"a\": \"20.92827105772963727500569606\", \"b\": \"17.11323740331314100185528757\", \"fark\": \"-3.81503365441649627315040849\", \"fark_yuzde\": \"-18.22909137545527742626579191\"}, \"gug\": {\"a\": \"1.684008333333333333333333333\", \"b\": \"1.591837117552334943639291466\", \"fark\": \"-0.092171215780998389694041867\", \"fark_yuzde\": \"-5.473323020828186105217721628\"}, \"faaliyet\": {\"a\": \"1.057248384118190212373037858\", \"b\": \"1.026668161434977578475336323\", \"fark\": \"-0.030580222683212633897701535\", \"fark_yuzde\": \"-2.892435036324828166917970515\"}, \"finans\": {\"a\": \"4.733905555036232164142413450\", \"b\": \"3.946348536460090704793983072\", \"fark\": \"-0.787557018576141459348430378\", \"fark_yuzde\": \"-16.63651734112624663627900448\"}, \"maliyet_tl\": {\"a\": \"28.40343333021739298485448070\", \"b\": \"23.67809121876054422876389843\", \"fark\": \"-4.72534211145684875609058227\", \"fark_yuzde\": \"-16.63651734112624663627900449\"}, \"maliyet_usd\": {\"a\": \"0.5736379672573316622431395122\", \"b\": \"0.4526435403734847913071049626\", \"fark\": \"-0.1209944268838468709360345496\", \"fark_yuzde\": \"-21.09247187077651407665607329\"}, \"satis_tl\": {\"a\": \"34.08411999626087158182537684\", \"b\": \"28.41370946251265307451667812\", \"fark\": \"-5.67041053374821850730869872\", \"far"
+  },
+  "6.1 yönetim özeti": {
+   "yanit": "{\"baslik\": {\"senaryo_id\": 1, \"sezon_ad\": \"2026-2027\", \"ad\": \"Test Bütçe 2026-2027\", \"tur\": \"fiyat_calismasi\", \"kilitli\": false, \"hesap_tarihi\": \"2026-11-16\", \"uretim_zamani\": \"2026-11-16T07:00:03.211042+00:00\"}, \"urunler\": {\"toplam\": 7, \"hesaplanan\": 7, \"hatali\": 0}, \"marj\": {\"ortalama\": \"0.200000000000000000000000000\", \"agirlikli_ortalama\": \"0.1999999999999999999999999999\", \"adetli_urun\": 7, \"hedef\": \"0.2\", \"marj_esigi\": \"0.10\", \"adet_kaynagi\": \"satis_gecmisi\"}, \"maliyet_yapisi\": {\"urun_sayisi\": 7, \"toplam_tl\": \"331.4113510802599175993328779\", \"urun_basina_tl\": \"47.34447872575141679990469684\", \"kalemler\": {\"malzeme\": {\"toplam_tl\": \"246.5369658932913902432113780\", \"pay_yuzde\": \"74.39001865496937145300270793\", \"urun_basina_tl\": \"35.21956655618448432045876829\"}, \"uretim\": {\"toplam_tl\": \"22.55559583333333333333333333\", \"pay_yuzde\": \"6.805921330036431516786120325\", \"urun_basina_tl\": \"3.222227976190476190476190476\"}, \"faaliyet\": {\"toplam_tl\": \"7.083564173591874422899353647\", \"pay_yuzde\": \"2.137393348327530363544505095\", \"urun_basina_tl\": \"1.011937739084553488985621950\"}, \"finansman\": {\"toplam_tl\": \"55.23522518004331959988881298\", \"pay_yuzde\": \"16.66666666666666666666666667\", \"urun_basina_tl\": \"7.89074645429190279998411614\"}}}, \"hedef_alti\": {\"esik\": \"0.10\", \"toplam\": 0, \"kayitlar\": []}, \"kur_riski\": {\"oran\": \"0.10\", \"kurlar\": {\"CHF\": \"52\", \"EUR\": \"49\", \"GBP\": \"56\", \"USD\": \"42.5\"}, \"doviz_payi_yuzde\": \"0.7818069096727009628689865516\", \"yillik_etki_tl\": \"48386.38998000000000000000000\", \"yillik_maliyet_tl\": \"61890460.90710133050945903592\", \"adetsiz_urun\": 0, \"hatali\": 0, \"en_riskli\": [{\"kod\": \"03.99.004\", \"ad\": \"Test Domates Sos 340 g\", \"maliyet\": \"33.68500470551964127584562546\", \"birim_etki\": \"0.09393300000000000000000000\", \"yillik_etki\": \"34520.37750000000000000000000\", \"doviz_payi_yuzde\": \"2.788570190836520586089335717\"}, {\"kod\": \"03.99.007\", \"ad\": \"Test Berrak Kornişon 370 ml\", \"maliyet\": \"29.38287382645799448861387919\", \"birim_etki\": \"0.04885320000000000000000000\", \"yillik_etki\": \"6126.191280000000000000000000\", \"doviz_payi_yuzde\": \"1.662641996441131882124564539\"}, {\"kod\": \"03.99.001\", \"ad\": \"Test Berrak Turşu 370 ml\", \"maliyet\": \"28.40343333021739298485448070\", \"birim_etki\": \"0.00810900000000000000000000\", \"yillik_etki\": \"4972.438800000000000000000000\", \"doviz_payi_yuzde\": \"0.2854936551410890889700714531\"}, {\"kod\": \"03.99.005\", \"ad\": \"Test Siyah Zeytin 500 g\", \"maliyet\": \"73.64868318704485067761680347\", \"birim_etki\": \"0.01740480000000000000000000\", \"yillik_e"
+  },
+  "6.2 maliyet kartları": {
+   "http": 200,
+   "sayfalar": [
+    "Özet",
+    "03.99.001",
+    "03.99.002",
+    "03.99.003",
+    "03.99.004",
+    "03.99.005",
+    "03.99.006",
+    "03.99.007"
+   ]
+  },
+  "6.3 değişiklik günlüğü": {
+   "toplam": 108,
+   "anahtar": [
+    "boyut",
+    "kayitlar",
+    "sayfa",
+    "toplam"
+   ],
+   "ilk": {
+    "id": "degisiklik:22",
+    "zaman": "2026-11-16T07:00:02.292505+00:00",
+    "kullanici": "muhasebe1",
+    "tur": "diger",
+    "baslik": "Liste fiyatı toplu yüklendi",
+    "urun_kodu": null,
+    "senaryo_id": null,
+    "eski": null,
+    "yeni": "yazilan: 18, dosya: 11-16-2026-liste-fiyatlari-gecmis.xlsx, bolenler: {'yurtici': '0.63', 'yurtdisi': '0.90'}",
+    "neden": null,
+    "geri_alinabilir": false,
+    "geri_al": null
+   }
+  },
+  "6.4 roller": {
+   "izleyici_fiyat": {
+    "hata": "yetki",
+    "mesaj": "İzleyici rolünün bu işleme izni yok",
+    "alanlar": {},
+    "kod": null
+   },
+   "satin_alma_fiyat": 201,
+   "satin_alma_recete": {
+    "hata": "yetki",
+    "mesaj": "Satın alma rolünün bu işleme izni yok",
+    "alanlar": {},
+    "kod": null
+   },
+   "satin_alma_kilit_ac": 201,
+   "izleyici_kullanicilar": 403,
+   "muhasebe_kullanici_ekle": 403
+  },
+  "6.5 çalışma kilitle": {
+   "http": 200,
+   "kilitliye_yazma": {
+    "hata": "kilitli",
+    "mesaj": "senaryo kilitli",
+    "alanlar": {
+     "senaryo_id": 2
+    },
+    "kod": null
+   }
+  },
+  "7.1 Ekim yükleme": {
+   "ad": "Ekim 2026",
+   "kalem_sayisi": 37,
+   "finansman": "85000",
+   "excel_kontrol": {
+    "karsilastirilan": 37,
+    "esit": 37,
+    "farkli": 0,
+    "farkli_ornek": [],
+    "excelde_sarf_bos": 0,
+    "excelde_sarf_bos_ornek": [],
+    "excelde_sarf_bos_tutar": "0",
+    "excelde_tekrar": []
+   },
+   "recete_kaynagi": "excel"
+  },
+  "7.2 kontrol listesi": {
+   "kaynaklar": [
+    [
+     "alim",
+     true,
+     23
+    ],
+    [
+     "iade",
+     true,
+     2
+    ],
+    [
+     "uretim",
+     true,
+     14
+    ],
+    [
+     "sayim",
+     true,
+     37
+    ],
+    [
+     "sahit",
+     true,
+     2
+    ],
+    [
+     "gider_mizan",
+     true,
+     5
+    ],
+    [
+     "stok_mizan",
+     true,
+     6
+    ]
+   ],
+   "eksik": [],
+   "donem_basi": {
+    "kaynak": "excel",
+    "dolu": 37,
+    "tutar": "9100125.00",
+    "hazir": true
+   },
+   "ayarlar": {
+    "finansman": "85000",
+    "gider_720": "1850000",
+    "gider_730": "2450000"
+   },
+   "grupsuz": {
+    "kalem": 0,
+    "alim_tutar": "0",
+    "dbs_tutar": "0",
+    "ornek": []
+   }
+  },
+  "7.3 stok ve envanter": {
+   "toplamlar": {
+    "dbs_tutar": "9100125.00",
+    "alim_tutar": "12670925.16",
+    "finansman_payi": "85000.00000000000000000000000",
+    "iade_tutar": "50602.90",
+    "dss_tutar": "9296034.521967434224334527186",
+    "sarf_tutar": "12510826.82452019668656227152",
+    "uretime_giden": "12561429.72452019668656227152"
+   },
+   "kontrol_sayisi": 0,
+   "satir": 37,
+   "turler": [
+    [
+     "0001-Hammadde",
+     5
+    ],
+    [
+     "0002-Yarı Mamul",
+     5
+    ],
+    [
+     "0003-Mamul",
+     5
+    ],
+    [
+     "0008-Ambalaj Malzeme",
+     10
+    ],
+    [
+     "0015-Üretim Yarı Mamulü",
+     4
+    ],
+    [
+     "0017-Yardımcı Malzeme",
+     8
+    ]
+   ],
+   "ornek": {
+    "99.10.001": {
+     "ortalama_fiyat": "18.71216752255947061086033128",
+     "sarf_miktar": "137616.8",
+     "sarf_tutar": "2575108.615518562155160644038",
+     "dss_tutar": "742219.9959990736577268361263"
+    },
+    "99.20.001": {
+     "ortalama_fiyat": "6.461213321567517501521958260",
+     "sarf_miktar": "491895",
+     "sarf_tutar": "3178238.526812454021411143658",
+     "dss_tutar": "1235190.150684062320765952761"
+    }
+   }
+  },
+  "7.4 SMM özeti (önce)": {
+   "smm": "16387031.91334006696579166019",
+   "uretim": "18007801.13334006696579166019",
+   "uretilen": "17845084.97334006696579166019",
+   "ilk_madde": "13707801.13334006696579166019",
+   "donem_sonu_stok": "9707834.60",
+   "mizan_kiyas": [
+    {
+     "hesap": "150",
+     "ad": "İlk madde ve malzeme",
+     "mizan": "5116894.84",
+     "sayim": "5113664.24",
+     "fark": "3230.60"
+    },
+    {
+     "hesap": "151",
+     "ad": "Yarı mamuller",
+     "mizan": "746056.16",
+     "sayim": "746056.16",
+     "fark": "0.00"
+    },
+    {
+     "hesap": "152",
+     "ad": "Mamuller",
+     "mizan": "3850000",
+     "sayim": "3848114.20",
+     "fark": "1885.80"
+    }
+   ],
+   "fis_borc": "65947719.15336026786316664076",
+   "fis_alacak": "65947719.15336026786316664076"
+  },
+  "7.5 elle kalem": {
+   "sayim_once": "191170",
+   "sayim_sonra": "191670",
+   "sarf_once": "491895",
+   "sarf_sonra": "491395",
+   "elle": {
+    "kayitlar": {
+     "99.20.001": {
+      "alanlar": [
+       "sayim_miktar"
+      ],
+      "zaman": "2026-11-16T07:00:04.225928",
+      "kullanici": "muhasebe1",
+      "kayit": 1
+     }
+    }
+   }
+  },
+  "7.6 mizan elle satır": {
+   "http": 201,
+   "yanit": "{\"donem\": {\"id\": 1, \"yil\": 2026, \"ay\": 10, \"ad\": \"Ekim 2026\", \"kaynak_dosya\": \"11-16-2026-smm-ekim-2026.xlsx\", \"finansman\": \"85000\", \"kalem_sayisi\": null, \"excel_kontrol\": {\"karsilastirilan\": 37, \"esit\": 37, \"farkli\": 0, \"farkli_ornek\": [], \"excelde_sarf_bos\": 0, \"excelde_sarf_bos_ornek\": [], \"excelde_sarf_bos_tutar\": \"0\", \"excelde_tekrar\": []}, \"olusturan\": \"muhasebe1\", \"recete_kaynagi\": \"excel\", \"devir_donem_id\": null, \"kilitli\": false, \"kilitleyen\": null, \"kilit_zamani\": null}, \"tur\": \"stok\", \"ad\": \"Stok mizanı (150 / 151 / 152)\", \"kayitlar\": [{\"hesap\": \"150.01\", \"ad\": \"Hammadde\", \"bakiye\":"
+  },
+  "7.7 üretim 20": {
+   "kayitlar": [
+    [
+     "01.99.001",
+     "120700.00",
+     "20.64",
+     "3.09",
+     "0.00",
+     "0.41",
+     "24.14",
+     false,
+     false
+    ],
+    [
+     "01.99.004",
+     "38400.00",
+     "27.31",
+     "3.09",
+     "0.00",
+     "0.55",
+     "30.95",
+     false,
+     false
+    ],
+    [
+     "01.99.003",
+     "18500.00",
+     "41.39",
+     "3.09",
+     "0.00",
+     "1.24",
+     "45.73",
+     false,
+     false
+    ],
+    [
+     "01.99.002",
+     "16400.00",
+     "29.52",
+     "3.09",
+     "0.00",
+     "0.59",
+     "33.20",
+     false,
+     false
+    ]
+   ]
+  },
+  "7.7 üretim 40": {
+   "kayitlar": [
+    [
+     "02.99.001",
+     "321920.00",
+     "14.50",
+     "1.59",
+     "2.40",
+     "0.15",
+     "18.64",
+     false,
+     false
+    ],
+    [
+     "02.99.002",
+     "120720.00",
+     "24.04",
+     "2.39",
+     "3.60",
+     "0.24",
+     "30.27",
+     false,
+     false
+    ],
+    [
+     "02.99.004",
+     "110660.00",
+     "18.81",
+     "1.59",
+     "2.16",
+     "0.19",
+     "22.75",
+     false,
+     false
+    ],
+    [
+     "02.99.003",
+     "90540.00",
+     "19.15",
+     "1.59",
+     "2.88",
+     "0.19",
+     "23.81",
+     false,
+     false
+    ],
+    [
+     "02.99.007",
+     "80480.00",
+     "16.49",
+     "1.59",
+     "2.40",
+     "0.16",
+     "20.64",
+     false,
+     false
+    ]
+   ]
+  },
+  "7.7 üretim 50": {
+   "kayitlar": [
+    [
+     "03.99.001",
+     "320000.00",
+     "20.25",
+     "0.70",
+     "0.00",
+     "0.06",
+     "21.01",
+     false,
+     false
+    ],
+    [
+     "03.99.002",
+     "120000.00",
+     "32.90",
+     "1.05",
+     "0.00",
+     "0.10",
+     "34.04",
+     false,
+     false
+    ],
+    [
+     "03.99.004",
+     "110000.00",
+     "24.23",
+     "0.63",
+     "0.00",
+     "0.07",
+     "24.93",
+     false,
+     false
+    ],
+    [
+     "03.99.003",
+     "90000.00",
+     "25.26",
+     "0.84",
+     "0.00",
+     "0.08",
+     "26.18",
+     false,
+     false
+    ],
+    [
+     "03.99.007",
+     "80000.00",
+     "22.19",
+     "0.70",
+     "0.00",
+     "0.07",
+     "22.95",
+     false,
+     false
+    ]
+   ],
+   "ozetler": [
+    [
+     20,
+     4,
+     "5492811.85",
+     {
+      "karsilastirilan": 0,
+      "esit": 0,
+      "farkli": 0,
+      "farkli_ornek": []
+     }
+    ],
+    [
+     40,
+     5,
+     "15990760.93",
+     {
+      "karsilastirilan": 0,
+      "esit": 0,
+      "farkli": 0,
+      "farkli_ornek": []
+     }
+    ],
+    [
+     50,
+     5,
+     "17741731.70",
+     {
+      "karsilastirilan": 0,
+      "esit": 0,
+      "farkli": 0,
+      "farkli_ornek": []
+     }
+    ]
+   ],
+   "dagitim": {
+    "dagitilan": "4300000",
+    "mizan_720": "1850000",
+    "mizan_730": "2450000",
+    "dagitilmayan": "0"
+   }
+  },
+  "7.8 aşama elle": {
+   "birim": "34.24413415584379165684716181",
+   "elle": [
+    "iscilik"
+   ]
+  },
+  "7.8 formüle dön": {
+   "birim": "34.04241878100262266065910590",
+   "elle": []
+  },
+  "7.9 sarf farkı": {
+   "toplamlar": {
+    "recete_tutar": "32957397.90165700373865031211",
+    "stok_tutar": "33058934.33119947989360317073",
+    "fazla": "150165.6506117194666975981758",
+    "eksik": "-48629.22106924331174473953325"
+   },
+   "birim_uyumsuz": 0,
+   "ilk": [
+    [
+     "99.10.001",
+     "132963.12",
+     "137616.80",
+     "4653.68",
+     "87080.44"
+    ],
+    [
+     "99.20.001",
+     "497869.40",
+     "491395.00",
+     "-6474.40",
+     "-41832.48"
+    ],
+    [
+     "99.11.002",
+     "21337.26",
+     "22617.50",
+     "1280.24",
+     "28239.46"
+    ],
+    [
+     "99.10.004",
+     "62668.80",
+     "64235.50",
+     "1566.70",
+     "22558.58"
+    ],
+    [
+     "99.10.003",
+     "23818.75",
+     "23943.00",
+     "124.25",
+     "4114.24"
+    ],
+    [
+     "99.20.002",
+     "121927.20",
+     "122343.00",
+     "415.80",
+     "3958.09"
+    ]
+   ]
+  },
+  "7.10 SMM özeti": {
+   "smm": "16383801.31334006696579166019",
+   "uretim": "18004570.53334006696579166019",
+   "uretilen": "17841854.37334006696579166019",
+   "ilk_madde": "13704570.53334006696579166019",
+   "donem_sonu_stok": "9711065.20",
+   "mizan_kiyas": [
+    {
+     "hesap": "150",
+     "ad": "İlk madde ve malzeme",
+     "mizan": "5116894.84",
+     "sayim": "5116894.84",
+     "fark": "0.00"
+    },
+    {
+     "hesap": "151",
+     "ad": "Yarı mamuller",
+     "mizan": "746056.16",
+     "sayim": "746056.16",
+     "fark": "0.00"
+    },
+    {
+     "hesap": "152",
+     "ad": "Mamuller",
+     "mizan": "3850000",
+     "sayim": "3848114.20",
+     "fark": "1885.80"
+    },
+    {
+     "hesap": "153",
+     "ad": "Ticari mallar",
+     "mizan": "12500",
+     "sayim": "0",
+     "fark": "12500"
+    }
+   ],
+   "fis": [
+    [
+     "710",
+     "13704570.53334006696579166019",
+     "0"
+    ],
+    [
+     "150",
+     "0",
+     "13704570.53334006696579166019"
+    ],
+    [
+     "151",
+     "13704570.53334006696579166019",
+     "0"
+    ],
+    [
+     "711",
+     "0",
+     "13704570.53334006696579166019"
+    ],
+    [
+     "151",
+     "1850000",
+     "0"
+    ],
+    [
+     "721",
+     "0",
+     "1850000"
+    ],
+    [
+     "151",
+     "2450000",
+     "0"
+    ],
+    [
+     "731",
+     "0",
+     "2450000"
+    ],
+    [
+     "152",
+     "17841854.37334006696579166019",
+     "0"
+    ],
+    [
+     "151",
+     "0",
+     "17841854.37334006696579166019"
+    ],
+    [
+     "620",
+     "16383801.31334006696579166019",
+     "0"
+    ],
+    [
+     "152",
+     "0",
+     "16383801.31334006696579166019"
+    ]
+   ],
+   "fis_borc": "65934796.75336026786316664076",
+   "dss_kiyas": {
+    "karsilastirilan": 0,
+    "esit": 0,
+    "farkli": 0,
+    "farkli_ornek": [],
+    "excel_toplam": "0",
+    "bizim_toplam": "0"
+   },
+   "tablo": [
+    [
+     "150",
+     "13704570.53334006696579166019"
+    ],
+    [
+     "72x",
+     "18004570.53334006696579166019"
+    ],
+    [
+     "151",
+     "17841854.37334006696579166019"
+    ],
+    [
+     "152",
+     "16383801.31334006696579166019"
+    ]
+   ]
+  },
+  "7.11 bütçe kıyası": {
+   "yanit": "{\"donem\": {\"id\": 1, \"yil\": 2026, \"ay\": 10, \"ad\": \"Ekim 2026\", \"kaynak_dosya\": \"11-16-2026-smm-ekim-2026.xlsx\", \"finansman\": \"85000\", \"kalem_sayisi\": 37, \"excel_kontrol\": {\"karsilastirilan\": 37, \"esit\": 37, \"farkli\": 0, \"farkli_ornek\": [], \"excelde_sarf_bos\": 0, \"excelde_sarf_bos_ornek\": [], \"excelde_sarf_bos_tutar\": \"0\", \"excelde_tekrar\": []}, \"olusturan\": \"muhasebe1\", \"recete_kaynagi\": \"excel\", \"devir_donem_id\": null, \"kilitli\": false, \"kilitleyen\": null, \"kilit_zamani\": null}, \"senaryo\": {\"id\": 1, \"ad\": \"Test Bütçe 2026-2027\"}, \"ozet\": {\"eslesen\": 5, \"karsilastirilan\": 5, \"uretimsiz\": 0, \"yalniz_butce\": 2, \"yalniz_fiili\": 0, \"ortalama_fark_yuzde\": \"-0.05237311349470319756902815934\", \"fiili_yuksek\": 0}, \"yalniz_butce\": [{\"kod\": \"03.99.005\", \"ad\": \"Test Siyah Zeytin 500 g\", \"butce_maliyet_",
+   "ilk": "{\"kod\": \"03.99.004\", \"ad\": \"Test Domates Sos 340 g\", \"asama\": 50, \"birim\": \"AD\", \"uretim_miktar\": \"110000\", \"uretildi\": true, \"butce_maliyet_tl\": \"27.11931370889332987206895381\", \"butce_finansman_dahil_tl\": \"33.68500470551964127584562546\", \"fiili_birim_maliyet_tl\": \"24.93405015543452149471711180\", \"fark_tl\": \"-2.18526355345880837735184201\", \"fark_yuzde\": \"-0.08057960378039313657012608435\", \"fiili_dokum\": {\"malzeme\": \"24.23238223363830796852437222\", \"iscilik\": \"0.628970775095298602287166455\", \"gug\": \"0\", \"fire\": \"0.07269714670091492390557311668\", \"stok_payi\": \"0E-28\"}, \"butce_dokum\": {\"malzeme\": \"24.657074999402\", \"iscilik\": \"0.68250\", \"gug\": \"1.062870000000000000000000000\", \"fire\": \"0.71686870949132987206895381\", \"uretim_gideri\": \"1.745370000000000000000000000\", \"pazarlama_yonetim\": \"0.9515235457063711911357340720\", \"finansman\": \"5.614167450919940212640937576\"}, \"alim_kurali\": false, \"bu",
+   "kayitlar": [
+    [
+     "03.99.004",
+     "27.12",
+     "24.93",
+     "-2.19",
+     "-8.06"
+    ],
+    [
+     "03.99.001",
+     "22.61",
+     "21.01",
+     "-1.61",
+     "-7.11"
+    ],
+    [
+     "03.99.002",
+     "35.78",
+     "34.04",
+     "-1.73",
+     "-4.84"
+    ],
+    [
+     "03.99.003",
+     "27.31",
+     "26.18",
+     "-1.13",
+     "-4.15"
+    ],
+    [
+     "03.99.007",
+     "23.43",
+     "22.95",
+     "-0.47",
+     "-2.02"
+    ]
+   ]
+  },
+  "7.12 ürün maliyet kartı": {
+   "yanit": "{\"donem\": {\"id\": 1, \"yil\": 2026, \"ay\": 10, \"ad\": \"Ekim 2026\", \"kaynak_dosya\": \"11-16-2026-smm-ekim-2026.xlsx\", \"finansman\": \"85000\", \"kalem_sayisi\": 37, \"excel_kontrol\": {\"karsilastirilan\": 37, \"esit\": 37, \"farkli\": 0, \"farkli_ornek\": [], \"excelde_sarf_bos\": 0, \"excelde_sarf_bos_ornek\": [], \"excelde_sarf_bos_tutar\": \"0\", \"excelde_tekrar\": []}, \"olusturan\": \"muhasebe1\", \"recete_kaynagi\": \"excel\", \"devir_donem_id\": null, \"kilitli\": false, \"kilitleyen\": null, \"kilit_zamani\": null}, \"kod\": \"03.99.001\", \"ad\": \"Test Berrak Turşu 370 ml\", \"birim\": \"AD\", \"asama\": 50, \"birim_maliyet\": \"21.00530371503864932999757496\", \"uretim_miktar\": \"320000\", \"toplam\": \"6721697.188812367785599223987\", \"alim_kurali\": false, \"alim_fiyati\": \"0\", \"asamalar\": [{\"asama\": 50, \"ad\": \"Etiketleme\", \"kod\": \"03.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml\", \"birim\": \"AD\", \"ust_kod\": null, \"carpan\": null, \"malzeme\": \"20.24571016776280690673607069\", \"iscilik\": \"0.6988564167725540025412960609\", \"gug\": \"0\", \"fire\": \"0.06073713050328842072020821209\", \"stok_payi\": \"0E-28\", \"birim_maliyet\": \"21.00530371503864932999757496\", \"uretim_miktar\": \"320000\", \"alim_kurali\": false, \"elle_alanlar\": []}, {\"asama\": 40, \"ad\": \"Üretim hattı\", \"kod\": \"02.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml Dolu Kavanoz\", \"birim\": \"AD\", \"ust_kod\": \"03.99.001\", \"carpan\": \"1\", \"malzeme\": \"14.50483505368459293346848746\", \"iscilik\": \"1.593006066167099964316664118\", \"gug\": \"2.399832264355417684490262996\", \"fire\": \"0.1450483505368459293346848746\", "
+  },
+  "7.13 fiş excel": {
+   "http": 200,
+   "bayt": 7041
+  },
+  "7.14 Ekim kapat": {
+   "http": 200,
+   "yanit": {
+    "kilitli": true
+   }
+  },
+  "7.14 kilitliye yazma": {
+   "http": 409
+  },
+  "7.15 Canias önizleme": {
+   "satir_sayisi": 63,
+   "urun_sayisi": 14,
+   "asama": {
+    "20": 4,
+    "40": 5,
+    "50": 5
+   },
+   "alternatifli_urun": 1,
+   "eklenecek_urun": 14
+  },
+  "7.15 reçeteler": {
+   "toplam": 14
+  },
+  "7.16 Kasım yeni dönem": {
+   "ad": "Kasım 2026",
+   "kalem": 37,
+   "devir": {
+    "onceki": "Ekim 2026",
+    "kalem": 37,
+    "tutar": "9711065.20",
+    "uyari": null
+   },
+   "recete_kaynagi": "ana"
+  },
+  "7.16 Kasım kontrol listesi (boş)": {
+   "eksik": [
+    "Alım ve satış",
+    "Üretim miktarları",
+    "Sayım (dönem sonu stok)",
+    "Gider mizanı (720 / 730)"
+   ],
+   "devir": {
+    "uyumlu": true,
+    "fark_kalem": 0,
+    "fark_tutar": "0.00",
+    "onceki_ad": "Ekim 2026",
+    "onceki_kilitli": true
+   },
+   "donem_basi": {
+    "kaynak": "devir",
+    "dolu": 37,
+    "tutar": "9711065.20",
+    "hazir": true
+   }
+  },
+  "7.17 Kasım alim": {
+   "dolu": 23,
+   "eksik": [
+    "Üretim miktarları",
+    "Sayım (dönem sonu stok)",
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "7.17 Kasım iade": {
+   "dolu": 1,
+   "eksik": [
+    "Üretim miktarları",
+    "Sayım (dönem sonu stok)",
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "7.17 Kasım uretim": {
+   "dolu": 14,
+   "eksik": [
+    "Sayım (dönem sonu stok)",
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "7.17 Kasım sayim": {
+   "dolu": 37,
+   "eksik": [
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "7.17 Kasım sahit": {
+   "dolu": 2,
+   "eksik": [
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "7.17 Kasım gider_mizan": {
+   "dolu": 5,
+   "eksik": []
+  },
+  "7.17 Kasım stok_mizan": {
+   "dolu": 6,
+   "eksik": []
+  },
+  "7.18 Kasım dağıtım": {
+   "dagitim": {
+    "dagitilan": "4300000",
+    "mizan_720": "1920000",
+    "mizan_730": "2450000",
+    "dagitilmayan": "70000"
+   },
+   "birim": [
+    [
+     "03.99.001",
+     "22.10"
+    ],
+    [
+     "03.99.002",
+     "35.51"
+    ],
+    [
+     "03.99.004",
+     "26.41"
+    ],
+    [
+     "03.99.003",
+     "27.63"
+    ],
+    [
+     "03.99.007",
+     "24.17"
+    ]
+   ]
+  },
+  "7.18 Kasım dağıtım güncel": {
+   "dagitilan": "4370000",
+   "dagitilmayan": "0"
+  },
+  "7.19 Kasım SMM özeti": {
+   "smm": "16393436.34000000000000000000",
+   "uretim": "17981182.92000000000000000000",
+   "ilk_madde": "13611182.92000000000000000000",
+   "donem_sonu_stok": "11834195.32",
+   "mizan_kiyas": [
+    {
+     "hesap": "150",
+     "ad": "İlk madde ve malzeme",
+     "mizan": "5656106.63",
+     "sayim": "5656106.63",
+     "fark": "0.00"
+    },
+    {
+     "hesap": "151",
+     "ad": "Yarı mamuller",
+     "mizan": "889474.62",
+     "sayim": "889474.62",
+     "fark": "0.00"
+    },
+    {
+     "hesap": "152",
+     "ad": "Mamuller",
+     "mizan": "5290000",
+     "sayim": "5288614.07",
+     "fark": "1385.93"
+    }
+   ],
+   "tablo": [
+    [
+     "150",
+     "13611182.92000000000000000000"
+    ],
+    [
+     "72x",
+     "17981182.92000000000000000000"
+    ],
+    [
+     "151",
+     "17837764.46000000000000000000"
+    ],
+    [
+     "152",
+     "16393436.34000000000000000000"
+    ]
+   ]
+  },
+  "7.19 Kasım devir durumu": {
+   "onceki": {
+    "id": 1,
+    "ad": "Ekim 2026",
+    "kilitli": true
+   },
+   "uyumlu": true,
+   "fark_kalem": 0,
+   "fark_tutar": "0.00",
+   "acilis_tutar": "9711065.20",
+   "kapanis_tutar": "9711065.20",
+   "elle_kalem": 0,
+   "ornek": []
+  },
+  "7.20 aylar arası": {
+   "yanit": "{\"donemler\": [{\"id\": 1, \"yil\": 2026, \"ay\": 10, \"ad\": \"Ekim 2026\", \"kaynak_dosya\": \"11-16-2026-smm-ekim-2026.xlsx\", \"finansman\": \"85000\", \"kalem_sayisi\": 37, \"excel_kontrol\": {\"karsilastirilan\": 37, \"esit\": 37, \"farkli\": 0, \"farkli_ornek\": [], \"excelde_sarf_bos\": 0, \"excelde_sarf_bos_ornek\": [], \"excelde_sarf_bos_tutar\": \"0\", \"excelde_tekrar\": []}, \"olusturan\": \"muhasebe1\", \"recete_kaynagi\": \"excel\", \"devir_donem_id\": null, \"kilitli\": true, \"kilitleyen\": \"muhasebe1\", \"kilit_zamani\": \"2026-11-16T07:00:04+00:00\"}, {\"id\": 2, \"yil\": 2026, \"ay\": 11, \"ad\": \"Kasım 2026\", \"kaynak_dosya\": null, \"finansman\": \"0\", \"kalem_sayisi\": 37, \"excel_kontrol\": null, \"olusturan\": \"muhasebe1\", \"recete_kaynagi\": \"ana\", \"devir_donem_id\": 1, \"kilitli\": false, \"kilitleyen\": null, \"kilit_zamani\": null}], \"satirlar\": [{\"anahtar\": \"ilk_madde\", \"ad\": \"710 · İlk madde ve malzeme gideri\", \"vurgulu\": false, \"hucreler\": [{\"donem_id\": 1, \"tutar\": \"13704570.53334006696579166019\", \"degisim_tl\": null, \"degisim_yuzde\": null}, {\"donem_id\": 2, \"tutar\": \"13611182.92000000000000000000\", \"degisim_tl\": \"-93387.61334006696579166019\", \"degisim_yuzde\": \"-0.006814340742227302133845018443\"}], \"son_fark_tl\": \"-93387.61334006696579166019\", \"son_fark_yuzde\": \"-0.006814340742227302133845018443\"}, {\"anahtar\": \"iscilik\", \"ad\": \"720 Direkt işçilik (gider mizanı)\", \"vurgulu\": false, \"hucreler\": [{\"donem_id\": 1, \"tutar\": \"1850000\", \"degisim_tl\": null, \"degisim_yuzde\": null}, {\"donem_id\": 2, \"tutar\": \"1920000\", \"degisim_tl\": \"70000\", \"d"
+  },
+  "7.21 Ekim kilidi aç (Muhasebe)": {
+   "http": 403
+  },
+  "7.21 Kasım kapat": {
+   "http": 200,
+   "yanit": "kilitli"
+  },
+  "7.21 Ekim kilidi aç (GD, Kasım kilitli)": {
+   "http": 409,
+   "yanit": {
+    "hata": "catisma",
+    "mesaj": "önce Kasım 2026 kilidini açın; açılışı bu dönemden devralındı",
+    "alanlar": {
+     "donem_id": 2
+    },
+    "kod": "sonraki_kilitli"
+   }
+  },
+  "7.21 Kasım kilidi aç (GD)": {
+   "http": 200
+  },
+  "7.21 Ekim kilidi aç (GD)": {
+   "http": 200,
+   "uyari": "Kasım 2026 açılışı bu dönemden devralındı; değişiklik sonrası devri yenileyin"
+  },
+  "7.22 devir uyumsuz": {
+   "uyumlu": false,
+   "fark_kalem": 1,
+   "fark_tutar": "648659.16",
+   "eksikler": {
+    "hata": "catisma",
+    "mesaj": "Kasım 2026 kapatılmadan önce eksikler var",
+    "alanlar": {
+     "eksikler": [
+      "Açılış stoku Ekim 2026 kapanışıyla uyuşmuyor (1 kalem, fark 648.659,16 TL)"
+     ]
+    },
+    "kod": "kapanis_eksik"
+   }
+  },
+  "7.22 devri yenile": {
+   "guncellenen": 1,
+   "eklenen": 0,
+   "uyumlu": true
+  }
+ },
+ "hatalar": []
+}
