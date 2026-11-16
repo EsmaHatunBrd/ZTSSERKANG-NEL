@@ -2659,3 +2659,94 @@ class OnayCiktisiSmmGiris(BaseModel):
     tur: Literal["excel", "pdf"]
     ekler: OnayCiktisiEkleri = Field(default_factory=OnayCiktisiEkleri)
     imzalar: OnayCiktisiImzalari = Field(default_factory=OnayCiktisiImzalari)
+
+
+# ---------------------------------------------------------------- SMM gider dağıtım tablosu ve en büyük sarf farkları — 16.11.2026
+class SmmGiderKaynagi(BaseModel):
+    """720 ya da 730. `dagitilan` yalnız hesaba ayrılabilen kısım (40 işçilik / 40 GÜG). 20 ve 50 havuzu birleşik olduğundan
+    `ayrilmamis` > 0 ise hesap bazında dağıtılmayan hesaplanamaz (null). Mizan girilmemişse mizan_tutari null."""
+    hesap: Literal["720", "730"]
+    ad: str
+    mizan_tutari: str | None
+    dagitilan: str
+    dagitilan_kapsami: str
+    dagitilmayan: str | None
+    dagitilmayan_yuzde: str | None          # kesir: 0.05 = %5
+
+
+class SmmGiderToplami(BaseModel):
+    """720 + 730 birlikte: dağıtılan + dağıtılmayan = mizan (mizan yoksa null)."""
+    mizan_tutari: str | None
+    dagitilan: str
+    dagitilmayan: str | None
+    dagitilmayan_yuzde: str | None
+
+
+class SmmGiderAsamasi(BaseModel):
+    """Aşamaya dağılan işçilik / GÜG (Σ birim × üretim). birlesik: 20 ve 50'de `iscilik` işçilik + GÜG'dür, `gug` 0."""
+    asama: int
+    ad: str
+    anahtar: str                            # dağıtım anahtarının görünen adı
+    birlesik: bool
+    havuz: str                              # aşamanın üretim havuzu (girilen tutar)
+    iscilik: str
+    gug: str
+    toplam: str
+    pay_yuzde: str | None                   # toplam dağıtılan içindeki payı (kesir)
+    urun_sayisi: int                        # pay alan ürün
+    uretim_miktar: str                      # aşamadaki ürünlerin üretim miktarı toplamı (birimler karışık olabilir)
+    birim_basina_ortalama: str | None
+
+
+class SmmGiderUrunu(BaseModel):
+    kod: str
+    ad: str | None
+    asama: int
+    iscilik: str                            # toplam TL (birim × üretim)
+    gug: str
+    toplam: str
+
+
+class SmmGiderDagitimi(BaseModel):
+    donem: SmmDonemCikis
+    kaynaklar: list[SmmGiderKaynagi]
+    toplam: SmmGiderToplami
+    ayrilmamis: str                         # 20 + 50 aşamalarının birleşik (işçilik + GÜG) dağıtılanı
+    havuz_toplami: str
+    asamalar: list[SmmGiderAsamasi]
+    urunler_ilk20: list[SmmGiderUrunu]
+    urun_sayisi: int                        # pay alan toplam ürün (aşama başına ayrı sayılır)
+    esik_yuzde: str                         # arayüzde vurgu eşiği
+    notlar: list[str]
+
+
+class SmmSarfOzetKalemi(BaseModel):
+    kod: str
+    ad: str | None
+    birim: str | None
+    tur: str
+    birim_fiyat: str
+    beklenen_sarf: str                      # reçeteye göre
+    gercek_sarf: str                        # sayıma göre
+    fark_miktar: str
+    fark_tutar: str                         # artı: fazla harcanan
+    fark_yuzde: str | None                  # kesir; reçete sarfı 0 ise null
+    yon: Literal["fazla", "eksik"]
+
+
+class SmmSarfOzetToplami(BaseModel):
+    """Sarf farkı ekranı toplamlarıyla aynı: eksik_tutar eksi işaretli; toplam_fark_tutari = fazla + eksik (net)."""
+    toplam_fark_tutari: str
+    fazla_tutar: str
+    eksik_tutar: str
+    fazla_sayisi: int
+    eksik_sayisi: int
+    birim_uyumsuz_sayisi: int
+
+
+class SmmSarfOzeti(BaseModel):
+    donem: SmmDonemCikis
+    ilk: int
+    kalem_sayisi: int                       # farkı olan, birimi uyumlu kalem sayısı
+    kalemler: list[SmmSarfOzetKalemi]
+    ozet: SmmSarfOzetToplami

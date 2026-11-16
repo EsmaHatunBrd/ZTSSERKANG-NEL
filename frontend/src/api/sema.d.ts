@@ -2683,6 +2683,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/smm/donemler/{donem_id}/gider-dagitimi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gider Dagitimi
+         * @description 720 / 730 gider mizanı tutarı, aşamalara dağıtılan ve dağıtılmayan; aşama başına işçilik / GÜG ve en çok gider alan ürünler.
+         *     Aşama hesabının sonuçlarından; yeni kural yok. 20 ve 50 havuzları birleşik (işçilik + GÜG) olduğundan 720 / 730'a bölünmez.
+         */
+        get: operations["gider_dagitimi_api_v1_smm_donemler__donem_id__gider_dagitimi_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/donemler/{donem_id}/sarf-farki/ozet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sarf Farki Ozeti
+         * @description Tutara göre en büyük ilk N sarf farkı (birim uyumsuzlar hariç, ayrı sayılır) ve fazla / eksik özeti.
+         */
+        get: operations["sarf_farki_ozeti_api_v1_smm_donemler__donem_id__sarf_farki_ozet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/duzenleme-kilidi/ac": {
         parameters: {
             query?: never;
@@ -6494,6 +6535,110 @@ export interface components {
             alacak: string;
         };
         /**
+         * SmmGiderAsamasi
+         * @description Aşamaya dağılan işçilik / GÜG (Σ birim × üretim). birlesik: 20 ve 50'de `iscilik` işçilik + GÜG'dür, `gug` 0.
+         */
+        SmmGiderAsamasi: {
+            /** Asama */
+            asama: number;
+            /** Ad */
+            ad: string;
+            /** Anahtar */
+            anahtar: string;
+            /** Birlesik */
+            birlesik: boolean;
+            /** Havuz */
+            havuz: string;
+            /** Iscilik */
+            iscilik: string;
+            /** Gug */
+            gug: string;
+            /** Toplam */
+            toplam: string;
+            /** Pay Yuzde */
+            pay_yuzde: string | null;
+            /** Urun Sayisi */
+            urun_sayisi: number;
+            /** Uretim Miktar */
+            uretim_miktar: string;
+            /** Birim Basina Ortalama */
+            birim_basina_ortalama: string | null;
+        };
+        /** SmmGiderDagitimi */
+        SmmGiderDagitimi: {
+            donem: components["schemas"]["SmmDonemCikis"];
+            /** Kaynaklar */
+            kaynaklar: components["schemas"]["SmmGiderKaynagi"][];
+            toplam: components["schemas"]["SmmGiderToplami"];
+            /** Ayrilmamis */
+            ayrilmamis: string;
+            /** Havuz Toplami */
+            havuz_toplami: string;
+            /** Asamalar */
+            asamalar: components["schemas"]["SmmGiderAsamasi"][];
+            /** Urunler Ilk20 */
+            urunler_ilk20: components["schemas"]["SmmGiderUrunu"][];
+            /** Urun Sayisi */
+            urun_sayisi: number;
+            /** Esik Yuzde */
+            esik_yuzde: string;
+            /** Notlar */
+            notlar: string[];
+        };
+        /**
+         * SmmGiderKaynagi
+         * @description 720 ya da 730. `dagitilan` yalnız hesaba ayrılabilen kısım (40 işçilik / 40 GÜG). 20 ve 50 havuzu birleşik olduğundan
+         *     `ayrilmamis` > 0 ise hesap bazında dağıtılmayan hesaplanamaz (null). Mizan girilmemişse mizan_tutari null.
+         */
+        SmmGiderKaynagi: {
+            /**
+             * Hesap
+             * @enum {string}
+             */
+            hesap: "720" | "730";
+            /** Ad */
+            ad: string;
+            /** Mizan Tutari */
+            mizan_tutari: string | null;
+            /** Dagitilan */
+            dagitilan: string;
+            /** Dagitilan Kapsami */
+            dagitilan_kapsami: string;
+            /** Dagitilmayan */
+            dagitilmayan: string | null;
+            /** Dagitilmayan Yuzde */
+            dagitilmayan_yuzde: string | null;
+        };
+        /**
+         * SmmGiderToplami
+         * @description 720 + 730 birlikte: dağıtılan + dağıtılmayan = mizan (mizan yoksa null).
+         */
+        SmmGiderToplami: {
+            /** Mizan Tutari */
+            mizan_tutari: string | null;
+            /** Dagitilan */
+            dagitilan: string;
+            /** Dagitilmayan */
+            dagitilmayan: string | null;
+            /** Dagitilmayan Yuzde */
+            dagitilmayan_yuzde: string | null;
+        };
+        /** SmmGiderUrunu */
+        SmmGiderUrunu: {
+            /** Kod */
+            kod: string;
+            /** Ad */
+            ad: string | null;
+            /** Asama */
+            asama: number;
+            /** Iscilik */
+            iscilik: string;
+            /** Gug */
+            gug: string;
+            /** Toplam */
+            toplam: string;
+        };
+        /**
          * SmmGrupsuzKalemler
          * @description Türü / mizan kodu boş olduğu için stok hesabı (150/151/152) bulunamayan, SMM tablosuna girmeyen hareketli kalemler.
          */
@@ -7115,6 +7260,63 @@ export interface components {
             turler: string[];
             /** Kayitlar */
             kayitlar: components["schemas"]["SmmSarfSatiri"][];
+        };
+        /** SmmSarfOzetKalemi */
+        SmmSarfOzetKalemi: {
+            /** Kod */
+            kod: string;
+            /** Ad */
+            ad: string | null;
+            /** Birim */
+            birim: string | null;
+            /** Tur */
+            tur: string;
+            /** Birim Fiyat */
+            birim_fiyat: string;
+            /** Beklenen Sarf */
+            beklenen_sarf: string;
+            /** Gercek Sarf */
+            gercek_sarf: string;
+            /** Fark Miktar */
+            fark_miktar: string;
+            /** Fark Tutar */
+            fark_tutar: string;
+            /** Fark Yuzde */
+            fark_yuzde: string | null;
+            /**
+             * Yon
+             * @enum {string}
+             */
+            yon: "fazla" | "eksik";
+        };
+        /**
+         * SmmSarfOzetToplami
+         * @description Sarf farkı ekranı toplamlarıyla aynı: eksik_tutar eksi işaretli; toplam_fark_tutari = fazla + eksik (net).
+         */
+        SmmSarfOzetToplami: {
+            /** Toplam Fark Tutari */
+            toplam_fark_tutari: string;
+            /** Fazla Tutar */
+            fazla_tutar: string;
+            /** Eksik Tutar */
+            eksik_tutar: string;
+            /** Fazla Sayisi */
+            fazla_sayisi: number;
+            /** Eksik Sayisi */
+            eksik_sayisi: number;
+            /** Birim Uyumsuz Sayisi */
+            birim_uyumsuz_sayisi: number;
+        };
+        /** SmmSarfOzeti */
+        SmmSarfOzeti: {
+            donem: components["schemas"]["SmmDonemCikis"];
+            /** Ilk */
+            ilk: number;
+            /** Kalem Sayisi */
+            kalem_sayisi: number;
+            /** Kalemler */
+            kalemler: components["schemas"]["SmmSarfOzetKalemi"][];
+            ozet: components["schemas"]["SmmSarfOzetToplami"];
         };
         /** SmmSarfSatiri */
         SmmSarfSatiri: {
@@ -16152,6 +16354,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SmmMaliyetKarti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    gider_dagitimi_api_v1_smm_donemler__donem_id__gider_dagitimi_get: {
+        parameters: {
+            query?: {
+                ilk?: number;
+            };
+            header?: never;
+            path: {
+                donem_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmGiderDagitimi"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    sarf_farki_ozeti_api_v1_smm_donemler__donem_id__sarf_farki_ozet_get: {
+        parameters: {
+            query?: {
+                ilk?: number;
+            };
+            header?: never;
+            path: {
+                donem_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmSarfOzeti"];
                 };
             };
             /** @description Not Found */

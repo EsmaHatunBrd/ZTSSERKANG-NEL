@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Pencil, TriangleAlert } from "lucide-react";
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
-import { useSmmDagitim, useSmmUretim, useSmmUrunElle, useSmmUrunRecetesi } from "@/api/sorgular/smm";
+import { useSmmDagitim, useSmmGiderDagitimi, useSmmUretim, useSmmUrunElle, useSmmUrunRecetesi } from "@/api/sorgular/smm";
 import type { SmmAsamaUrunu, SmmDagitim } from "@/api/tipler";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
@@ -11,9 +11,11 @@ import { Input } from "@/bilesenler/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/bilesenler/ui/sheet";
 import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
 import { cn } from "@/lib/utils";
-import { D, paraBicimle } from "@/yardimcilar/para";
+import { D, paraBicimle, yuzdeBicimle } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
 import { DonemSecici, DonemYok, Miktar, milyon, useGecikmeli, useSmmDonemSecimi } from "./ortak";
+
+const GiderDagitimGrafigi = lazy(() => import("./GiderDagitimGrafigi").then((m) => ({ default: m.GiderDagitimGrafigi })));
 
 const KAYNAK_ADI: Record<string, string> = {
   ortalama: "Dönem ortalama fiyatı",
@@ -111,9 +113,188 @@ function ElleDeger({
 /** API sayı metni -> giriş kutusu metni ("5720896.74" -> "5720896,74"). */
 const kutu = (x: string) => D(x).toFixed().replace(".", ",");
 
+/** Mizan / dağıtılan / dağıtılmayan kutusu; dağıtılmayan eşiği (%5) aşarsa sarı. */
+function GiderKutusu({
+  baslik,
+  mizan,
+  dagitilan,
+  dagitilanAdi,
+  dagitilmayan,
+  oran,
+  esik,
+  aciklama,
+}: {
+  baslik: string;
+  mizan: string | null;
+  dagitilan: string;
+  dagitilanAdi: string;
+  dagitilmayan: string | null;
+  oran: string | null;
+  esik: string;
+  aciklama?: string;
+}) {
+  const yuksek = oran !== null && D(oran).abs().gt(esik);
+  return (
+    <section
+      aria-label={baslik}
+      data-uyari={yuksek || undefined}
+      className={cn("flex flex-col gap-1 rounded-xl border p-3 text-sm", yuksek ? "border-amber-400 bg-kart-sari" : "bg-card")}
+    >
+      <h3 className="font-semibold">{baslik}</h3>
+      <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 tabular-nums">
+        <dt className="text-muted-foreground">Mizan</dt>
+        <dd className="text-right">{mizan === null ? "girilmemiş" : paraBicimle(mizan, "TL", 0)}</dd>
+        <dt className="text-muted-foreground">{dagitilanAdi}</dt>
+        <dd className="text-right">{paraBicimle(dagitilan, "TL", 0)}</dd>
+        <dt className="text-muted-foreground">Dağıtılmayan</dt>
+        <dd className="text-right font-semibold">
+          {dagitilmayan === null ? "—" : paraBicimle(dagitilmayan, "TL", 0)}
+          {oran !== null && <span className="ml-1 font-normal text-muted-foreground">({yuzdeBicimle(oran)})</span>}
+        </dd>
+      </dl>
+      {yuksek && <p className="text-xs text-amber-800 dark:text-amber-300">Mizanın %5'inden fazlası aşamalara dağıtılmamış.</p>}
+      {aciklama && <p className="text-xs text-muted-foreground">{aciklama}</p>}
+    </section>
+  );
+}
+
+/** Gider dağıtım tablosu: 720 / 730 mizan ile aşamalara dağıtılan, aşama başına işçilik / GÜG ve en çok gider alan ürünler. */
+function GiderDagitimTablosu({ donemId }: { donemId: number }) {
+  const q = useSmmGiderDagitimi(donemId);
+  const v = q.data;
+  if (q.isPending) return <p className="text-sm text-muted-foreground">Gider dağıtımı yükleniyor…</p>;
+  if (q.error || !v)
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        {hataMetni(q.error as ApiHatasi)}
+      </p>
+    );
+  const ayrilmamis = D(v.ayrilmamis).gt(0);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid gap-3 sm:grid-cols-3">
+        {v.kaynaklar.map((k) => (
+          <GiderKutusu
+            key={k.hesap}
+            baslik={`${k.hesap} · ${k.ad}`}
+            mizan={k.mizan_tutari}
+            dagitilan={k.dagitilan}
+            dagitilanAdi={ayrilmamis ? `Ayrı dağıtılan (${k.dagitilan_kapsami})` : "Dağıtılan"}
+            dagitilmayan={k.dagitilmayan}
+            oran={k.dagitilmayan_yuzde}
+            esik={v.esik_yuzde}
+            aciklama={ayrilmamis && k.mizan_tutari !== null ? "20 ve 50 havuzu birleşik; hesap bazında dağıtılmayan toplamda." : undefined}
+          />
+        ))}
+        <GiderKutusu
+          baslik="720 + 730 toplam"
+          mizan={v.toplam.mizan_tutari}
+          dagitilan={v.toplam.dagitilan}
+          dagitilanAdi="Dağıtılan"
+          dagitilmayan={v.toplam.dagitilmayan}
+          oran={v.toplam.dagitilmayan_yuzde}
+          esik={v.esik_yuzde}
+          aciklama={ayrilmamis ? `Bunun ${paraBicimle(v.ayrilmamis, "TL", 0)} kadarı 20 ve 50'de işçilik + GÜG birleşik.` : undefined}
+        />
+      </div>
+      {v.notlar.length > 0 && (
+        <ul aria-label="Dağıtım notları" className="flex flex-col gap-1 text-sm">
+          {v.notlar.map((n) => (
+            <li key={n} className="flex items-start gap-2">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+              {n}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Aşamalara dağıtılan işçilik ve GÜG</caption>
+          <thead>
+            <tr className="text-left text-xs text-muted-foreground uppercase">
+              <th className="py-1.5 font-medium">Aşama</th>
+              <th className="py-1.5 font-medium">Dağıtım anahtarı</th>
+              <th className="py-1.5 text-right font-medium">İşçilik</th>
+              <th className="py-1.5 text-right font-medium">GÜG</th>
+              <th className="py-1.5 text-right font-medium">Toplam</th>
+              <th className="py-1.5 text-right font-medium">Pay</th>
+              <th className="py-1.5 text-right font-medium">Ürün</th>
+              <th className="py-1.5 text-right font-medium">Birim başına</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {v.asamalar.map((a) => (
+              <tr key={a.asama}>
+                <th scope="row" className="py-1.5 text-left font-medium">
+                  {a.asama} · {a.ad}
+                </th>
+                <td className="py-1.5 text-muted-foreground">{a.anahtar}</td>
+                {a.birlesik ? (
+                  <td colSpan={2} className="py-1.5 text-center text-muted-foreground tabular-nums">
+                    {paraBicimle(a.toplam, "TL", 0)} (işçilik + GÜG)
+                  </td>
+                ) : (
+                  <>
+                    <td className="py-1.5 text-right tabular-nums">{paraBicimle(a.iscilik, "TL", 0)}</td>
+                    <td className="py-1.5 text-right tabular-nums">{paraBicimle(a.gug, "TL", 0)}</td>
+                  </>
+                )}
+                <td className="py-1.5 text-right font-semibold tabular-nums">{paraBicimle(a.toplam, "TL", 0)}</td>
+                <td className="py-1.5 text-right tabular-nums">{a.pay_yuzde === null ? "—" : yuzdeBicimle(a.pay_yuzde)}</td>
+                <td className="py-1.5 text-right tabular-nums">{a.urun_sayisi}</td>
+                <td className="py-1.5 text-right tabular-nums">
+                  {a.birim_basina_ortalama === null ? "—" : paraBicimle(a.birim_basina_ortalama, "TL", 4)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Suspense fallback={<p className="text-sm text-muted-foreground">Grafik yükleniyor…</p>}>
+        <GiderDagitimGrafigi asamalar={v.asamalar} />
+      </Suspense>
+      {v.urunler_ilk20.length > 0 && (
+        <details className="rounded-xl border">
+          <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
+            En çok gider alan {v.urunler_ilk20.length} ürün
+            <span className="ml-1 font-normal text-muted-foreground">({v.urun_sayisi} üründen)</span>
+          </summary>
+          <table className="w-full border-t text-sm">
+            <caption className="sr-only">En çok gider alan ürünler</caption>
+            <thead>
+              <tr className="text-left text-xs text-muted-foreground uppercase">
+                <th className="px-3 py-1.5 font-medium">Ürün</th>
+                <th className="px-3 py-1.5 font-medium">Aşama</th>
+                <th className="px-3 py-1.5 text-right font-medium">İşçilik</th>
+                <th className="px-3 py-1.5 text-right font-medium">GÜG</th>
+                <th className="px-3 py-1.5 text-right font-medium">Toplam</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {v.urunler_ilk20.map((u) => (
+                <tr key={`${u.asama}-${u.kod}`}>
+                  <td className="px-3 py-1.5">
+                    <span className="block">{u.ad ?? u.kod}</span>
+                    <span className="block text-xs text-muted-foreground">{u.kod}</span>
+                  </td>
+                  <td className="px-3 py-1.5">{u.asama}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{paraBicimle(u.iscilik, "TL", 0)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{u.asama === 40 ? paraBicimle(u.gug, "TL", 0) : "—"}</td>
+                  <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{paraBicimle(u.toplam, "TL", 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
+    </div>
+  );
+}
+
 /** Dağıtılan işçilik ve genel üretim gideri havuzları (Excel aşama sayfalarının 1. satırı); değiştirilebilir. */
 function DagitimKarti({ donemId, dagitim }: { donemId: number; dagitim: SmmDagitim }) {
   const kaydet = useSmmDagitim(donemId);
+  const [acik, setAcik] = useState(false);
   const [taslak, setTaslak] = useState<Record<string, string>>({});
   const degisen = Object.entries(taslak).filter(([k, v]) => {
     const h = dagitim.havuzlar.find((x) => x.anahtar === k);
@@ -121,7 +302,7 @@ function DagitimKarti({ donemId, dagitim }: { donemId: number; dagitim: SmmDagit
   });
   const gecersiz = degisen.some(([, v]) => sayiApi(v) === null);
   return (
-    <details className="group rounded-2xl border bg-card shadow-xs">
+    <details className="group rounded-2xl border bg-card shadow-xs" onToggle={(e) => setAcik(e.currentTarget.open)}>
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-1 px-5 py-4">
         <span className="text-base font-semibold">Dağıtılan işçilik ve genel gider</span>
         <span className="text-sm text-muted-foreground">
@@ -131,6 +312,8 @@ function DagitimKarti({ donemId, dagitim }: { donemId: number; dagitim: SmmDagit
         <span className="ml-auto text-sm font-medium text-primary group-open:hidden">Göster / değiştir</span>
       </summary>
       <div className="flex flex-col gap-3 border-t px-5 py-4">
+        {acik && <GiderDagitimTablosu donemId={donemId} />}
+        <h3 className="mt-2 text-sm font-semibold">Havuzlar ve dağıtım anahtarı</h3>
         <p className="text-sm text-muted-foreground">
           Tutarlar Excel'deki aşama sayfalarının ilk satırından geldi. Değiştirirseniz aşama maliyetleri yeniden hesaplanır; Excel'deki ilk
           değer yanında kalır.

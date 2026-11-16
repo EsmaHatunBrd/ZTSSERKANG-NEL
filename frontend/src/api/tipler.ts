@@ -199,3 +199,11 @@ export type OnayCiktisiFiyatGiris = Sema["OnayCiktisiFiyatGiris"];
 export type OnayCiktisiSmmGiris = Sema["OnayCiktisiSmmGiris"];
 export type OnayCiktisiEkleri = Sema["OnayCiktisiEkleri"];
 export type OnayCiktisiImzalari = Sema["OnayCiktisiImzalari"];
+
+// SMM gider dağıtım tablosu ve en büyük sarf farkları (16.11.2026). Oranlar metin kesir (0.05 = %5).
+export type SmmGiderDagitimi = Sema["SmmGiderDagitimi"];
+export type SmmGiderKaynagi = Sema["SmmGiderKaynagi"];
+export type SmmGiderAsamasi = Sema["SmmGiderAsamasi"];
+export type SmmGiderUrunu = Sema["SmmGiderUrunu"];
+export type SmmSarfOzeti = Sema["SmmSarfOzeti"];
+export type SmmSarfOzetKalemi = Sema["SmmSarfOzetKalemi"];

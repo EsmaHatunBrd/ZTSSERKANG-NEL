@@ -503,3 +503,24 @@ export function useSmmMaliyetKarti(donemId: number | null, kod: string | null) {
       ),
   });
 }
+
+/** Gider dağıtım tablosu: 720 / 730 mizan, aşamalara dağıtılan ve dağıtılmayan, aşama başına işçilik / GÜG, en çok gider alan ürünler. */
+export function useSmmGiderDagitimi(donemId: number | null, acik = true) {
+  return useQuery({
+    queryKey: ["smm", "gider-dagitimi", donemId],
+    enabled: donemId !== null && acik,
+    queryFn: () => cagir(api.GET("/api/v1/smm/donemler/{donem_id}/gider-dagitimi", { params: { path: { donem_id: donemId as number } } })),
+  });
+}
+
+/** Tutara göre en büyük sarf farkları (birim uyumsuzlar hariç) ve fazla / eksik özeti. */
+export function useSmmSarfOzeti(donemId: number | null, ilk = 20) {
+  return useQuery({
+    queryKey: ["smm", "sarf-ozet", donemId, ilk],
+    enabled: donemId !== null,
+    queryFn: () =>
+      cagir(
+        api.GET("/api/v1/smm/donemler/{donem_id}/sarf-farki/ozet", { params: { path: { donem_id: donemId as number }, query: { ilk } } }),
+      ),
+  });
+}

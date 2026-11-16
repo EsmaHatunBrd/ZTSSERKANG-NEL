@@ -232,6 +232,10 @@ describe("SMM", () => {
         dagitimGovdesi = await request.json();
         return HttpResponse.json(dagitim);
       }),
+      // gider dağıtım tablosu (ayrı testi SmmGiderSarf.test.tsx'te): bölüm açılınca istenir
+      http.get(`${T}/smm/donemler/:id/gider-dagitimi`, () =>
+        HttpResponse.json({ hata: "bulunamadi", mesaj: "bu testte yok", alanlar: {}, kod: null }, { status: 404 }),
+      ),
     );
     kurSayfa(<SmmUretim />);
     await screen.findByText("Biber 370 etiketli");
@@ -314,6 +318,16 @@ describe("SMM", () => {
     const esikler: (string | null)[] = [];
     sunucu.use(
       http.get(`${T}/smm/donemler`, () => HttpResponse.json({ kayitlar: [donem] })),
+      // en büyük farklar bölümü (ayrı testi SmmGiderSarf.test.tsx'te)
+      http.get(`${T}/smm/donemler/:id/sarf-farki/ozet`, () =>
+        HttpResponse.json({
+          donem,
+          ilk: 20,
+          kalem_sayisi: 0,
+          kalemler: [],
+          ozet: { toplam_fark_tutari: "0", fazla_tutar: "0", eksik_tutar: "0", fazla_sayisi: 0, eksik_sayisi: 0, birim_uyumsuz_sayisi: 0 },
+        }),
+      ),
       http.get(`${T}/smm/donemler/:id/sarf-farki`, ({ request }) => {
         esikler.push(new URL(request.url).searchParams.get("esik"));
         return HttpResponse.json({
