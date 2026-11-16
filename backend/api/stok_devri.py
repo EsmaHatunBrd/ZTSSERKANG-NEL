@@ -7,7 +7,7 @@ from ..servisler import hesap_servisi as hs, stok_devri_servisi as sd
 from ..servisler.donusum import decimal_str
 from ..servisler.hatalar import ServisHatasi
 from .bagimliliklar import OturumDep, SenaryoDep, kullanici_ver
-from .import_ import _gecici
+from .import_ import _gecici, geri_al_uclari
 from .semalar import HATA_404_409_422, HATA_404_422, StokDevriCikis, StokDevriGiris, StokDevriListesi, StokDevriOnizle, StokDevriUygula
 
 router = APIRouter(tags=["stok-devri"])
@@ -83,9 +83,13 @@ def onizle(s: OturumDep, dosya: UploadFile = File(...), senaryo: int = Form(...)
 
 
 @router.post("/aktarim/stok-devri/uygula", response_model=StokDevriUygula, responses=HATA_404_409_422)
-def uygula(s: OturumDep, dosya: UploadFile = File(...), senaryo: int = Form(...), neden: str = Form(...), kul: str = Depends(kullanici_ver)):
+def uygula(s: OturumDep, dosya: UploadFile = File(...), senaryo: int = Form(...), neden: str = Form(...), onay: bool = Form(False),
+           kul: str = Depends(kullanici_ver)):
     """Hatalı satır varsa 422 (`alanlar.hatalar` = [{satir_no, mesaj}]) ve hiçbir satır yazılmaz. Kilitli çalışmaya yazılmaz (409)."""
     sen = hs.senaryo_getir(s, senaryo)
     hs.kilit_denetle(sen)
     with _gecici(dosya) as yol:
-        return sd.aktarim_uygula(s, sen, yol, neden, kul)
+        return sd.aktarim_uygula(s, sen, yol, neden, kul, onay, hs.dosya_adi_temizle(dosya.filename))
+
+
+geri_al_uclari(router, "/aktarim/stok-devri", "stok_devri", etiket="Stokta kalan")

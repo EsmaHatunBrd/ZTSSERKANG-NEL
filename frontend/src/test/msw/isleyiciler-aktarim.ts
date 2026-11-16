@@ -10,6 +10,9 @@ import type {
 
 const T = "*/api/v1/aktarim";
 
+/** Standart önizleme özeti (boş); testler gerektiğinde alanları ezer. */
+export const bosOzet = { okunan: 0, yeni: 0, degisen: 0, ayni: 0, silinecek: 0, atlanan: 0, sorunlu: [], uyarilar: [] };
+
 type Tip = "uretim-adetleri" | "satin-alma" | "gider-dagitim" | "stok-devri";
 
 export interface AktarimIstegi {
@@ -34,6 +37,7 @@ export const uretimOnizle: AktarimOnizleUretim = {
   degisen: [{ urun_kodu: "T-2", alan: "hedef_uretim", eski: "190", yeni: "195" }],
   ayni: 3,
   uyarilar: ["Üretim Adetleri: ürün kodu T-3 birden fazla satırda; ilk satır korundu"],
+  ozet: bosOzet,
 };
 export const uretimUygula: AktarimUygulaUretim = { eklenen: 1, guncellenen: 1, uyarilar: uretimOnizle.uyarilar };
 
@@ -46,6 +50,7 @@ export const satinAlmaOnizle: AktarimOnizleSatinAlma = {
   hatali: [],
   revize: [{ kod: "MLZ-3", ilk: "2.8", revize: "3" }],
   revize_sayisi: 1,
+  ozet: bosOzet,
 };
 export const satinAlmaUygula: AktarimUygulaSatinAlma = {
   malzeme_eklenen: 1,
@@ -86,5 +91,6 @@ export const giderOnizle: AktarimOnizleGider = {
     yeni_adet: 1,
     degisen: [{ ad: "Küçük", alan: "uretim_adedi", eski: "1000", yeni: "2000" }],
   },
+  ozet: bosOzet,
 };
 export const giderUygula: AktarimUygulaGider = { havuz: 1, ambalaj: 1, havuz_kodlari: ["dolum_iscilik"] };

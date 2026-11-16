@@ -2,15 +2,18 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarPlus, CalendarRange, CircleCheck, FileSpreadsheet, Lock, TriangleAlert, Upload } from "lucide-react";
 import { ApiHatasi, hataMetni, hataMetniVarsa } from "@/api/istemci";
-import { useSmmDonemleri, useSmmReceteKaynagi, useSmmSil, useSmmYeniDonem, useSmmYukle } from "@/api/sorgular/smm";
+import { useSmmDonemleri, useSmmDonemOnizle, useSmmReceteKaynagi, useSmmSil, useSmmYeniDonem, useSmmYukle } from "@/api/sorgular/smm";
 import type { SmmDonem } from "@/api/tipler";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
+import { satirKaybi, useSatirKaybiOnayi } from "@/bilesenler/SatirKaybiOnayi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { SonYuklemeSeridi } from "@/bilesenler/SonYuklemeSeridi";
 import { Button } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { paraBicimle } from "@/yardimcilar/para";
 import { kilitTarihi } from "./SmmDevirKilit";
 import { SmmDuzenlemeKilidi, useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
+import { SmmOnizlemeKutusu, SmmYuklemeYardimi } from "./SmmYukleme";
 
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const SECIM_SINIFI = "h-8 rounded-lg border border-input bg-background px-2 text-sm";
@@ -191,6 +194,8 @@ function YeniDonemKarti({ liste }: { liste: SmmDonem[] }) {
 export default function SmmDonemler() {
   const donemler = useSmmDonemleri();
   const yukle = useSmmYukle();
+  const onizle = useSmmDonemOnizle();
+  const kayip = useSatirKaybiOnayi();
   const sil = useSmmSil();
   const { kilitli, neden } = useSmmYazmaKilidi();
   const dosyaRef = useRef<HTMLInputElement>(null);
@@ -201,27 +206,34 @@ export default function SmmDonemler() {
   const [silinecek, setSilinecek] = useState<SmmDonem | null>(null);
   const [yuklenen, setYuklenen] = useState<SmmDonem | null>(null);
 
-  function gonder(uzerineYaz = false) {
+  function gonder(uzerineYaz = false, onay = false) {
     if (!dosya) return;
     setYuklenen(null);
     yukle.mutate(
-      { dosya, yil, ay, uzerineYaz },
+      { dosya, yil, ay, uzerineYaz, onay },
       {
         onSuccess: (d) => {
           setYuklenen(d);
           setUstuneYazOnayi(false);
           setDosya(null);
+          onizle.reset();
           if (dosyaRef.current) dosyaRef.current.value = "";
         },
         onError: (e) => {
-          if (e instanceof ApiHatasi && e.durum === 409) setUstuneYazOnayi(true);
+          setUstuneYazOnayi(false);
+          // önce "dönem zaten yüklü" (üzerine yaz), sonra "kalem yarıdan az" (satır kaybı) onayı
+          if (kayip.yakala(e, () => gonder(true, true))) return;
+          if (e instanceof ApiHatasi && e.durum === 409 && e.kod !== "donem_kilitli") setUstuneYazOnayi(true);
         },
       },
     );
   }
 
   const liste = donemler.data?.kayitlar ?? [];
-  const cakisma = yukle.error instanceof ApiHatasi && yukle.error.durum === 409;
+  const cakisma = yukle.error instanceof ApiHatasi && yukle.error.durum === 409 && yukle.error.kod !== "donem_kilitli";
+  const on = onizle.data;
+  // seçili ay/yıl için var olan dönem: "Son yükleme — Geri al" şeridi onun için
+  const seciliDonem = liste.find((d) => d.yil === yil && d.ay === ay) ?? null;
   return (
     <section className="flex flex-col gap-5">
       <SayfaBasligi bant baslik="Maliyet Muhasebesi" altBaslik="Aylık SMM: dönem başı, alım, sayım, sarf ve ortalama maliyet" />
@@ -255,6 +267,7 @@ export default function SmmDonemler() {
                   const f = e.target.files?.[0] ?? null;
                   setDosya(f);
                   yukle.reset();
+                  onizle.reset();
                   setUstuneYazOnayi(false);
                   const dn = f ? dosyadanDonem(f.name) : null;
                   if (dn) {
@@ -266,7 +279,15 @@ export default function SmmDonemler() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-muted-foreground">Ay</span>
-              <select aria-label="Ay" className={SECIM_SINIFI} value={ay} onChange={(e) => setAy(Number(e.target.value))}>
+              <select
+                aria-label="Ay"
+                className={SECIM_SINIFI}
+                value={ay}
+                onChange={(e) => {
+                  setAy(Number(e.target.value));
+                  onizle.reset();
+                }}
+              >
                 {AYLAR.map((a, i) => (
                   <option key={a} value={i + 1}>
                     {a}
@@ -281,17 +302,53 @@ export default function SmmDonemler() {
                 inputMode="numeric"
                 className="w-24"
                 value={yil}
-                onChange={(e) => setYil(Number(e.target.value) || yil)}
+                onChange={(e) => {
+                  setYil(Number(e.target.value) || yil);
+                  onizle.reset();
+                }}
               />
             </label>
-            <Button type="button" disabled={kilitli || !dosya || yukle.isPending} title={neden} onClick={() => gonder(false)}>
-              {yukle.isPending ? "Yükleniyor…" : "Yükle"}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!dosya || onizle.isPending}
+              onClick={() => dosya && onizle.mutate({ dosya, yil, ay })}
+            >
+              {onizle.isPending ? "Okunuyor…" : "Önizle"}
             </Button>
           </div>
-          {yukle.error && !cakisma && (
+          <SmmYuklemeYardimi />
+          {(onizle.error || (yukle.error && !cakisma && !satirKaybi(yukle.error))) && (
             <p role="alert" className="text-sm text-destructive">
-              {hataMetni(yukle.error)}
+              {hataMetni(onizle.error ?? yukle.error)}
             </p>
+          )}
+          {on && dosya && (
+            <SmmOnizlemeKutusu
+              ozet={on}
+              baslik="SMM Excel'i — sayı sütununda metin hücreler"
+              uygulaMetni="Yükle"
+              uygulanamaz={kilitli || on.kalem === 0 || on.kilitli}
+              bekliyor={yukle.isPending}
+              kilitNedeni={on.kilitli ? "Dönem kapatıldı" : neden}
+              onUygula={() => gonder(false)}
+              onVazgec={() => onizle.reset()}
+            >
+              <p className="text-sm">
+                <b>{on.donem_ad}</b>: {on.kalem} stok kalemi, {on.recete_satiri} reçete satırı, {on.iscilik} üretim süresi.
+                {on.mevcut_donem_id ? ` Dönem zaten var (${on.mevcut_kalem} kalem).` : " Yeni dönem açılacak."}
+              </p>
+              <p className="text-xs text-muted-foreground">Okunan sayfalar: {on.sayfalar.join(", ")}</p>
+            </SmmOnizlemeKutusu>
+          )}
+          {seciliDonem && (
+            <SonYuklemeSeridi
+              yol={`/api/v1/smm/donemler/${seciliDonem.id}`}
+              sorgu={{}}
+              kilitli={kilitli || Boolean(seciliDonem.kilitli)}
+              kilitNedeni={seciliDonem.kilitli ? "Dönem kapatıldı" : neden}
+              gecersiz={["smm"]}
+            />
           )}
           {yuklenen && (
             <div role="status" className="flex flex-col gap-2 rounded-xl bg-kart-yesil px-4 py-3 text-sm">
@@ -371,9 +428,11 @@ export default function SmmDonemler() {
         >
           <p>
             {AYLAR[ay - 1]} {yil} dönemi daha önce yüklenmiş. Üzerine yazarsanız bu dönemin verileri yeni dosyadakilerle değiştirilir.
+            Yanlış olursa "Son yükleme — Geri al" ile önceki hâline dönebilirsiniz.
           </p>
         </OnayDiyalogu>
       )}
+      {kayip.diyalog}
       {silinecek && !kilitli && (
         <OnayDiyalogu
           baslik="Dönem silinsin mi?"

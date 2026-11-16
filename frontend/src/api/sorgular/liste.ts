@@ -75,7 +75,15 @@ export function useListeYukle(senaryo: number | null | undefined) {
           bodySerializer: () => formVerisi({ dosya }),
         }),
       ),
-    onSuccess: () => yenile(qc),
+    onSuccess: () => Promise.all([yenile(qc), qc.invalidateQueries({ queryKey: ["son-yukleme"] })]),
+  });
+}
+
+/** Hiçbir şey yazmaz: yeni / değişecek / aynı ve hatalı satırlar + standart özet. */
+export function useListeOnizle() {
+  return useMutation({
+    mutationFn: (dosya: File) =>
+      cagir(api.POST("/api/v1/liste-fiyatlari/onizle", { body: {} as never, bodySerializer: () => formVerisi({ dosya }) })),
   });
 }
 

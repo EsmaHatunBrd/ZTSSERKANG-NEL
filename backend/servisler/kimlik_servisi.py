@@ -25,9 +25,11 @@ _SCRYPT = (2 ** 14, 8, 1)
 _KULLANICI_ADI = re.compile(r"^[a-z0-9._-]{3,64}$")
 
 # Veri yazmayan POST'lar: her rol kullanabilir (önizleme hesabı, aktarım önizlemeleri, onay çıktısı indirme).
-_SALT_OKUNUR_POST = re.compile(r"(/hesapla|/onizle|/import/fiyat-listesi|^/api/v1/onay-ciktisi/(fiyat|smm))$")
+_SALT_OKUNUR_POST = re.compile(r"(/hesapla|/onizle|/import/fiyat-listesi|^/api/v1/onay-ciktisi/(fiyat|smm)|^/api/v1/sablonlar/sorunlu-satirlar\.xlsx)$")
 # Satın alma rolünün yazabildiği uçlar: malzeme kartı, fiyatları, fiyat listesi ve S.ALMA BF aktarımı.
-_SATIN_ALMA_YAZAR = re.compile(r"^/api/v1/(malzemeler(/[^/]+/(fiyatlar|pasif))?|import/fiyat-listesi/uygula|satin-alma/uygula|duzenleme-kilidi/ac)$")
+# Önceki desen "satin-alma/uygula"yı kökte arıyordu; gerçek uç /aktarim/satin-alma/uygula olduğu için satın alma rolü 403 alıyordu.
+_SATIN_ALMA_YAZAR = re.compile(r"^/api/v1/(malzemeler(/[^/]+/(fiyatlar|pasif))?|import/fiyat-listesi/(uygula|son-yuklemeyi-geri-al)"
+                               r"|aktarim/satin-alma/(uygula|son-yuklemeyi-geri-al)|duzenleme-kilidi/ac)$")
 _YAZMA = ("POST", "PUT", "PATCH", "DELETE")
 
 

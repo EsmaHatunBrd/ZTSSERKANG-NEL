@@ -3,7 +3,10 @@ import { CircleCheck, FileSpreadsheet, Plus, TriangleAlert, Upload } from "lucid
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
 import { useSmmDonemleri, useSmmReceteKiyas, useSmmReceteler, useSmmReceteOnizle, useSmmReceteYukle } from "@/api/sorgular/smm";
 import type { SmmAnaReceteOnizleme, SmmReceteUrunu } from "@/api/tipler";
+import { satirKaybi, useSatirKaybiOnayi } from "@/bilesenler/SatirKaybiOnayi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { SonYuklemeSeridi } from "@/bilesenler/SonYuklemeSeridi";
+import { YuklemeOzetiKutusu } from "@/bilesenler/YuklemeOzetiKutusu";
 import { Button } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
@@ -11,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { SECIM_SINIFI, useGecikmeli } from "./ortak";
 import { ASAMA_ADI, ReceteCekmecesi, YeniReceteDiyalogu } from "./ReceteDuzenleme";
 import { SmmDuzenlemeKilidi, useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
+import { SmmYuklemeYardimi } from "./SmmYukleme";
 
 const DURUM_ADI: Record<string, string> = {
   ayni: "Aynı",
@@ -58,8 +62,23 @@ function YuklemeKarti() {
   const [dosya, setDosya] = useState<File | null>(null);
   const onizle = useSmmReceteOnizle();
   const yukle = useSmmReceteYukle();
+  const kayip = useSatirKaybiOnayi();
   const { kilitli, neden } = useSmmYazmaKilidi();
-  const hata = onizle.error ?? yukle.error;
+  const hata = onizle.error ?? (satirKaybi(yukle.error) ? null : yukle.error);
+  const o = onizle.data;
+  const gonder = (onay = false) =>
+    dosya &&
+    yukle.mutate(
+      { dosya, onay },
+      {
+        onSuccess: () => {
+          setDosya(null);
+          onizle.reset();
+          if (ref.current) ref.current.value = "";
+        },
+        onError: (e) => kayip.yakala(e, () => gonder(true)),
+      },
+    );
   return (
     <section aria-label="Canias reçete dökümü" className="flex flex-col gap-3 rounded-2xl border bg-card p-5 shadow-xs">
       <div className="flex items-start gap-3">
@@ -92,32 +111,39 @@ function YuklemeKarti() {
         </Button>
         <Button
           type="button"
-          disabled={kilitli || !dosya || !onizle.data || yukle.isPending}
+          disabled={kilitli || !dosya || !o || o.satir_sayisi === 0 || yukle.isPending}
           title={neden}
-          onClick={() =>
-            dosya &&
-            yukle.mutate(dosya, {
-              onSuccess: () => {
-                setDosya(null);
-                onizle.reset();
-                if (ref.current) ref.current.value = "";
-              },
-            })
-          }
+          onClick={() => gonder()}
         >
           {yukle.isPending ? "Yükleniyor…" : "Yükle"}
         </Button>
       </div>
+      <SmmYuklemeYardimi kimlik="canias_urun_agaci" />
       {hata && (
         <p role="alert" className="text-sm text-destructive">
           {hataMetni(hata)}
         </p>
       )}
-      {onizle.data && !yukle.data && (
-        <div className="rounded-xl bg-muted/60 px-4 py-3">
-          <OnizlemeOzeti o={onizle.data} />
+      {o && !yukle.data && (
+        <div role="region" aria-label="Önizleme" className="flex flex-col gap-3 rounded-xl bg-muted/60 px-4 py-3">
+          <OnizlemeOzeti o={o} />
+          <YuklemeOzetiKutusu
+            baslik="Canias ürün ağacı — sorunlu satırlar"
+            ozet={{
+              okunan: o.okunan ?? 0,
+              yeni: o.yeni ?? 0,
+              degisen: o.degisen ?? 0,
+              ayni: o.ayni ?? 0,
+              silinecek: o.silinecek ?? 0,
+              atlanan: o.atlanan ?? 0,
+              sorunlu: o.sorunlu ?? [],
+              uyarilar: o.uyarilar ?? [],
+            }}
+          />
         </div>
       )}
+      <SonYuklemeSeridi yol="/api/v1/smm/receteler" sorgu={{}} kilitli={kilitli} kilitNedeni={neden} gecersiz={["smm"]} />
+      {kayip.diyalog}
       {yukle.data && (
         <p role="status" className="flex items-center gap-2 text-sm">
           <CircleCheck className="size-4 text-green-700 dark:text-green-400" aria-hidden />

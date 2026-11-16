@@ -2,17 +2,17 @@
 bos = şablon olduğu gibi (boş) · tek = yalnız Örnek sayfası · dolu = doldurulacak sayfaya örnek yazılmış kitap (uygula dahil)
 
 [GEÇTİ] 01 Satın alma fiyat listesi (malzeme kartı + bütçe fiyatı)  (dosya: 11-16-2026-01-satin-alma-fiyat-listesi.xlsx, beklenen satır: 6)
-    bos   tamam okunan=0  yeni malzeme 0, fiyat yeni 0, revize 0, hatalı 0
+    bos   hata  okunan=None  HATA: Dosyada okunabilen malzeme satırı yok; mevcut veri değiştirilmedi.
     tek   tamam okunan=6  yeni malzeme 6, fiyat yeni 6, revize 1, hatalı 0
     dolu  tamam okunan=6  yeni malzeme 6, fiyat yeni 6, revize 1, hatalı 0 · uygula: kart 6, fiyat 6, revize 1
 
 [GEÇTİ] 02 Malzeme fiyat listesi (fiyat güncelleme / revize)  (dosya: 11-16-2026-02-malzeme-fiyat-listesi.xlsx, beklenen satır: 4)
-    bos   tamam okunan=0  değişen 0, aynı 0, yeni (yazılmaz) 0, revize 0, hatalı 0
+    bos   hata  okunan=None  HATA: Dosyada okunabilen fiyat satırı yok; mevcut veri değiştirilmedi. Doğru sayfayı ve dosyayı seçtiğinizden emin olun.
     tek   tamam okunan=4  değişen 3, aynı 1, yeni (yazılmaz) 0, revize 1, hatalı 0
     dolu  tamam okunan=4  değişen 3, aynı 1, yeni (yazılmaz) 0, revize 1, hatalı 0 · uygula: 3 fiyat
 
 [GEÇTİ] 03 Üretim adetleri (vardiya kapasitesi ve hedef üretim)  (dosya: 11-16-2026-03-uretim-adetleri.xlsx, beklenen satır: 3)
-    bos   hata  okunan=None  HATA: Üretim Adetleri sayfasında satır yok
+    bos   hata  okunan=None  HATA: Üretim Adetleri sayfasında satır yok; mevcut veri değiştirilmedi.
     tek   tamam okunan=3  yeni 3, değişen alan 0, aynı 0
     dolu  tamam okunan=3  yeni 3, değişen alan 0, aynı 0 · uygula: eklenen 3, güncellenen 0
 
@@ -23,61 +23,61 @@ bos = şablon olduğu gibi (boş) · tek = yalnız Örnek sayfası · dolu = dol
 
 [GEÇTİ] 05 Ürün reçetesi (Fiyat Çalışması ürün sayfası düzeni)  (dosya: 11-16-2026-05-urun-recetesi.xlsx, beklenen satır: 7)
     bos   tamam okunan=0   · hatalı sayfalar: [{'sayfa': '001', 'mesaj': 'reçete satırı yok'}]
-    tek   tamam okunan=7  sayfa Örnek 99.03.001 yeni_urun: 7 satır, elle fiyat 7, elle brüt 0
+    tek   tamam okunan=7  sayfa Örnek 99.03.001 yeni_urun: 7 satır, elle fiyat 1, elle brüt 0
     dolu  tamam okunan=7  sayfa 001 99.03.001 yeni_urun: 7 satır, elle fiyat 1, elle brüt 0 · uygula: [{'sayfa': '001', 'kod': '99.03.001', 'versiyon': 1}], yeni ürün 1
 
 [GEÇTİ] 06 Stokta kalan (geçen yıldan devreden ürün stoku)  (dosya: 11-16-2026-06-stokta-kalan.xlsx, beklenen satır: 2)
-    bos   tamam okunan=0  yeni 0, değişen 0, aynı 0, hatalar []
+    bos   hata  okunan=None  HATA: Dosyada okunabilen stok satırı yok; mevcut veri değiştirilmedi.
     tek   tamam okunan=2  yeni 2, değişen 0, aynı 0, hatalar []
     dolu  tamam okunan=2  yeni 2, değişen 0, aynı 0, hatalar [] · uygula: {'eklenen': 2, 'guncellenen': 0, 'ayni': 0}
 
 [GEÇTİ] 07 Satış geçmişi (geçen yıl satış fiyatları)  (dosya: 11-16-2026-07-satis-gecmisi.xlsx, beklenen satır: 4)
-    bos   hata  okunan=None  HATA: dosyada veri satırı yok
+    bos   hata  okunan=None  HATA: dosyada veri satırı yok; mevcut veri değiştirilmedi
     tek   tamam okunan=4  eklenen 4
-    dolu  tamam okunan=4  eklenen 4
+    dolu  tamam okunan=4  eklenen 0
 
 [GEÇTİ] 08 Geçmiş yılların liste fiyatları (yalnız Berrak)  (dosya: 11-16-2026-08-liste-fiyatlari.xlsx, beklenen satır: 4)
-    bos   hata  okunan=None  HATA: dosyada veri satırı yok
+    bos   hata  okunan=None  HATA: dosyada veri satırı yok; mevcut veri değiştirilmedi
     tek   tamam okunan=4  yazılan 4
     dolu  tamam okunan=4  yazılan 4
 
 [GEÇTİ] 09 Canias ürün ağacı dökümü (kalıcı üretim reçeteleri)  (dosya: 11-16-2026-09-canias-urun-agaci.xlsx, beklenen satır: (3, 10))
-    bos   hata  okunan=None  HATA: dosyada reçete satırı yok
+    bos   tamam okunan=(0, 0)  0 ürün, 0 satır, aşama {}, alternatifli 0
     tek   tamam okunan=(3, 10)  3 ürün, 10 satır, aşama {'20': 1, '40': 1, '50': 1}, alternatifli 1
     dolu  tamam okunan=(3, 10)  3 ürün, 10 satır, aşama {'20': 1, '40': 1, '50': 1}, alternatifli 1 · yükle: 3 ürün
 
 [GEÇTİ] 10 SMM · Alım ve satış (HM-YM ALIŞ SATIŞ)  (dosya: 11-16-2026-10-smm-alim-satis.xlsx, beklenen satır: 3)
-    bos   tamam okunan=0  okunan 0, ekranda dolu 0
+    bos   hata  okunan=None  HATA: Dosyada okunabilen kalem yok; mevcut veri değiştirilmedi. Doğru sayfayı ve dosyayı seçtiğinizden emin olun.
     tek   tamam okunan=3  okunan 3, ekranda dolu 3
     dolu  tamam okunan=3  okunan 3, ekranda dolu 3
 
 [GEÇTİ] 11 SMM · Alım iadeleri (İADELER)  (dosya: 11-16-2026-11-smm-iadeler.xlsx, beklenen satır: 2)
-    bos   tamam okunan=0  okunan 0, ekranda dolu 0
+    bos   hata  okunan=None  HATA: Dosyada okunabilen kalem yok; mevcut veri değiştirilmedi. Doğru sayfayı ve dosyayı seçtiğinizden emin olun.
     tek   tamam okunan=2  okunan 2, ekranda dolu 2
     dolu  tamam okunan=2  okunan 2, ekranda dolu 2
 
 [GEÇTİ] 12 SMM · Üretim miktarları (ÜRETİM)  (dosya: 11-16-2026-12-smm-uretim.xlsx, beklenen satır: 3)
-    bos   tamam okunan=0  okunan 0, ekranda dolu 0
+    bos   hata  okunan=None  HATA: Dosyada okunabilen kalem yok; mevcut veri değiştirilmedi. Doğru sayfayı ve dosyayı seçtiğinizden emin olun.
     tek   tamam okunan=3  okunan 3, ekranda dolu 3
     dolu  tamam okunan=3  okunan 3, ekranda dolu 3
 
 [GEÇTİ] 13 SMM · Dönem sonu sayım (DSS)  (dosya: 11-16-2026-13-smm-sayim.xlsx, beklenen satır: 5)
-    bos   tamam okunan=0  okunan 0, ekranda dolu 0
+    bos   hata  okunan=None  HATA: Dosyada okunabilen kalem yok; mevcut veri değiştirilmedi. Doğru sayfayı ve dosyayı seçtiğinizden emin olun.
     tek   tamam okunan=5  okunan 5, ekranda dolu 5
     dolu  tamam okunan=5  okunan 5, ekranda dolu 5
 
 [GEÇTİ] 14 SMM · Şahit numune (ŞAHİT)  (dosya: 11-16-2026-14-smm-sahit-numune.xlsx, beklenen satır: 2)
-    bos   tamam okunan=0  okunan 0, ekranda dolu 0
+    bos   hata  okunan=None  HATA: Dosyada okunabilen kalem yok; mevcut veri değiştirilmedi. Doğru sayfayı ve dosyayı seçtiğinizden emin olun.
     tek   tamam okunan=2  okunan 2, ekranda dolu 2
     dolu  tamam okunan=2  okunan 2, ekranda dolu 2
 
 [GEÇTİ] 15 SMM · Gider mizanı (GİDER MİZAN, 720 / 730)  (dosya: 11-16-2026-15-smm-gider-mizani.xlsx, beklenen satır: 5)
-    bos   hata  okunan=None  HATA: gider mizanında 720 / 730 bulunamadı
+    bos   hata  okunan=None  HATA: Dosyada okunabilen hesap yok; mevcut veri değiştirilmedi. Doğru sayfayı ve dosyayı seçtiğinizden emin olun.
     tek   tamam okunan=5  okunan 5, ekranda dolu 5
     dolu  tamam okunan=5  okunan 5, ekranda dolu 5
 
 [GEÇTİ] 16 SMM · Stok mizanı (STOK MİZAN, 150 / 151 / 152)  (dosya: 11-16-2026-16-smm-stok-mizani.xlsx, beklenen satır: 5)
-    bos   hata  okunan=None  HATA: stok mizanında 15x hesabı bulunamadı
+    bos   hata  okunan=None  HATA: Dosyada okunabilen hesap yok; mevcut veri değiştirilmedi. Doğru sayfayı ve dosyayı seçtiğinizden emin olun.
     tek   tamam okunan=5  okunan 5, ekranda dolu 5
     dolu  tamam okunan=5  okunan 5, ekranda dolu 5
 

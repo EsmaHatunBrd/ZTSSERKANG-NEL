@@ -103,15 +103,45 @@ def _satir(no: int, ham: dict) -> dict:
             "tarih": tarih, "fiyat": fiyat, "para_birimi": str(ham.get("para_birimi") or "").strip().upper(), "adet": adet, "hatalar": hatalar}
 
 
-def _satirlara(baslik: list, govde, basliklar: tuple = BASLIKLAR, satir_fn=None, istege_bagli: tuple = ()) -> list[dict]:
+ESANLAMLAR = {
+    "urun_kodu": ("Ürün Kodu", "Stok Kodu", "Malzeme Kodu", "Mamul Kodu", "Kod"),
+    "musteri": ("Müşteri", "Müşteri Adı", "Cari", "Cari Adı", "Cari Hesap", "Cari Unvan", "Firma"),
+    "tarih": ("Tarih", "Fatura Tarihi", "Satış Tarihi", "İşlem Tarihi"),
+    "fiyat": ("Fiyat", "Birim Fiyat", "Birim Fiyatı", "Satış Fiyatı", "Net Fiyat"),
+    "para_birimi": ("Para Birimi", "Döviz", "Döviz Cinsi", "PB", "Para", "Döviz Kodu"),
+    "adet": ("Adet", "Miktar", "Satış Adedi", "Satış Miktarı"),
+    "yil": ("Yıl",),
+    "liste_fiyati": ("Liste Fiyatı", "Liste Fiyat", "Liste"),
+    "birim_maliyet": ("Birim Maliyet", "Birim Maliyeti", "Maliyet"),
+    "pazar": ("Pazar", "Yurtiçi/Yurtdışı"),
+}
+BASLIK_ARAMA_SATIRI = 30
+
+
+def _satirlara(baslik: list, govde, basliklar: tuple = BASLIKLAR, satir_fn=None, istege_bagli: tuple = (), ust: list | None = None) -> list[dict]:
     """Başlık satırı + (satir_no, hücreler) üreteci -> çözümlenmiş satırlar. Tamamen boş satırlar atlanır.
-    `basliklar`/`satir_fn`: başka bir tablo biçimi (ör. liste fiyatları) aynı okuyucuyla okunur; `istege_bagli` başlıklar eksik olabilir."""
+    `basliklar`/`satir_fn`: başka bir tablo biçimi (ör. liste fiyatları) aynı okuyucuyla okunur; `istege_bagli` başlıklar eksik olabilir.
+    Başlıklar esnektir (büyük/küçük, Türkçe harf, boşluk; ESANLAMLAR): ilk satır başlık değilse sonraki satırlarda (ilk 30) aranır."""
+    from .excel_ortak import Alan, baslik_satirini_bul
     satir_fn = satir_fn or _satir
-    esleme = {_baslik_anahtari(b): b for b in basliklar}
-    sutun = {i: esleme[k] for i, b in enumerate(baslik) if (k := _baslik_anahtari(b)) in esleme}
-    eksik = [b for b in basliklar if b not in sutun.values() and b not in istege_bagli]
-    if eksik:
-        raise DogrulamaHatasi("dosyada zorunlu başlık eksik", {"eksik_basliklar": eksik, "beklenen": list(basliklar)})
+    alanlar = [Alan(b, (b,) + ESANLAMLAR.get(b, ()), zorunlu=b not in istege_bagli) for b in basliklar]
+    ust = [] if ust is None else ust
+    govde = iter(govde)
+    adaylar = [(1, list(baslik))] + list(ust)
+    while len(adaylar) < BASLIK_ARAMA_SATIRI:   # başlık ilk satırda değilse sonraki satırlara da bakılır
+        sonraki = next(govde, None)
+        if sonraki is None:
+            break
+        adaylar.append((sonraki[0], list(sonraki[1])))
+    try:
+        e = baslik_satirini_bul((h for _, h in adaylar), alanlar, ilk_n=BASLIK_ARAMA_SATIRI, ne="dosya")
+    except DogrulamaHatasi as h:   # eski istemciler `eksik_basliklar` / `beklenen` alanlarını okur
+        h.alanlar = {**h.alanlar, "eksik_basliklar": h.alanlar.get("eksik_sutunlar", []), "beklenen": list(basliklar)}
+        raise
+    sutun = {i: a for a, i in e.sutun.items()}
+    kalan = adaylar[e.satir:]   # başlıktan sonraki, önceden okunmuş satırlar
+    from itertools import chain
+    govde = chain(kalan, govde)
     sonuc = []
     for no, hucreler in govde:
         if no - 1 > MAKS_SATIR:   # no = dosyadaki satır (başlık 1); bellek şişmesin diye daha fazla ayrıştırılmaz
@@ -121,7 +151,7 @@ def _satirlara(baslik: list, govde, basliklar: tuple = BASLIKLAR, satir_fn=None,
             continue
         sonuc.append(satir_fn(no, ham))
     if not sonuc:
-        raise DogrulamaHatasi("dosyada veri satırı yok")
+        raise DogrulamaHatasi("dosyada veri satırı yok; mevcut veri değiştirilmedi", kod="bos_dosya")
     return sonuc
 
 
@@ -139,13 +169,17 @@ def _csv_oku(icerik: bytes, **bicim) -> list[dict]:
     return _satirlara(baslik, ((i, r) for i, r in enumerate(okuyucu, start=2)), **bicim)
 
 
-def _xlsx_oku(icerik: bytes, **bicim) -> list[dict]:
+def _xlsx_oku(icerik: bytes, sablon: str = "satis_gecmisi", **bicim) -> list[dict]:
     try:
         wb = load_workbook(io.BytesIO(icerik), read_only=True, data_only=True)
     except (zipfile.BadZipFile, InvalidFileException, KeyError):
         raise DogrulamaHatasi("dosya geçerli bir .xlsx değil")
     try:
-        satirlar = wb.worksheets[0].iter_rows(values_only=True)
+        from .excel_ortak import sablon_denetle
+        from .yukleme_guvenligi import veri_sayfalari
+        sablon_denetle(wb, sablon)
+        veri = veri_sayfalari(wb)
+        satirlar = (veri[0] if veri else wb.worksheets[0]).iter_rows(values_only=True)
         baslik = next(satirlar, None)
         if baslik is None:
             raise DogrulamaHatasi("dosya boş")
@@ -159,6 +193,7 @@ def oku(icerik: bytes, dosya_adi: str = "", **bicim) -> list[dict]:
     if len(icerik) > MAKS_BAYT:
         raise DogrulamaHatasi("dosya 10 MB'den büyük")
     ad = (dosya_adi or "").lower()
+    sablon = bicim.pop("sablon", "satis_gecmisi")   # şablon kimliği (yanlış ekrana yüklenen şablonu tanımak için)
     if ad.endswith(".csv") or (not ad.endswith(".xlsx") and not icerik.startswith(b"PK")):
         return _csv_oku(icerik, **bicim)
-    return _xlsx_oku(icerik, **bicim)
+    return _xlsx_oku(icerik, sablon=sablon, **bicim)

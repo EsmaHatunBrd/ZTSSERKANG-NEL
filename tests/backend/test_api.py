@@ -108,6 +108,11 @@ def test_fiyat_listesi_import(istemci, oturum, tmp_path):
     with open(yol, "rb") as f:
         r = istemci.post("/api/v1/import/fiyat-listesi", data={"senaryo": str(sid), "gecerlilik_basi": "2026-10-21"}, files={"dosya": ("fiyat.xlsx", f)})
     assert r.status_code == 200, r.text
+    # 16.11.2026: elle girilmiş fiyat varsayılan olarak korunur (yükleme güvenliği); üzerine yazmak için elle_ustune_yaz.
+    assert r.json()["degisen"] == [] and r.json()["elle"][0]["kod"] == "A1"
+    with open(yol, "rb") as f:
+        r = istemci.post("/api/v1/import/fiyat-listesi", data={"senaryo": str(sid), "gecerlilik_basi": "2026-10-21", "elle_ustune_yaz": "true"},
+                         files={"dosya": ("fiyat.xlsx", f)})
     assert len(r.json()["degisen"]) == 1 and r.json()["degisen"][0]["kod"] == "A1"
     r = istemci.post("/api/v1/import/fiyat-listesi", data={"senaryo": str(sid)}, files={"dosya": ("x.txt", b"merhaba")})
     assert r.status_code == 422 and r.json()["hata"] == "dogrulama"
@@ -235,12 +240,13 @@ def test_fiyat_listesi_onizle_uygula_api(istemci, oturum, tmp_path):
 
     def gonder(tarih, uygula):
         with open(yol, "rb") as f:
-            veri = {"senaryo": str(sid), "gecerlilik_basi": tarih, **({"neden": "liste"} if uygula else {})}
+            # 16.11.2026: fiyatlar elle girildiği için varsayılan olarak korunur; bu test üzerine yazma yolunu sınar.
+            veri = {"senaryo": str(sid), "gecerlilik_basi": tarih, "elle_ustune_yaz": "true", **({"neden": "liste"} if uygula else {})}
             return istemci.post(f"{A}/import/fiyat-listesi" + ("/uygula" if uygula else ""), data=veri, files={"dosya": ("f.xlsx", f)})
     assert gonder("2026-10-01", False).json()["ayni"] == 1
     assert gonder("2026-08-01", False).json()["degisen"][0]["kod"] == "A1"
-    assert gonder("2026-10-01", True).json() == {"yazilan": 0, "kodlar": []}
-    assert gonder("2026-08-01", True).json() == {"yazilan": 1, "kodlar": ["A1"]}
+    assert gonder("2026-10-01", True).json() == {"yazilan": 0, "kodlar": [], "korunan_elle": 0}
+    assert gonder("2026-08-01", True).json() == {"yazilan": 1, "kodlar": ["A1"], "korunan_elle": 0}
 
 
 def test_urun_kod_degistir_ve_gecici_filtre(istemci, oturum):

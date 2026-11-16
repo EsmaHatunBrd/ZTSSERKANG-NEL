@@ -102,6 +102,13 @@ describe("SMM", () => {
     let cagri = 0;
     sunucu.use(
       http.get(`${T}/smm/donemler`, () => HttpResponse.json({ kayitlar: [] })),
+      http.post(`${T}/smm/donemler/yukle/onizle`, () =>
+        HttpResponse.json({
+          ...{ okunan: 2006, yeni: 0, degisen: 3, ayni: 2003, silinecek: 0, atlanan: 0, sorunlu: [], uyarilar: [] },
+          ...{ yil: 2026, ay: 9, donem_ad: "Eylül 2026", mevcut_donem_id: 7, kilitli: false, kalem: 2006, mevcut_kalem: 2006 },
+          ...{ recete_satiri: 900, iscilik: 120, sayfalar: ["DBS", "HM-YM ALIŞ SATIŞ", "DSS", "TABLO"] },
+        }),
+      ),
       // İlk gönderim: dönem zaten var (409); onaydan sonra ikinci gönderim üzerine yazar.
       http.post(`${T}/smm/donemler/yukle`, () => {
         cagri += 1;
@@ -114,7 +121,11 @@ describe("SMM", () => {
     expect(await screen.findByText(/Henüz dönem yok/)).toBeInTheDocument();
     await userEvent.upload(screen.getByLabelText("SMM dosyası"), new File(["x"], "09-2026 SMM v1.xlsx"));
     expect(screen.getByLabelText("Ay")).toHaveValue("9");
-    await userEvent.click(screen.getByRole("button", { name: "Yükle" }));
+    // önce önizleme (yazmaz), sonra önizleme kutusundaki "Yükle"
+    await userEvent.click(screen.getByRole("button", { name: "Önizle" }));
+    const on = await screen.findByRole("region", { name: "Önizleme" });
+    expect(on).toHaveTextContent("Eylül 2026: 2006 stok kalemi, 900 reçete satırı, 120 üretim süresi. Dönem zaten var (2006 kalem).");
+    await userEvent.click(within(on).getByRole("button", { name: "Yükle" }));
     const d = await screen.findByRole("dialog");
     await userEvent.click(within(d).getByRole("button", { name: "Üzerine yaz" }));
     await waitFor(() => expect(cagri).toBe(2));
@@ -677,10 +688,17 @@ describe("SMM", () => {
     sunucu.use(
       http.get(`${T}/smm/donemler`, () => HttpResponse.json({ kayitlar: [donem] })),
       http.get(`${T}/smm/donemler/:id/veri`, () => HttpResponse.json(durum())),
+      http.post(`${T}/smm/donemler/:id/veri/:kaynak/onizle`, () =>
+        HttpResponse.json({
+          ...{ okunan: 3, yeni: 2, degisen: 0, ayni: 0, silinecek: 0, atlanan: 0, sorunlu: [], uyarilar: [] },
+          ...{ kaynak: "alim", ad: "Alım ve satış", donem, mevcut: 0, dosyadaki: 2, elle_silinecek: 0, yeni_kalem: 0 },
+        }),
+      ),
       http.post(`${T}/smm/donemler/:id/veri/:kaynak`, ({ params }) => {
         yuklenen = params.kaynak as string;
         return HttpResponse.json(durum());
       }),
+      http.get(`${T}/smm/donemler/:id/veri/:kaynak/son-yukleme`, () => HttpResponse.json({ son: null })),
       http.put(`${T}/smm/donemler/:id/kilit`, async ({ request }) => {
         kilitGovdesi = await request.json();
         kilitli = true;
@@ -690,7 +708,8 @@ describe("SMM", () => {
     kurSayfa(<SmmVeri />);
     expect(await screen.findByText(/Eksik:/)).toHaveTextContent("Alım ve satış");
     await userEvent.upload(screen.getByLabelText("Alım ve satış dosyası"), new File(["x"], "alim-rapor.xlsx"));
-    await userEvent.click(screen.getAllByRole("button", { name: /Yükle/ })[0]);
+    await userEvent.click(screen.getByRole("button", { name: "Önizle — Alım ve satış" }));
+    await userEvent.click(within(await screen.findByRole("region", { name: "Önizleme" })).getByRole("button", { name: "Uygula" }));
     await waitFor(() => expect(yuklenen).toBe("alim"));
     expect(screen.getByRole("link", { name: /SMM fişini Excel olarak indir/ })).toHaveAttribute("href", "/api/v1/smm/donemler/7/fis.xlsx");
     await userEvent.click(screen.getByRole("button", { name: /Dönemi kapat/ }));

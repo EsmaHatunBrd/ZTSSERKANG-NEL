@@ -51,6 +51,8 @@ export const dogrulamaHatasi = (alanlar: Record<string, unknown> = { ad: "zorunl
   HttpResponse.json({ hata: "dogrulama", mesaj: "istek gövdesi geçersiz", alanlar }, { status: 422 });
 
 export const isleyiciler = [
+  // Son yükleme (geri al şeridi): varsayılan "geri alınacak yükleme yok". Testler gerektiğinde `sunucu.use` ile ezer.
+  http.get(`${T}/*/son-yukleme`, () => HttpResponse.json({ son: null })),
   // Stokta kalan: varsayılan "kayıt yok" (ürün ekranı fazladan bir şey göstermez). Testler gerektiğinde `sunucu.use` ile ezer.
   http.get(`${T}/urunler/:kod/stok-devri`, ({ params }) => HttpResponse.json(bosStokDevri(String(params.kod)))),
   http.get(`${T}/stok-devri`, () => HttpResponse.json({ kayitlar: [] })),

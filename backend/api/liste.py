@@ -9,7 +9,8 @@ from ..servisler import hesap_servisi as hs, liste_servisi as ls, satis_okuyucu
 from ..servisler.hatalar import DogrulamaHatasi
 from . import urunler as urunler_api
 from .bagimliliklar import OturumDep, SenaryoDep, kullanici_ver
-from .semalar import HATA_404_422, ListeCalismasi, ListeFiyatiCikis, ListeFiyatiGiris, ListeOrnekOzeti, ListeYuklemeOzeti
+from .import_ import geri_al_uclari
+from .semalar import HATA_404_422, ListeCalismasi, ListeFiyatiCikis, ListeFiyatiGiris, ListeOnizleme, ListeOrnekOzeti, ListeYuklemeOzeti
 
 router = APIRouter(tags=["liste-fiyatlari"])
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -52,9 +53,20 @@ def sil(s: OturumDep, urun_kodu: str, yil: int, pazar: Pazar = Query("yurtici"),
     return Response(status_code=204)
 
 
+@router.post("/liste-fiyatlari/onizle", response_model=ListeOnizleme, responses=HATA_404_422)
+def onizle(s: OturumDep, dosya: UploadFile = File(...)):
+    """Hiçbir şey yazmaz: yeni / değişecek / aynı (ürün, yıl, pazar) ve hatalı satırlar."""
+    icerik = dosya.file.read(satis_okuyucu.MAKS_BAYT + 1)
+    return ls.onizle(s, ls.dosya_oku(icerik, dosya.filename or ""))
+
+
+geri_al_uclari(router, "/liste-fiyatlari", "liste_fiyatlari", senaryolu=False, etiket="Liste fiyatları")
+
+
 @router.post("/liste-fiyatlari/yukle", response_model=ListeYuklemeOzeti, responses=HATA_404_422)
 def yukle(s: OturumDep, dosya: UploadFile = File(...), k: str = Depends(kullanici_ver),
-          senaryo: int | None = Query(None, description="Satırlara bu senaryonun bugünkü geçerli bölenleri yazılır (yoksa varsayılan)")):
+          senaryo: int | None = Query(None, description="Satırlara bu senaryonun bugünkü geçerli bölenleri yazılır (yoksa varsayılan)"),
+          onay: bool = Query(False, description="Satır kaybı onayı (bu yükleme kayıt silmez; diğer yüklemelerle aynı imza)")):
     """CSV/xlsx. Tek işlem: herhangi bir satır hatalıysa 422 (`alanlar.hatalar` = [{satir_no, mesaj}]) ve hiçbir satır yazılmaz."""
     icerik = dosya.file.read(satis_okuyucu.MAKS_BAYT + 1)
     yazilan, hatalar = ls.toplu_yukle(s, ls.dosya_oku(icerik, dosya.filename or ""), k, dosya.filename or "", _senaryo_id(s, senaryo))

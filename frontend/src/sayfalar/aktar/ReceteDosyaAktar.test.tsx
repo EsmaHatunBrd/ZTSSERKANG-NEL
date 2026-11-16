@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { http, HttpResponse } from "msw";
 import { sunucu } from "@/test/msw/sunucu";
+import { bosOzet } from "@/test/msw/isleyiciler-aktarim";
 import { SenaryoSaglayici } from "@/bilesenler/SenaryoSecici";
 import type { AktarimOnizleRecete } from "@/api/tipler";
 import { ReceteDosyaAktar, seciliSayfalar } from "./ReceteDosyaAktar";
@@ -45,6 +46,7 @@ const onizleme: AktarimOnizleRecete = {
     { ...bos, sayfa: "070", kod: "03.070", ad: "Yeni Turşu", durum: "yeni_urun", satir_sayisi: 12, secili: true },
   ],
   hatali: [{ sayfa: "Sayfa2", mesaj: "ürün kodu yok (D6 hücresi boş)" }],
+  ozet: bosOzet,
 };
 
 function kur() {

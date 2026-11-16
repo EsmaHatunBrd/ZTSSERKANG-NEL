@@ -33,11 +33,19 @@ export function useSmmStok(donemId: number | null, secenek: SmmStokSecenegi = {}
   });
 }
 
-/** SMM Excel'ini yükler. Dönem verilmezse dosya adından çıkarılır; dönem zaten varsa 409 (üzerine yazmak için `uzerineYaz`). */
+/** Yükleme yazınca: SMM sorguları ve "Son yükleme — Geri al" şeritleri tazelenir. */
+function yuklemeSonrasi(qc: ReturnType<typeof useQueryClient>) {
+  return Promise.all([qc.invalidateQueries({ queryKey: ["smm"] }), qc.invalidateQueries({ queryKey: ["son-yukleme"] })]);
+}
+
+/**
+ * SMM Excel'ini yükler. Dönem verilmezse dosya adından çıkarılır; dönem zaten varsa 409 (üzerine yazmak için `uzerineYaz`);
+ * üzerine yazarken kalem yarıdan azsa 409 `satir_kaybi_onayi` (`onay` ile yazılır).
+ */
 export function useSmmYukle() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ dosya, yil, ay, uzerineYaz }: { dosya: File; yil?: number; ay?: number; uzerineYaz?: boolean }) =>
+    mutationFn: ({ dosya, yil, ay, uzerineYaz, onay }: { dosya: File; yil?: number; ay?: number; uzerineYaz?: boolean; onay?: boolean }) =>
       cagir(
         api.POST("/api/v1/smm/donemler/yukle", {
           body: {} as never,
@@ -47,10 +55,24 @@ export function useSmmYukle() {
               ...(yil ? { yil: String(yil) } : {}),
               ...(ay ? { ay: String(ay) } : {}),
               ...(uzerineYaz ? { uzerine_yaz: "true" } : {}),
+              ...(onay ? { onay: "true" } : {}),
             }),
         }),
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
+    onSuccess: () => yuklemeSonrasi(qc),
+  });
+}
+
+/** SMM Excel'i önizlemesi (yazmaz). */
+export function useSmmDonemOnizle() {
+  return useMutation({
+    mutationFn: ({ dosya, yil, ay }: { dosya: File; yil?: number; ay?: number }) =>
+      cagir(
+        api.POST("/api/v1/smm/donemler/yukle/onizle", {
+          body: {} as never,
+          bodySerializer: () => formVerisi({ dosya, ...(yil ? { yil: String(yil) } : {}), ...(ay ? { ay: String(ay) } : {}) }),
+        }),
+      ),
   });
 }
 
@@ -242,19 +264,20 @@ export function useSmmRecete(kod: string | null) {
   });
 }
 
-function receteDosyasi(yol: "/api/v1/smm/receteler/onizle" | "/api/v1/smm/receteler/yukle", dosya: File) {
-  return cagir(api.POST(yol, { body: {} as never, bodySerializer: () => formVerisi({ dosya }) }));
+function receteDosyasi(yol: "/api/v1/smm/receteler/onizle" | "/api/v1/smm/receteler/yukle", dosya: File, onay = false) {
+  return cagir(api.POST(yol, { body: {} as never, bodySerializer: () => formVerisi({ dosya, ...(onay ? { onay: "true" } : {}) }) }));
 }
 
 export function useSmmReceteOnizle() {
   return useMutation({ mutationFn: (dosya: File) => receteDosyasi("/api/v1/smm/receteler/onizle", dosya) });
 }
 
+/** Canias dökümünü yükler; ürün yarıdan azsa 409 `satir_kaybi_onayi` (`onay` ile yazılır). */
 export function useSmmReceteYukle() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dosya: File) => receteDosyasi("/api/v1/smm/receteler/yukle", dosya),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
+    mutationFn: ({ dosya, onay }: { dosya: File; onay?: boolean }) => receteDosyasi("/api/v1/smm/receteler/yukle", dosya, onay),
+    onSuccess: () => yuklemeSonrasi(qc),
   });
 }
 
@@ -343,18 +366,33 @@ export function useSmmVeriDurumu(donemId: number | null) {
   });
 }
 
+/** Aylık kaynağı yükler; kayıt yarıdan azsa 409 `satir_kaybi_onayi` (`onay` ile yazılır). Yanıtın `yukleme` alanı yazılmayan satırları verir. */
 export function useSmmVeriYukle(donemId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ kaynak, dosya }: { kaynak: string; dosya: File }) =>
+    mutationFn: ({ kaynak, dosya, onay }: { kaynak: string; dosya: File; onay?: boolean }) =>
       cagir(
         api.POST("/api/v1/smm/donemler/{donem_id}/veri/{kaynak}", {
+          params: { path: { donem_id: donemId as number, kaynak } },
+          body: {} as never,
+          bodySerializer: () => formVerisi({ dosya, ...(onay ? { onay: "true" } : {}) }),
+        }),
+      ),
+    onSuccess: () => yuklemeSonrasi(qc),
+  });
+}
+
+/** Aylık kaynak önizlemesi (yazmaz): yeni / değişen / aynı / sıfırlanacak, sorunlu satırlar, uyarılar. */
+export function useSmmVeriOnizle(donemId: number | null) {
+  return useMutation({
+    mutationFn: ({ kaynak, dosya }: { kaynak: string; dosya: File }) =>
+      cagir(
+        api.POST("/api/v1/smm/donemler/{donem_id}/veri/{kaynak}/onizle", {
           params: { path: { donem_id: donemId as number, kaynak } },
           body: {} as never,
           bodySerializer: () => formVerisi({ dosya }),
         }),
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["smm"] }),
   });
 }
 

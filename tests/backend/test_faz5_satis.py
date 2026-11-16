@@ -63,7 +63,7 @@ def test_yukle_csv_noktali_virgul_ve_virgul(istemci):
     c = istemci; _urunler(c)
     r = _yukle(c, f"{BASLIK}\nTST-1;Deneme Ltd;31.12.2024;1.234,56;TL;10\nTST-2;Başka AŞ;2025-02-01;7,5;usd;2000\n".encode("utf-8"), "a.csv")
     assert r.status_code == 200, r.text
-    assert r.json() == {"eklenen": 2, "hatalar": []}
+    assert r.json() == {"eklenen": 2, "hatalar": [], "atlanan_kayitli": 0}   # 16.11.2026: atlanan_kayitli (ikilenme koruması) eklendi
     k = {x["urun_kodu"]: x for x in c.get(A).json()["kayitlar"]}
     assert (k["TST-1"]["fiyat"], k["TST-1"]["tarih"], k["TST-1"]["adet"]) == ("1234.56", "2024-12-31", "10")
     assert (k["TST-2"]["para_birimi"], k["TST-2"]["adet"]) == ("USD", "2000")
@@ -182,7 +182,7 @@ def test_toplu_yukleme_tek_denetim_kaydi(istemci, oturum):
     assert r.status_code == 200 and r.json()["eklenen"] == 3
     kayitlar = oturum.query(m.DegisiklikKaydi).filter_by(tablo="satis_gecmisi").all()
     assert len(kayitlar) == 1
-    assert (kayitlar[0].islem, kayitlar[0].kullanici, kayitlar[0].yeni) == ("toplu_yukle", "esma", {"eklenen": 3, "dosya": "uc.csv"})
+    assert (kayitlar[0].islem, kayitlar[0].kullanici, kayitlar[0].yeni) == ("toplu_yukle", "esma", {"eklenen": 3, "atlanan_kayitli": 0, "dosya": "uc.csv"})
 
 
 def test_cok_noktali_degerler_gruplama_denetimi(istemci, oturum):

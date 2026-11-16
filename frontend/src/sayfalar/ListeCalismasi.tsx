@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Download, Scale, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Scale, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { ApiHatasi, hataMetni, hataMetniVarsa } from "@/api/istemci";
-import { useListeCalismasi, useListeOrnekSil, useListeOrnekUret, useListeYukle } from "@/api/sorgular/liste";
+import { useListeCalismasi, useListeOnizle, useListeOrnekSil, useListeOrnekUret, useListeYukle } from "@/api/sorgular/liste";
+import { SablonIndir, YuklemeYardimi } from "@/bilesenler/SablonIndir";
+import { SonYuklemeSeridi } from "@/bilesenler/SonYuklemeSeridi";
+import { YuklemeOzetiKutusu } from "@/bilesenler/YuklemeOzetiKutusu";
 import { useParametreEkle } from "@/api/sorgular/parametreler";
 import type { ListeCalismaSatiri, ListePazari } from "@/api/tipler";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
@@ -24,8 +27,6 @@ import { YillikArtisGrafigi } from "@/sayfalar/liste/YillikArtisGrafigi";
 import { D, paraBicimle, yuzdeBicimle } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
 import { bugunIso } from "@/yardimcilar/tarih";
-
-const SABLON_ADRESI = "/api/v1/liste-fiyatlari/sablon.xlsx";
 
 /** Oran farkı (−0.1) -> "−10,0 puan". */
 export function puanBicimle(fark: string | null): string {
@@ -127,6 +128,7 @@ export default function ListeCalismasi() {
   const ornekUret = useListeOrnekUret();
   const ornekSil = useListeOrnekSil();
   const yukle = useListeYukle(senaryoId);
+  const listeOnizle = useListeOnizle();
   const dosyaRef = useRef<HTMLInputElement>(null);
   const [dosya, setDosya] = useState<File | null>(null);
   const [yuklenen, setYuklenen] = useState<number | null>(null);
@@ -232,16 +234,7 @@ export default function ListeCalismasi() {
       <SayfaBasligi
         baslik="Liste Çalışması"
         altBaslik={`${veri ? `${veri.yil} liste fiyatı önceki yıllarla ve maliyet artışıyla kıyaslanır. ` : ""}Her Berrak ürününün yurtiçi ve yurtdışı olmak üzere iki liste fiyatı vardır.`}
-        eylemler={
-          <a
-            href={SABLON_ADRESI}
-            download
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-sm font-medium hover:bg-muted"
-          >
-            <Download className="size-4" aria-hidden />
-            Şablonu indir
-          </a>
-        }
+        eylemler={<SablonIndir kimlik="liste_fiyatlari" />}
       />
       <KilitSeridi />
       <DuzenlemeKilidi />
@@ -472,6 +465,14 @@ export default function ListeCalismasi() {
           Sütunlar: ürün kodu, yıl, liste fiyatı, birim maliyet (isteğe bağlı), pazar (isteğe bağlı: Yurtiçi/Yurtdışı; boşsa Yurtiçi). Aynı
           ürün, yıl ve pazar tekrar yüklenirse eski değerin yerine geçer; örnek veri gerçek değerle değiştirilir.
         </p>
+        <YuklemeYardimi />
+        <SonYuklemeSeridi
+          yol="/api/v1/liste-fiyatlari"
+          sorgu={{}}
+          kilitli={duzenlemeKilitli}
+          kilitNedeni="Düzenleme kilitli"
+          gecersiz={["liste-calismasi", "liste-fiyatlari"]}
+        />
         <div className="flex flex-wrap items-end gap-2">
           <Input
             ref={dosyaRef}
@@ -483,8 +484,17 @@ export default function ListeCalismasi() {
               setDosya(e.target.files?.[0] ?? null);
               setYuklenen(null);
               yukle.reset();
+              listeOnizle.reset();
             }}
           />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!dosya || listeOnizle.isPending}
+            onClick={() => dosya && listeOnizle.mutate(dosya)}
+          >
+            {listeOnizle.isPending ? "Önizleniyor…" : "Önizle"}
+          </Button>
           <Button
             type="button"
             disabled={!dosya || yukle.isPending || duzenlemeKilitli}
@@ -503,6 +513,16 @@ export default function ListeCalismasi() {
             Yükle
           </Button>
         </div>
+        {listeOnizle.data && (
+          <section aria-label="Önizleme" className="flex flex-col gap-1 rounded-md border p-3">
+            <YuklemeOzetiKutusu ozet={listeOnizle.data.ozet} baslik="Liste fiyatları — sorunlu satırlar" />
+          </section>
+        )}
+        {listeOnizle.error && (
+          <p role="alert" className="text-sm text-destructive">
+            {hataMetni(listeOnizle.error)}
+          </p>
+        )}
         <div aria-live="polite">
           {yuklenen !== null && (
             <p role="status" className="text-sm text-green-800 dark:text-green-300">

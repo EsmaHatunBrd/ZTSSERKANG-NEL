@@ -11,6 +11,10 @@ import { useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Girdi } from "@/bilesenler/Girdi";
 import { Button } from "@/bilesenler/ui/button";
+import { SablonIndir, YuklemeYardimi, type SablonKimligi } from "@/bilesenler/SablonIndir";
+import { satirKaybi, useSatirKaybiOnayi } from "@/bilesenler/SatirKaybiOnayi";
+import { SonYuklemeSeridi } from "@/bilesenler/SonYuklemeSeridi";
+import { YuklemeOzetiKutusu, type YuklemeOzetiT } from "@/bilesenler/YuklemeOzetiKutusu";
 import { bugunIso } from "@/yardimcilar/tarih";
 import { dosyaSemasi } from "./TamKitapFormu";
 
@@ -24,6 +28,8 @@ interface Props<T extends AktarimTipi> {
   /** Formun erişilebilir adı. */
   ad: string;
   aciklama: string;
+  /** Bu ekranın şablonu ("Şablonu indir" bağlantısı). */
+  sablon: SablonKimligi;
   /** Satın alma: geçerlilik tarihi ve "Kartları güncelle" alanları. */
   satinAlma?: boolean;
   /** Önizleme gövdesi: yeni / değişen / aynı / hatalı tabloları. */
@@ -45,6 +51,7 @@ export function AktarimFormu<T extends AktarimTipi>({
   tip,
   ad,
   aciklama,
+  sablon,
   satinAlma,
   onizlemeGoster,
   hatalar,
@@ -65,6 +72,7 @@ export function AktarimFormu<T extends AktarimTipi>({
   const [neden, setNeden] = useState("");
   const onizle = useAktarimOnizle(tip);
   const uygula = useAktarimUygula(tip);
+  const kayip = useSatirKaybiOnayi();
 
   const onizleme = onizle.data;
   const hataKodlari = onizleme && hatalar ? hatalar(onizleme) : [];
@@ -95,16 +103,19 @@ export function AktarimFormu<T extends AktarimTipi>({
 
   function uygulaBaslat() {
     if (!dosya || senaryoId === null || !uygulanabilir) return;
-    uygula.mutate({
+    const d: AktarimUygulaDegiskenleri = {
       dosya,
       senaryo: senaryoId,
       neden: neden.trim(),
       ...(satinAlma ? { gecerlilik_basi: tarih, kartlari_guncelle: kartlariGuncelle } : {}),
       ...(uygulaEk && onizleme ? uygulaEk(onizleme) : {}),
-    });
+    };
+    // 409 satir_kaybi_onayi: "N kalem silinecek" diye sorulur, onaylanırsa onay=true ile yeniden gönderilir.
+    uygula.mutate(d, { onError: (e) => kayip.yakala(e, () => uygula.mutate({ ...d, onay: true })) });
   }
 
-  const hata = hataMetniVarsa(onizle.error) ?? hataMetniVarsa(uygula.error);
+  const hata = hataMetniVarsa(onizle.error) ?? (satirKaybi(uygula.error) ? null : hataMetniVarsa(uygula.error));
+  const ozet = (onizleme as { ozet?: YuklemeOzetiT } | undefined)?.ozet;
   const sonuc = uygula.data;
 
   return (
@@ -118,7 +129,14 @@ export function AktarimFormu<T extends AktarimTipi>({
           uygulaBaslat();
         }}
       >
-        <p className="text-sm text-muted-foreground">{aciklama}</p>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <p className="max-w-2xl text-sm text-muted-foreground">{aciklama}</p>
+          <SablonIndir kimlik={sablon} />
+        </div>
+        <YuklemeYardimi />
+        {senaryoId !== null && (
+          <SonYuklemeSeridi yol={`/api/v1/aktarim/${tip}`} sorgu={{ senaryo: senaryoId }} kilitli={kilitli} kilitNedeni={kilitNedeni} />
+        )}
         {senaryoId === null && <p className="text-sm text-muted-foreground">Önce üst çubuktan bir senaryo seçin.</p>}
 
         <div className="flex flex-col gap-1">
@@ -182,6 +200,7 @@ export function AktarimFormu<T extends AktarimTipi>({
 
         {onizleme && (
           <section aria-label="Önizleme" className="flex flex-col gap-3">
+            {ozet && <YuklemeOzetiKutusu ozet={ozet} baslik={`${ad} — sorunlu satırlar`} />}
             {onizlemeGoster(onizleme)}
             {hataKodlari.length > 0 && (
               <p role="alert" className="rounded-md border border-destructive/40 p-2 text-sm text-destructive">
@@ -211,6 +230,8 @@ export function AktarimFormu<T extends AktarimTipi>({
           <p className="font-medium">{hata}</p>
         </div>
       )}
+
+      {kayip.diyalog}
 
       {sonuc && (
         <section aria-label="Aktarım özeti" className="flex flex-col gap-3">

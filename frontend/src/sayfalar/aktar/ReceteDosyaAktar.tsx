@@ -33,6 +33,7 @@ export function ReceteDosyaAktar() {
   return (
     <AktarimFormu
       tip="recete"
+      sablon="urun_recetesi"
       ad="Dosyadan reçete aktar"
       aciklama="Fiyat çalışması Excel'inin ürün sayfası düzenindeki dosya: kitabın tamamı ya da bir/birkaç ürün sayfasının kopyası. Her sayfanın reçetesi seçili çalışmadaki aktif reçeteyle karşılaştırılır; seçtiğiniz ürünler için yeni reçete versiyonu açılır, eski versiyon geçmişte kalır. Var olan ürün kartı ve üretim bilgileri değişmez; sistemde olmayan ürün sayfadaki bilgilerle açılır."
       onSifirla={() => setIsaret({})}

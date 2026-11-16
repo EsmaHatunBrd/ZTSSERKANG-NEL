@@ -7,6 +7,7 @@ export function SatinAlmaAktar() {
   return (
     <AktarimFormu
       tip="satin-alma"
+      sablon="satin_alma_fiyat_listesi"
       satinAlma
       ad="Satın alma fiyat listesini içe aktar"
       aciklama="S.ALMA BF sayfası (tam çalışma kitabı veya tek sayfalık dosya). Yeni malzeme kartları açılır, fiyatlar seçilen geçerlilik tarihiyle eklenir; eski fiyatlar geçmişte kalır. Sağdaki ikinci fiyat sütunu (I) revize sayılır: ilk bütçe (F) ve revize aynı güne iki kayıt olarak yazılır, geçerli olan revizedir. Var olan kartlar yalnız Kartları güncelle işaretliyse değişir."

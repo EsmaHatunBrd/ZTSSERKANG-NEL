@@ -7,6 +7,7 @@ import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { DuzenlemeKilidi, useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { SatisYuklemeKarti } from "@/bilesenler/SatisYuklemeKarti";
+import { sablonAdresi } from "@/bilesenler/SablonIndir";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { Button } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
@@ -16,7 +17,7 @@ import { goster } from "@/yardimcilar/tarih";
 
 const BOYUT = 50;
 const PARA_BIRIMLERI = ["TL", "USD", "EUR", "GBP", "CHF", "RUB", "ZAR"] as const;
-const SABLON_ADRESI = "/api/v1/satis-gecmisi/sablon.xlsx";
+const SABLON_ADRESI = sablonAdresi("satis_gecmisi");
 const SELECT_SINIFI =
   "h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 

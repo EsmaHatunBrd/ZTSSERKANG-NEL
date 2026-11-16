@@ -263,16 +263,63 @@ def _satir(no: int, ham: dict) -> dict:
 
 
 def dosya_oku(icerik: bytes, dosya_adi: str = "") -> list[dict]:
-    return satis_okuyucu.oku(icerik, dosya_adi, basliklar=BASLIKLAR, satir_fn=_satir, istege_bagli=ISTEGE_BAGLI)
+    return satis_okuyucu.oku(icerik, dosya_adi, basliklar=BASLIKLAR, satir_fn=_satir, istege_bagli=ISTEGE_BAGLI, sablon="liste_fiyatlari")
+
+
+def onizle(s: Session, satirlar: list[dict]) -> dict:
+    """Hiçbir şey yazmaz: hangi (ürün, yıl, pazar) yeni, hangisi değişecek; hatalı satırlar (toplu_yukle ile aynı kurallar)."""
+    from .yukleme_guvenligi import ozet, sorunlu
+    hatalar = _satir_hatalari(s, satirlar)
+    hatali_no = {h["satir_no"] for h in hatalar}
+    yeni = degisen = ayni = 0
+    for r in satirlar:
+        if r["satir_no"] in hatali_no:
+            continue
+        u = s.scalar(select(m.Urun).where(m.Urun.kod == r["urun_kodu"]))
+        k = _bul(s, u, r["yil"], r["pazar"])
+        if k is None:
+            yeni += 1
+        elif k.liste_fiyati != r["liste_fiyati"] or k.birim_maliyet != r["birim_maliyet"] or k.ornek:
+            degisen += 1
+        else:
+            ayni += 1
+    oz = ozet(okunan=len(satirlar), yeni=yeni, degisen=degisen, ayni=ayni, atlanan=len(hatalar),
+              sorunlu_satirlar=[sorunlu(h["satir_no"], None, None, None, h["mesaj"]) for h in hatalar],
+              uyarilar=["Hatalı satırlar düzeltilmeden hiçbir satır yazılmaz."] if hatalar else [])
+    return {"okunan": len(satirlar), "yeni": yeni, "degisen": degisen, "ayni": ayni, "hatalar": hatalar, "ozet": oz}
+
+
+def _satir_hatalari(s: Session, satirlar: list[dict]) -> list[dict]:
+    return _dogrula(s, satirlar)[0]
 
 
 def toplu_yukle(s: Session, satirlar: list[dict], kullanici: str = "sistem", dosya_adi: str = "", senaryo_id: int | None = None) -> tuple[int, list[dict]]:
     """Tek işlem: herhangi bir satır hatalıysa hiçbiri yazılmaz. Var olan (ürün, yıl, pazar) güncellenir. Bölen: kaydet'teki gibi
-    (senaryonun bugünkü geçerli böleni ya da varsayılan). Dönüş: (yazılan, hatalar)."""
+    (senaryonun bugünkü geçerli böleni ya da varsayılan). Yazmadan önce yedek (geri al: eski değerler geri yazılır). Dönüş: (yazılan, hatalar)."""
+    from .yukleme_guvenligi import GENEL, liste_icerik, yedekle
+    hatalar, gecerli = _dogrula(s, satirlar)
+    if hatalar:
+        return 0, hatalar
+    bolenler = bolenler_gecerli(s, senaryo_id) if senaryo_id is not None else dict(VARSAYILAN_BOLENLER)
+    if gecerli:
+        yedek = []
+        for r, u in gecerli:
+            k = _bul(s, u, r["yil"], r["pazar"])
+            yedek.append({"urun_id": u.id, "yil": r["yil"], "pazar": r["pazar"], "eski": liste_icerik(k) if k is not None else None})
+        yedekle(s, "liste_fiyatlari", GENEL, {"satirlar": yedek}, f"{len(gecerli)} liste fiyatı", (dosya_adi or None), kullanici)
+    for r, u in gecerli:
+        _yaz(s, u, r["yil"], r["pazar"], r["liste_fiyati"], r["birim_maliyet"], bolenler[r["pazar"]], kullanici)
+    if gecerli:
+        s.add(m.DegisiklikKaydi(tablo="liste_fiyati", kayit_id=0, islem="toplu_yukle", eski=None, kullanici=kullanici,
+                                yeni={"yazilan": len(gecerli), "dosya": (dosya_adi or "")[:200], "bolenler": decimal_str(bolenler)}))
+        s.flush()
+    return len(gecerli), []
+
+
+def _dogrula(s: Session, satirlar: list[dict]) -> tuple[list[dict], list]:
     hatalar, gecerli = [], []
     onbellek: dict[str, m.Urun | None] = {}
     gorulen: set[tuple[str, int, str]] = set()
-    bolenler = bolenler_gecerli(s, senaryo_id) if senaryo_id is not None else dict(VARSAYILAN_BOLENLER)
     for r in satirlar:
         kod = r["urun_kodu"]
         if kod not in onbellek:
@@ -292,15 +339,7 @@ def toplu_yukle(s: Session, satirlar: list[dict], kullanici: str = "sistem", dos
             hatalar.append({"satir_no": r["satir_no"], "mesaj": "; ".join(mesaj)})
         else:
             gecerli.append((r, onbellek[kod]))
-    if hatalar:
-        return 0, hatalar
-    for r, u in gecerli:
-        _yaz(s, u, r["yil"], r["pazar"], r["liste_fiyati"], r["birim_maliyet"], bolenler[r["pazar"]], kullanici)
-    if gecerli:
-        s.add(m.DegisiklikKaydi(tablo="liste_fiyati", kayit_id=0, islem="toplu_yukle", eski=None, kullanici=kullanici,
-                                yeni={"yazilan": len(gecerli), "dosya": (dosya_adi or "")[:200], "bolenler": decimal_str(bolenler)}))
-        s.flush()
-    return len(gecerli), []
+    return hatalar, gecerli
 
 
 def _sapma(kod: str, adim: int) -> Decimal:

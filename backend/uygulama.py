@@ -14,6 +14,7 @@ from .api import senaryolar, parametreler, malzemeler, gider, urunler, teklifler
 from .api import fiyat_egilimi, yonetim, smm_rapor
 from .api import duzenleme_kilidi
 from .api import onay_ciktisi
+from .api import sablonlar
 from .api.bagimliliklar import kimlik_denetle
 
 
@@ -29,7 +30,8 @@ def onbellegi_temizlemeli_mi(yontem: str, yol: str) -> bool:
     if yontem not in YAZMA_YONTEMLERI or not yol.startswith("/api/v1/"):
         return False
     yol = yol.rstrip("/")
-    return not (yol.endswith("/hesapla") or yol == "/api/v1/import/fiyat-listesi" or yol.startswith("/api/v1/onay-ciktisi/"))
+    return not (yol.endswith("/hesapla") or yol == "/api/v1/import/fiyat-listesi" or yol.startswith("/api/v1/onay-ciktisi/")
+                or yol == "/api/v1/sablonlar/sorunlu-satirlar.xlsx")
 
 
 def giris_zorunlu_mu() -> bool:
@@ -59,6 +61,7 @@ def uygulama_olustur(oturum_bagimliligi=None, giris_zorunlu: bool | None = None)
         app.include_router(r.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
     app.include_router(duzenleme_kilidi.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
     app.include_router(onay_ciktisi.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
+    app.include_router(sablonlar.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
     if oturum_bagimliligi is not None:
         app.dependency_overrides[oturum_ver] = oturum_bagimliligi
 

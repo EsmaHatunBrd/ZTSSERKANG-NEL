@@ -207,3 +207,12 @@ export type SmmGiderAsamasi = Sema["SmmGiderAsamasi"];
 export type SmmGiderUrunu = Sema["SmmGiderUrunu"];
 export type SmmSarfOzeti = Sema["SmmSarfOzeti"];
 export type SmmSarfOzetKalemi = Sema["SmmSarfOzetKalemi"];
+
+// Yükleme güvenliği (16.11.2026): standart önizleme özeti, son yükleme / geri al, satış ve liste önizlemeleri
+export type YuklemeOzeti = Sema["YuklemeOzeti"];
+export type SorunluSatir = Sema["SorunluSatir"];
+export type SonYukleme = Sema["SonYukleme"];
+export type SonYuklemeYaniti = Sema["SonYuklemeYaniti"];
+export type GeriAlSonucu = Sema["GeriAlSonucu"];
+export type SatisOnizleme = Sema["SatisOnizleme"];
+export type ListeOnizleme = Sema["ListeOnizleme"];

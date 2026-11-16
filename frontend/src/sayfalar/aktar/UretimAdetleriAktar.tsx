@@ -6,6 +6,7 @@ export function UretimAdetleriAktar() {
   return (
     <AktarimFormu
       tip="uretim-adetleri"
+      sablon="uretim_adetleri"
       ad="Üretim adetlerini içe aktar"
       aciklama="Üretim Adetleri sayfası (tam çalışma kitabı veya yalnız bu sayfayı içeren tek sayfalık dosya). Senaryodaki mevcut kapasiteyle karşılaştırılır; yalnız yeni ve değişen ürünler yazılır, her değişiklik geçmişe kaydedilir."
       onizlemeGoster={(o) => (

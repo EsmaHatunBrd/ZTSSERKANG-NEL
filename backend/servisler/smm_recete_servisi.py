@@ -4,18 +4,17 @@ yeniden yüklenir. Dönem, reçete kaynağı 'ana' ise aşama hesabında bu reç
 Döküm sütunları: Alternatif Numarası, Malzeme Kodu, Malzeme Açıklaması, Satır No, Ürün Ağacı Kalem Tipi, Tüketim Malzeme Kodu,
 Tüketim Malzeme Adı, Tüketim Miktarı, Tüketim Birimi, Fire Oranı (%), Fireli Miktar. Tüketim malzemesi boş satırlar ürün başlığıdır.
 Aşama koddan: 02 -> 40 (üretim hattı), 03 -> 50 (etiketleme), diğerleri (01 salamura, 11-19 taze/kalibre/fermente) -> 20."""
-import io
 import re
-import zipfile
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
-from openpyxl import load_workbook
-from openpyxl.utils.exceptions import InvalidFileException
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 from ..depo import modeller as m
+from . import smm_excel_okuyucu as eo
+from . import yukleme_yedegi as yy
 from .donusum import decimal_str
+from .excel_ortak import satir_kaybi_denetle, sayi_cevir
 from .hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi
 from .smm_servisi import MAKS_BAYT, SIFIR, _d, _metin, _tr, donem_getir
 
@@ -46,40 +45,61 @@ class HesapSatiri:
 
 
 # ---------------------------------------------------------------- dosya
-def dosya_oku(icerik: bytes) -> list[dict]:
-    if len(icerik) > MAKS_BAYT:
-        raise DogrulamaHatasi("dosya 60 MB'den büyük")
+# Canias ürün ağacı dökümünün sütunları. Başlıklar büyük/küçük harf, Türkçe harf, boşluk farkına duyarsız; Canias raporunda farklı bir
+# başlık görülürse eş anlamlıyı buraya ekleyin. Zorunlu olmayanlar yoksa boş kalır.
+_S = eo.Sutun
+TANIM = eo.Tanim("canias_urun_agaci", "Canias ürün ağacı dökümü", "canias_urun_agaci", ("TBLRESULT",), [
+    _S("alternatif", ("Alternatif Numarası", "Alternatif No", "Alternatif", "Alt. No")),
+    _S("kod", ("Malzeme Kodu", "Ana Malzeme Kodu", "Mamul Kodu", "Ürün Kodu")),
+    _S("ad", ("Malzeme Açıklaması", "Ana Malzeme Açıklaması", "Mamul Adı", "Ürün Adı"), zorunlu=False),
+    _S("satir_no", ("Satır No", "Satır Numarası", "Sıra No"), zorunlu=False),
+    _S("tip", ("Ürün Ağacı Kalem Tipi", "Kalem Tipi"), zorunlu=False),
+    _S("mal", ("Tüketim Malzeme Kodu", "Bileşen Kodu", "Alt Malzeme Kodu")),
+    _S("mal_ad", ("Tüketim Malzeme Adı", "Tüketim Malzeme Açıklaması", "Bileşen Adı"), zorunlu=False),
+    _S("miktar", ("Tüketim Miktarı", "Bileşen Miktarı")),
+    _S("birim", ("Tüketim Birimi", "Bileşen Birimi"), zorunlu=False),
+    _S("fire", ("Fire Oranı", "Fire Oranı (%)", "Fire Yüzdesi", "Fire %")),
+], yedek_konum=False)
+
+
+def dosya_oku(icerik: bytes) -> tuple[list[dict], eo.Ozet]:
+    """Döküm satırları ve özet (okunan, atlanan, sorunlu). Sayıya çevrilemeyen / boş miktar ya da fire: satır sorunlu, yazılmaz."""
+    wb = eo.calisma_kitabi(icerik, MAKS_BAYT)
     try:
-        wb = load_workbook(io.BytesIO(icerik), read_only=True, data_only=True)
-    except (zipfile.BadZipFile, InvalidFileException, KeyError):
-        raise DogrulamaHatasi("dosya geçerli bir .xlsx değil")
-    try:
-        ws = wb.worksheets[0]
-        satirlar = ws.iter_rows(values_only=True)
-        baslik = [(_metin(x) or "") for x in next(satirlar, ())]
-        sira = {}
-        for b in BASLIKLAR:
-            if b not in baslik:
-                raise DogrulamaHatasi("Canias ürün ağacı dökümü bekleniyor; sütun eksik", {"eksik": b, "beklenen": list(BASLIKLAR)})
-            sira[b] = baslik.index(b)
-        out = []
-        for r in satirlar:
-            def h(b):
-                i = sira[b]
-                return r[i] if i < len(r) else None
-            kod, mal = _metin(h("Malzeme Kodu")), _metin(h("Tüketim Malzeme Kodu"))
-            if not kod or not mal:
-                continue   # ürün başlık satırı
-            tip = h("Ürün Ağacı Kalem Tipi")
-            out.append({"ana_kod": kod, "ana_ad": _metin(h("Malzeme Açıklaması")), "alternatif": _metin(h("Alternatif Numarası")) or VARSAYILAN_ALTERNATIF,
-                        "satir_no": int(_d(h("Satır No"))), "kalem_tipi": int(tip) if isinstance(tip, (int, float)) else None,
-                        "asama": asama_bul(kod), "malzeme_kod": mal, "malzeme_ad": _metin(h("Tüketim Malzeme Adı")),
-                        "miktar": _d(h("Tüketim Miktarı")), "birim": _metin(h("Tüketim Birimi")), "fire_orani": _d(h("Fire Oranı")) / YUZ})
-        if not out:
-            raise DogrulamaHatasi("dosyada reçete satırı yok")
-        return out
+        o = eo.oku(wb, TANIM, [])
     finally:
         wb.close()
+    ozet = eo.Ozet(uyarilar=list(o.uyarilar))
+    out = []
+    for satir_no, r in o.satirlar:
+        kod, mal = eo.kod_metni(o.hucre(r, "kod")), eo.kod_metni(o.hucre(r, "mal"))
+        if not kod or not mal:
+            continue   # ürün başlık satırı
+        ozet.okunan += 1
+        sayilar, hatali = {}, False
+        for ic in ("miktar", "fire", "satir_no", "tip"):
+            if ic not in o.sutun:
+                continue
+            ham = o.hucre(r, ic)
+            v, hata = sayi_cevir(ham, TANIM.sutun(ic).gorunen)
+            if ic == "miktar" and v is None and hata is None:
+                hata = "Tüketim Miktarı boş"
+            if hata:
+                ozet.sorun(satir_no, f"{kod} / {mal}", TANIM.sutun(ic).gorunen, ham, hata + "; satır yazılmadı")
+                hatali = True
+            sayilar[ic] = v
+        if hatali:
+            ozet.atlanan += 1
+            continue
+        tip = sayilar.get("tip")
+        alt = o.hucre(r, "alternatif")
+        if isinstance(alt, (int, float)) and not isinstance(alt, bool) and float(alt).is_integer():
+            alt = f"{int(alt):02d}"   # Excel '00'ı sayı 0 yaptıysa: 0 -> '00', 1 -> '01'
+        out.append({"ana_kod": kod, "ana_ad": _metin(o.hucre(r, "ad")), "alternatif": eo.kod_metni(alt) or VARSAYILAN_ALTERNATIF,
+                    "satir_no": int(sayilar.get("satir_no") or 0), "kalem_tipi": int(tip) if tip is not None else None,
+                    "asama": asama_bul(kod), "malzeme_kod": mal, "malzeme_ad": _metin(o.hucre(r, "mal_ad")),
+                    "miktar": sayilar["miktar"], "birim": _metin(o.hucre(r, "birim")), "fire_orani": (sayilar.get("fire") or SIFIR) / YUZ})
+    return out, ozet
 
 
 def _ozet(satirlar: list[dict]) -> dict:
@@ -114,9 +134,22 @@ def _elle_kodlar(s: Session) -> set[str]:
     return set(s.scalars(select(m.SmmReceteElle.ana_kod)))
 
 
+def _standart_ozet(sonuc: dict, ozet: eo.Ozet) -> dict:
+    """Ürün bazında standart özet: yeni / değişen / aynı / silinecek ürün (elle korunanlar hariç)."""
+    ozet.yeni, ozet.degisen, ozet.silinecek = sonuc["eklenecek_urun"], sonuc["degisecek_urun"], sonuc["kalkacak_urun"]
+    ozet.ayni = sonuc["_ortak_urun"] - sonuc["degisecek_urun"]
+    if not sonuc["satir_sayisi"]:
+        ozet.uyarilar.insert(0, "Dosyada okunabilen reçete satırı yok; bu dosya yüklenemez (mevcut reçeteler değişmez).")
+    elif sonuc["_eski_urun"] and sonuc["_yeni_urun"] < sonuc["_eski_urun"] / 2:
+        ozet.uyarilar.insert(0, f"Dosyada {sonuc['_yeni_urun']} ürün var, mevcut reçetelerde {sonuc['_eski_urun']}; yüklemek için ayrıca onay istenecek.")
+    if sonuc["kalkacak_urun"]:
+        ozet.uyarilar.append(f"{sonuc['kalkacak_urun']} ürünün reçetesi dosyada yok; yüklenirse kalkar.")
+    return {**{k: v for k, v in sonuc.items() if not k.startswith("_")}, **ozet.sozluk()}
+
+
 def onizle(s: Session, icerik: bytes) -> dict:
-    yeni = dosya_oku(icerik)
-    return _onizle(s, yeni)
+    yeni, ozet = dosya_oku(icerik)
+    return decimal_str(_standart_ozet(_onizle(s, yeni), ozet))
 
 
 def _onizle(s: Session, yeni: list[dict]) -> dict:
@@ -136,17 +169,28 @@ def _onizle(s: Session, yeni: list[dict]) -> dict:
                for kod in sorted(elle)]
     return {**_ozet(yeni), "mevcut_urun": len(eski_urun) + len(elle), "eklenecek_urun": len(yeni_urun - eski_urun),
             "kalkacak_urun": len(eski_urun - yeni_urun), "degisecek_urun": len(degisen), "korunan": korunan,
+            "_eski_urun": len(eski_urun), "_yeni_urun": len(yeni_urun), "_ortak_urun": len(eski_urun & yeni_urun),
             "ornek": [{"ana_kod": x["ana_kod"], "ana_ad": x["ana_ad"], "alternatif": x["alternatif"], "malzeme_kod": x["malzeme_kod"],
                        "malzeme_ad": x["malzeme_ad"], "miktar": str(x["miktar"]), "birim": x["birim"], "fire_orani": str(x["fire_orani"])}
                       for x in yeni[:8]]}
 
 
-def yukle(s: Session, icerik: bytes, dosya_adi: str, kullanici: str = "sistem") -> dict:
+YEDEK_ALANI = "smm_recete_canias"
+
+
+def yukle(s: Session, icerik: bytes, dosya_adi: str, kullanici: str = "sistem", onay: bool = False) -> dict:
     """Kalıcı reçeteleri dosyadakilerle değiştirir. Elle değiştirilmiş ürünler korunur; alternatif seçimleri korunur.
-    Dosyanın değiştirilmemiş kopyası ayrıca saklanır ('Canias'a döndür' için)."""
-    yeni = dosya_oku(icerik)
+    Dosyanın değiştirilmemiş kopyası ayrıca saklanır ('Canias'a döndür' için). Okunabilen satır yoksa 422 `bos_dosya`; dosyadaki ürün
+    mevcut ürünlerin yarısından azsa onaysız 409 `satir_kaybi_onayi`. Yazmadan önce mevcut reçeteler yedeklenir (geri al)."""
+    yeni, ozet = dosya_oku(icerik)
     sonuc = _onizle(s, yeni)
+    # satır yoksa 0 (red); yalnız elle korunan ürünler varsa 1 sayılır (red değil, kayıp onayı)
+    satir_kaybi_denetle(sonuc["_eski_urun"], max(sonuc["_yeni_urun"], 1) if yeni else 0, onay, "ürün")
     elle = _elle_kodlar(s)
+    yedek = yy.yedek_kaydet(s, YEDEK_ALANI, "", {
+        "canias": [eo.satir_json(r) for r in s.scalars(select(m.SmmCaniasRecete).order_by(m.SmmCaniasRecete.id))],
+        "ana": [eo.satir_json(r) for r in s.scalars(select(m.SmmAnaRecete).where(m.SmmAnaRecete.ana_kod.not_in(elle)).order_by(m.SmmAnaRecete.id))]},
+        ozet=f"Canias ürün ağacı: {sonuc['urun_sayisi']} ürün, {sonuc['satir_sayisi']} satır", kaynak_dosya=dosya_adi, kullanici=kullanici)
     s.execute(delete(m.SmmCaniasRecete))
     s.add_all(m.SmmCaniasRecete(olusturan=kullanici, **x) for x in yeni)
     s.execute(delete(m.SmmAnaRecete).where(m.SmmAnaRecete.ana_kod.not_in(elle)) if elle else delete(m.SmmAnaRecete))
@@ -158,9 +202,35 @@ def yukle(s: Session, icerik: bytes, dosya_adi: str, kullanici: str = "sistem") 
     s.add(m.DegisiklikKaydi(tablo="smm_recete", kayit_id=y.id, islem="toplu_yukle", eski={"urun": sonuc["mevcut_urun"]}, kullanici=kullanici,
                             yeni={"dosya": y.kaynak_dosya, "urun": sonuc["urun_sayisi"], "satir": sonuc["satir_sayisi"],
                                   "eklenen": sonuc["eklenecek_urun"], "kalkan": sonuc["kalkacak_urun"], "degisen": sonuc["degisecek_urun"],
-                                  "korunan_elle": len(sonuc["korunan"])}))
+                                  "korunan_elle": len(sonuc["korunan"]), **({"sorunlu": len(ozet.sorunlu)} if ozet.sorunlu else {})}))
+    yedek.veri = {**yedek.veri, "yukleme_id": y.id}   # geri alınınca bu yükleme kaydı da silinir ('son yükleme' bilgisi eskisine döner)
     s.flush()
-    return decimal_str(sonuc)
+    return decimal_str(_standart_ozet(sonuc, ozet))
+
+
+def son_yukleme_yedegi(s: Session) -> dict:
+    return {"son": yy.yedek_ozeti(yy.son_yedek(s, YEDEK_ALANI, ""))}
+
+
+def son_yuklemeyi_geri_al(s: Session, kullanici: str = "sistem") -> dict:
+    """Son Canias dökümü yüklemesinden önceki kalıcı reçeteleri birebir geri yazar (elle değiştirilmiş ürünlere dokunulmaz).
+    Geri alınacak yükleme yoksa 404."""
+    from .smm_veri_servisi import yedekleri_kapat
+    y = yy.son_yedek_zorunlu(s, YEDEK_ALANI, "")
+    v = y.veri
+    elle = _elle_kodlar(s)
+    s.execute(delete(m.SmmCaniasRecete))
+    s.add_all(eo.satirdan(m.SmmCaniasRecete, x) for x in v["canias"])
+    s.execute(delete(m.SmmAnaRecete).where(m.SmmAnaRecete.ana_kod.not_in(elle)) if elle else delete(m.SmmAnaRecete))
+    s.add_all(eo.satirdan(m.SmmAnaRecete, x) for x in v["ana"] if x["ana_kod"] not in elle)
+    if v.get("yukleme_id"):
+        s.execute(delete(m.SmmReceteYukleme).where(m.SmmReceteYukleme.id == v["yukleme_id"]))
+    yy.geri_alindi_isaretle(s, y)
+    yedekleri_kapat(s, [YEDEK_ALANI], "")
+    s.add(m.DegisiklikKaydi(tablo="smm_recete", kayit_id=v.get("yukleme_id") or 0, islem="yukleme_geri_al", eski=None, kullanici=kullanici,
+                            yeni={"geri_alinan": y.ozet, "dosya": y.kaynak_dosya, "urun": len({x["ana_kod"] for x in v["ana"]})}))
+    s.flush()
+    return {"geri_alinan": yy.yedek_ozeti(y), "mesaj": "Kalıcı reçeteler son Canias dökümü yüklemesinden önceki hâline döndü."}
 
 
 # ---------------------------------------------------------------- okuma

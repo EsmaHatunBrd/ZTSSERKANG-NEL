@@ -449,6 +449,18 @@ class SmmReceteYukleme(Base, Ortak):
     urun_sayisi: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class YuklemeYedegi(Base, Ortak):
+    """Excel yüklemesinden ÖNCEKİ verinin JSON kopyası ("son yüklemeyi geri al"). `alan`: yükleme noktası
+    (ör. "satin_alma_fiyat", "smm_kaynak:alim_satis"); `kapsam`: senaryo/dönem kimliği metni. Geri yükleme alana özel servistedir."""
+    __tablename__ = "yukleme_yedegi"
+    alan: Mapped[str] = mapped_column(String(64), index=True)
+    kapsam: Mapped[str] = mapped_column(String(64), default="")
+    ozet: Mapped[str] = mapped_column(String(300), default="")
+    kaynak_dosya: Mapped[str | None] = mapped_column(String(200))
+    veri: Mapped[dict] = mapped_column(JSON)
+    geri_alindi: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
+
 class SmmAlternatifSecimi(Base, Ortak):
     """Ürün için hesapta kullanılacak reçete alternatifi (yoksa '00')."""
     __tablename__ = "smm_alternatif_secimi"

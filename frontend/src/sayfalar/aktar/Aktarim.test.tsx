@@ -8,6 +8,7 @@ import { formAlanlariniYakala } from "@/test/msw/isleyiciler-aktar";
 import {
   aktarimHatasi,
   aktarimIsleyici,
+  bosOzet,
   giderOnizle,
   giderUygula,
   satinAlmaOnizle,
@@ -84,7 +85,8 @@ describe("Veri Aktar sayfası", () => {
     kur();
     await sekme("Satış geçmişi");
     expect(screen.getByRole("link", { name: "Satış Geçmişi sayfasına git" })).toHaveAttribute("href", "/satis-gecmisi");
-    expect(screen.getByRole("link", { name: /Şablonu indir/ })).toHaveAttribute("href", "/api/v1/satis-gecmisi/sablon.xlsx");
+    // 16.11.2026: ortak şablon ucu
+    expect(screen.getByRole("link", { name: /Şablonu indir/ })).toHaveAttribute("href", "/api/v1/sablonlar/satis_gecmisi.xlsx");
   });
 });
 
@@ -317,6 +319,7 @@ describe("Veri Aktar - stokta kalan", () => {
     yeni: 1,
     degisen: 1,
     ayni: 1,
+    ozet: bosOzet,
   };
   const uygula: AktarimUygulaStokDevri = { eklenen: 1, guncellenen: 1, ayni: 1 };
 
@@ -326,7 +329,8 @@ describe("Veri Aktar - stokta kalan", () => {
     sunucu.use(aktarimIsleyici("stok-devri", "onizle", onizle, istek), aktarimIsleyici("stok-devri", "uygula", uygula, istek));
     kur();
     await sekme("Stokta kalan");
-    expect(screen.getByRole("link", { name: /Şablonu indir/ })).toHaveAttribute("href", "/api/v1/aktarim/stok-devri/sablon.xlsx");
+    // 16.11.2026: ortak şablon ucu (sablonlar/ altındaki stokta kalan şablonu)
+    expect(screen.getByRole("link", { name: /Şablonu indir/ })).toHaveAttribute("href", "/api/v1/sablonlar/stokta_kalan.xlsx");
     const onizleme = await dosyaVeOnizle();
     expect(form.alanlar.senaryo).toBe("1");
     expect(within(onizleme).getByText(/Dosyada bulunamayan sütunlar: enflasyon/)).toBeInTheDocument();

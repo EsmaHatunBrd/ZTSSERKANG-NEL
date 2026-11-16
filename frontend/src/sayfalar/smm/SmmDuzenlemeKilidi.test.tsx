@@ -100,7 +100,17 @@ function sureleriTanimla(d: SmmDonem = donem) {
 describe("SMM düzenleme kilidi", () => {
   it("Dönemler: kilitliyken yeni dönem, Excel yükleme ve silme kapalı; onayla açılır ve günlüğe senaryosuz yazılır", async () => {
     const bildirimler = kilitle();
-    sunucu.use(http.get(`${T}/smm/donemler`, () => HttpResponse.json({ kayitlar: [donem] })));
+    sunucu.use(
+      http.get(`${T}/smm/donemler`, () => HttpResponse.json({ kayitlar: [donem] })),
+      http.post(`${T}/smm/donemler/yukle/onizle`, () =>
+        HttpResponse.json({
+          ...{ okunan: 10, yeni: 10, degisen: 0, ayni: 0, silinecek: 0, atlanan: 0, sorunlu: [], uyarilar: [] },
+          ...{ yil: 2026, ay: 10, donem_ad: "Ekim 2026", mevcut_donem_id: donem.id, kilitli: false, kalem: 10, mevcut_kalem: 10 },
+          ...{ recete_satiri: 0, iscilik: 0, sayfalar: ["DBS"] },
+        }),
+      ),
+      http.get(`${T}/smm/donemler/:id/son-yukleme`, () => HttpResponse.json({ son: null })),
+    );
     kurSayfa(<SmmDonemler />);
     const sil = await screen.findByRole("button", { name: "Sil — Ekim 2026" });
     const yeni = screen.getByRole("button", { name: "Kasım 2026 dönemini aç" });
@@ -109,12 +119,15 @@ describe("SMM düzenleme kilidi", () => {
     expect(sil).toBeDisabled();
     expect(screen.getByLabelText("Reçete kaynağı — Ekim 2026")).toBeDisabled();
     await userEvent.upload(screen.getByLabelText("SMM dosyası"), new File(["x"], "10-2026 SMM.xlsx"));
-    expect(screen.getByRole("button", { name: "Yükle" })).toBeDisabled();
+    // Önizleme okumadır: kilitliyken de yapılır; önizleme kutusundaki "Yükle" kapalı kalır.
+    await userEvent.click(screen.getByRole("button", { name: "Önizle" }));
+    const on = await screen.findByRole("region", { name: "Önizleme" });
+    expect(within(on).getByRole("button", { name: "Yükle" })).toBeDisabled();
 
     await duzenlemeyiAc();
     expect(yeni).toBeEnabled();
     expect(sil).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Yükle" })).toBeEnabled();
+    expect(within(on).getByRole("button", { name: "Yükle" })).toBeEnabled();
     await waitFor(() => expect(bildirimler).toEqual([{ senaryo_id: null, sayfa: "/" }]));
   });
 

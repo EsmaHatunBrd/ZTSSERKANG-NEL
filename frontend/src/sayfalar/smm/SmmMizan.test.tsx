@@ -86,6 +86,14 @@ function kur(baslangic: SmmMizanSatiri[], secenek: { kilitli?: boolean; grupsuz?
       satirlar = satirlar.filter((x) => x.hesap !== params.hesap);
       return HttpResponse.json(mizan());
     }),
+    // önizleme yazmaz (istek listesine girmez); elle satır sayısını bildirir
+    http.post(`${T}/smm/donemler/:id/veri/:kaynak/onizle`, ({ params }) =>
+      HttpResponse.json({
+        ...{ okunan: 2, yeni: 0, degisen: 1, ayni: 1, silinecek: 0, atlanan: 0, sorunlu: [], uyarilar: [] },
+        ...{ kaynak: params.kaynak, ad: "Gider mizanı (720 / 730)", donem, mevcut: satirlar.length, dosyadaki: 2 },
+        ...{ elle_silinecek: satirlar.filter((x) => x.elle).length, yeni_kalem: 0 },
+      }),
+    ),
     http.post(`${T}/smm/donemler/:id/veri/:kaynak`, ({ params }) => {
       istekler.push({ yontem: "YUKLE", hesap: params.kaynak as string });
       satirlar = [{ hesap: "720", ad: "Direkt İşçilik Giderleri", bakiye: "2000", elle: false }];
@@ -182,13 +190,15 @@ describe("SMM mizan satırları (elle giriş)", () => {
     kurSayfa(<SmmVeri />);
     expect(await screen.findByText(/1 elle satır/)).toBeInTheDocument();
     await userEvent.upload(screen.getByLabelText("Gider mizanı (720 / 730) dosyası"), new File(["x"], "mizan.xlsx"));
-    await userEvent.click(screen.getAllByRole("button", { name: /Yeniden yükle/ })[1]);
+    await userEvent.click(screen.getByRole("button", { name: "Önizle — Gider mizanı (720 / 730)" }));
+    const uygula = within(await screen.findByRole("region", { name: "Önizleme" })).getByRole("button", { name: /Uygula/ });
+    await userEvent.click(uygula);
     const onay = await screen.findByRole("dialog");
     expect(onay).toHaveTextContent("1 elle satır var, yükleme bunları siler");
     expect(istekler).toEqual([]);
     await userEvent.click(within(onay).getByRole("button", { name: "Vazgeç" }));
     expect(istekler).toEqual([]);
-    await userEvent.click(screen.getAllByRole("button", { name: /Yeniden yükle/ })[1]);
+    await userEvent.click(uygula);
     await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Yükle ve elle satırları sil" }));
     await waitFor(() => expect(istekler).toEqual([{ yontem: "YUKLE", hesap: "gider_mizan" }]));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -199,7 +209,8 @@ describe("SMM mizan satırları (elle giriş)", () => {
     const istekler = kur(EXCEL);
     kurSayfa(<SmmVeri />);
     await userEvent.upload(await screen.findByLabelText("Gider mizanı (720 / 730) dosyası"), new File(["x"], "mizan.xlsx"));
-    await userEvent.click(screen.getAllByRole("button", { name: /Yeniden yükle/ })[1]);
+    await userEvent.click(screen.getByRole("button", { name: "Önizle — Gider mizanı (720 / 730)" }));
+    await userEvent.click(within(await screen.findByRole("region", { name: "Önizleme" })).getByRole("button", { name: /Uygula/ }));
     await waitFor(() => expect(istekler).toEqual([{ yontem: "YUKLE", hesap: "gider_mizan" }]));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

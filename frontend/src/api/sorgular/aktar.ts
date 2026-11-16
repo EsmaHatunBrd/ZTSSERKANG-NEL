@@ -20,15 +20,17 @@ export interface FiyatOnizleDegiskenleri {
   dosya: File;
   senaryo: number;
   gecerlilik_basi?: string;
+  /** Elle girilmiş fiyatların da üzerine yazılsın mı (varsayılan: korunur). */
+  elle_ustune_yaz?: boolean;
 }
 
 export function useImportFiyatOnizle() {
   return useMutation({
-    mutationFn: ({ dosya, senaryo, gecerlilik_basi }: FiyatOnizleDegiskenleri) =>
+    mutationFn: ({ dosya, senaryo, gecerlilik_basi, elle_ustune_yaz }: FiyatOnizleDegiskenleri) =>
       cagir(
         api.POST("/api/v1/import/fiyat-listesi", {
           body: {} as never,
-          bodySerializer: () => formVerisi({ dosya, senaryo, gecerlilik_basi }),
+          bodySerializer: () => formVerisi({ dosya, senaryo, gecerlilik_basi, elle_ustune_yaz }),
         }),
       ),
   });
@@ -39,20 +41,23 @@ export interface FiyatUygulaDegiskenleri {
   senaryo: number;
   gecerlilik_basi: string;
   neden: string;
+  elle_ustune_yaz?: boolean;
 }
 
 export function useImportFiyatUygula() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ dosya, senaryo, gecerlilik_basi, neden }: FiyatUygulaDegiskenleri) =>
+    mutationFn: ({ dosya, senaryo, gecerlilik_basi, neden, elle_ustune_yaz }: FiyatUygulaDegiskenleri) =>
       cagir(
         api.POST("/api/v1/import/fiyat-listesi/uygula", {
           body: {} as never,
-          bodySerializer: () => formVerisi({ dosya, senaryo, gecerlilik_basi, neden }),
+          bodySerializer: () => formVerisi({ dosya, senaryo, gecerlilik_basi, neden, elle_ustune_yaz }),
         }),
       ),
     onSuccess: () =>
-      Promise.all(["malzemeler", "fiyat-gecmisi", "urunler", "uyarilar"].map((k) => qc.invalidateQueries({ queryKey: [k] }))),
+      Promise.all(
+        ["malzemeler", "fiyat-gecmisi", "urunler", "uyarilar", "son-yukleme"].map((k) => qc.invalidateQueries({ queryKey: [k] })),
+      ),
   });
 }
 

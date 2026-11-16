@@ -11,6 +11,8 @@ import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
 import { Button } from "@/bilesenler/ui/button";
 import { Girdi as Input } from "@/bilesenler/Girdi";
+import { YuklemeYardimi } from "@/bilesenler/SablonIndir";
+import { SonYuklemeSeridi } from "@/bilesenler/SonYuklemeSeridi";
 import { ImportOzetiKartlari } from "./ImportOzetiKartlari";
 
 const AZAMI_BOYUT = 25 * 1024 * 1024;
@@ -110,8 +112,18 @@ export function TamKitapFormu() {
       >
         <p className="text-sm text-muted-foreground">
           Fiyat çalışması Excel dosyasının tamamı (malzeme, fiyat, havuz, ambalaj, ürün, reçete, parametre) tek seferde yüklenir. En fazla
-          25 MB, yalnızca .xlsx.
+          25 MB, yalnızca .xlsx. Sayfa adları (S.ALMA BF, Gider Dağıtım, Üretim Adetleri, ürün sayfaları) büyük/küçük harf fark etmez; eksik
+          sayfa varsa hangisi olduğu söylenir.
         </p>
+        <YuklemeYardimi />
+        {mod === "tamamla" && senaryoId !== null && (
+          <SonYuklemeSeridi
+            yol="/api/v1/import/excel-tam"
+            sorgu={{ senaryo: senaryoId }}
+            kilitli={duzenlemeKilitli || kilitli}
+            kilitNedeni={duzenlemeKilitli ? "Düzenleme kilitli" : kilitli ? "Senaryo kilitli" : undefined}
+          />
+        )}
 
         <fieldset className="flex flex-col gap-1">
           <legend className="text-sm font-medium">Aktarım modu</legend>

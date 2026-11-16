@@ -89,10 +89,23 @@ def ekle(s: Session, urun_kodu: str, musteri: str, tarih: date, fiyat: Decimal, 
     return _cikis(_yaz(s, urun, musteri, tarih, fiyat, para_birimi, adet, kullanici), urun)
 
 
-def toplu_yukle(s: Session, satirlar: list[dict], kullanici: str = "sistem", dosya_adi: str = "") -> tuple[int, list[dict]]:
-    """Tek işlem: herhangi bir satır hatalıysa hiçbiri yazılmaz. `satirlar` öğeleri satis_okuyucu çıktısı biçimindedir.
-    Denetim: satır başına değil, toplu işlem başına TEK DegisiklikKaydi (islem=toplu_yukle; adet ve dosya adı).
-    Dönüş: (eklenen, hatalar[{satir_no, mesaj}]); hata varsa eklenen = 0."""
+def _anahtar(urun_id: int, musteri: str, tarih: date, fiyat: Decimal, adet: Decimal) -> tuple:
+    return (urun_id, (musteri or "").strip().casefold(), tarih, Decimal(fiyat).normalize(), Decimal(adet).normalize())
+
+
+def _kayitli_sayaci(s: Session, urun_idleri: set[int]) -> dict[tuple, int]:
+    """Sistemdeki satış satırları (ürün, müşteri, tarih, fiyat, adet) anahtarına göre adet (aynı satır birden çok kez kayıtlı olabilir)."""
+    sayac: dict[tuple, int] = {}
+    if not urun_idleri:
+        return sayac
+    for k in s.scalars(select(m.SatisGecmisi).where(m.SatisGecmisi.urun_id.in_(urun_idleri))):
+        a = _anahtar(k.urun_id, k.musteri, k.tarih, k.fiyat, k.adet)
+        sayac[a] = sayac.get(a, 0) + 1
+    return sayac
+
+
+def _ayikla(s: Session, satirlar: list[dict]) -> tuple[list[dict], list[tuple]]:
+    """(hatalar, geçerli satırlar [(satır, ürün, para)])."""
     hatalar: list[dict] = []
     gecerli = []
     onbellek: dict[str, m.Urun | None] = {}
@@ -108,15 +121,68 @@ def toplu_yukle(s: Session, satirlar: list[dict], kullanici: str = "sistem", dos
             hatalar.append({"satir_no": r["satir_no"], "mesaj": "; ".join(mesajlar)})
         else:
             gecerli.append((r, urun, para))
+    return hatalar, gecerli
+
+
+def _kayitlilari_ayir(s: Session, gecerli: list[tuple]) -> tuple[list[tuple], list[tuple]]:
+    """(eklenecek, zaten kayıtlı). Sistemde aynı (ürün, müşteri, tarih, fiyat, adet) satırı kaç kez varsa dosyadaki o kadar satır kayıtlı
+    sayılır (aynı gün aynı fiyatla iki ayrı fatura dosyada iki kez geçebilir; fazlası eklenir)."""
+    sayac = _kayitli_sayaci(s, {u.id for _, u, _ in gecerli})
+    eklenecek, kayitli = [], []
+    for x in gecerli:
+        r, u, _ = x
+        a = _anahtar(u.id, r["musteri"], r["tarih"], r["fiyat"], r["adet"])
+        if sayac.get(a, 0) > 0:
+            sayac[a] -= 1
+            kayitli.append(x)
+        else:
+            eklenecek.append(x)
+    return eklenecek, kayitli
+
+
+def onizle(s: Session, satirlar: list[dict]) -> dict:
+    """Hiçbir şey yazmaz: eklenecek, zaten kayıtlı (atlanacak) ve hatalı satırlar."""
+    from .yukleme_guvenligi import ozet, sorunlu
+    hatalar, gecerli = _ayikla(s, satirlar)
+    eklenecek, kayitli = _kayitlilari_ayir(s, gecerli)
+    uyarilar = []
+    if kayitli:
+        uyarilar.append(f"{len(kayitli)} satır zaten kayıtlı (aynı ürün, müşteri, tarih, fiyat, adet); atlanacak.")
     if hatalar:
-        return 0, hatalar
-    for r, urun, para in gecerli:
-        _yaz(s, urun, r["musteri"], r["tarih"], r["fiyat"], para, r["adet"], kullanici, denetim=False)
-    if gecerli:
+        uyarilar.append("Hatalı satırlar düzeltilmeden hiçbir satır eklenmez.")
+    oz = ozet(okunan=len(satirlar), yeni=len(eklenecek), ayni=len(kayitli), atlanan=len(kayitli) + len(hatalar),
+              sorunlu_satirlar=[sorunlu(h["satir_no"], None, None, None, h["mesaj"]) for h in hatalar], uyarilar=uyarilar)
+    return {"okunan": len(satirlar), "eklenecek": len(eklenecek), "kayitli": len(kayitli), "hatalar": hatalar, "ozet": oz}
+
+
+def toplu_yukle(s: Session, satirlar: list[dict], kullanici: str = "sistem", dosya_adi: str = "",
+                kayitlilari_da_ekle: bool = False) -> tuple[int, list[dict]]:
+    """Tek işlem: herhangi bir satır hatalıysa hiçbiri yazılmaz. `satirlar` öğeleri satis_okuyucu çıktısı biçimindedir.
+    Sistemde zaten kayıtlı satırlar (ürün, müşteri, tarih, fiyat, adet) varsayılan olarak atlanır (aynı dosya iki kez yüklenince ikilenmez).
+    Denetim: satır başına değil, toplu işlem başına TEK DegisiklikKaydi (islem=toplu_yukle; adet ve dosya adı). Yazmadan önce yedek.
+    Dönüş: (eklenen, hatalar[{satir_no, mesaj}]); hata varsa eklenen = 0. Atlanan sayısı için `toplu_yukle_ayrintili`."""
+    eklenen, hatalar, _ = toplu_yukle_ayrintili(s, satirlar, kullanici, dosya_adi, kayitlilari_da_ekle)
+    return eklenen, hatalar
+
+
+def toplu_yukle_ayrintili(s: Session, satirlar: list[dict], kullanici: str = "sistem", dosya_adi: str = "",
+                          kayitlilari_da_ekle: bool = False) -> tuple[int, list[dict], int]:
+    """(eklenen, hatalar, atlanan_kayitli)."""
+    from .yukleme_guvenligi import GENEL, yedek_guncelle, yedekle
+    hatalar, gecerli = _ayikla(s, satirlar)
+    if hatalar:
+        return 0, hatalar, 0
+    eklenecek, kayitli = (gecerli, []) if kayitlilari_da_ekle else _kayitlilari_ayir(s, gecerli)
+    y = yedekle(s, "satis_gecmisi", GENEL, {"eklenen_idler": []}, f"{len(eklenecek)} satış satırı", (dosya_adi or None), kullanici) \
+        if eklenecek else None
+    idler = [_yaz(s, urun, r["musteri"], r["tarih"], r["fiyat"], para, r["adet"], kullanici, denetim=False).id for r, urun, para in eklenecek]
+    if y is not None:
+        yedek_guncelle(y, eklenen_idler=idler)
+    if eklenecek:
         s.add(m.DegisiklikKaydi(tablo="satis_gecmisi", kayit_id=0, islem="toplu_yukle", eski=None, kullanici=kullanici,
-                                yeni={"eklenen": len(gecerli), "dosya": (dosya_adi or "")[:200]}))
+                                yeni={"eklenen": len(eklenecek), "atlanan_kayitli": len(kayitli), "dosya": (dosya_adi or "")[:200]}))
         s.flush()
-    return len(gecerli), []
+    return len(eklenecek), [], len(kayitli)
 
 
 def sil(s: Session, id: int, kullanici: str = "sistem") -> None:

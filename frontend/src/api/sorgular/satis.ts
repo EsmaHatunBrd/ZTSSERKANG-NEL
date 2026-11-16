@@ -42,7 +42,15 @@ export function useSatisYukle() {
   return useMutation({
     mutationFn: (dosya: File) =>
       cagir(api.POST("/api/v1/satis-gecmisi/yukle", { body: {} as never, bodySerializer: () => formVerisi({ dosya }) })),
-    onSuccess: () => yenile(qc),
+    onSuccess: () => Promise.all([yenile(qc), qc.invalidateQueries({ queryKey: ["son-yukleme"] })]),
+  });
+}
+
+/** Hiçbir şey yazmaz: eklenecek, sistemde zaten kayıtlı (atlanacak) ve hatalı satırlar + standart özet. */
+export function useSatisOnizle() {
+  return useMutation({
+    mutationFn: (dosya: File) =>
+      cagir(api.POST("/api/v1/satis-gecmisi/onizle", { body: {} as never, bodySerializer: () => formVerisi({ dosya }) })),
   });
 }
 

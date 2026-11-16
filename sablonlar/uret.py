@@ -26,6 +26,10 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 BURASI = Path(__file__).resolve().parent
 ON = "11-16-2026-"
+sys.path.insert(0, str(BURASI.parent))
+from backend.servisler.excel_ortak import SABLONLAR as _KIMLIK_ADLARI, sablon_kimligi_yaz  # noqa: E402
+
+KIMLIKLER = list(_KIMLIK_ADLARI)   # 01 → satin_alma_fiyat_listesi ... 16 → smm_stok_mizani
 
 # ------------------------------------------------------------------------------------------------ stiller
 Z_DOLGU = PatternFill("solid", fgColor="1E5631")      # zorunlu: koyu yeşil
@@ -237,16 +241,20 @@ SATIN_ALMA = Sablon(
     no="01", ad="satin-alma-fiyat-listesi", baslik="Satın alma fiyat listesi (malzeme kartı + bütçe fiyatı)",
     nereye="Fiyat Çalışması › Veri Aktar › 'Satın alma fiyat listesi' sekmesi → dosya seç → Önizle → neden + geçerlilik tarihi → Uygula",
     kim="Satın alma (muhasebe kontrol eder)", siklik="Sezon başında; yeni malzeme açılınca",
-    okuma=["'S.ALMA BF' adlı sayfa okunur; dosyada tek sayfa varsa adı ne olursa olsun o sayfa okunur. Birden çok sayfa varsa ve hiçbiri "
-           "'S.ALMA BF' değilse dosya reddedilir.",
-           "1. satır başlıktır ve sırası sabittir: A Malzeme, B Açıklama, E Para..., F ...fiyat... başlıkları denetlenir (büyük/küçük ve Türkçe harf duyarsız).",
-           "Sütunlar SIRAYLA okunur (başlık adıyla değil): A kod, B ad, C tip, D birim, E para birimi, F fiyat, G Z/S, I revize fiyat.",
+    okuma=["'S.ALMA BF' adlı sayfa okunur (ad büyük/küçük harf ve boşluk duyarsız); dosyada tek veri sayfası varsa adı ne olursa olsun o sayfa "
+           "okunur. Birden çok sayfa varsa ve hiçbiri 'S.ALMA BF' değilse dosya reddedilir.",
+           "Sütunlar BAŞLIK ADIYLA bulunur (sıra serbest; büyük/küçük, Türkçe harf, boşluk farkı önemsiz). Zorunlu: Malzeme (= Malzeme Kodu, "
+           "Stok Kodu), Açıklama (= Malzeme Adı), Para Birimi (= Döviz, PB), Bütçe Birim Fiyatları (= Birim Fiyat, Fiyat). İsteğe bağlı: Malzeme "
+           "Tipi, Stok Birimi (= Birim), Z/S, Revize (yoksa fiyat sütunundan sonraki ikinci fiyat sütunu, klasik düzende I).",
            "Sistemde olmayan kod için malzeme kartı açılır; var olan kartın farkları yalnız 'kartları güncelle' işaretliyse yazılır.",
-           "Fiyatlar seçilen geçerlilik tarihiyle EKLENİR (eski fiyat silinmez, geçmişte kalır). Fiyatı sayı olmayan satır varsa hiçbir şey yazılmaz."],
-    hatalar=["Fiyatı metin olarak yazmak ('18,50 TL', '18.50 ₺'): satır 'hatalı' listesine düşer ve uygula reddedilir. Hücreyi sayı yapın.",
-             "Başlık satırını silmek ya da sütun eklemek: 'S.ALMA BF sayfası beklenen düzen değil' hatası.",
+           "Fiyatlar seçilen geçerlilik tarihiyle EKLENİR (eski fiyat silinmez, geçmişte kalır). Metin sayı ('18,50 TL') çevrilir; çevrilemeyen "
+           "fiyat varsa satır sorunlu listelenir ve düzeltilene kadar hiçbir şey yazılmaz. Önizlemede %15 (TL) / %10 (döviz) üzeri fiyat "
+           "değişimleri uyarı olarak çıkar.",
+           "Son yükleme geri alınabilir: eklenen fiyatlar silinir, açılan kartlar kaldırılır, güncellenen kartlar eski haline döner."],
+    hatalar=["Fiyat hücresine sayı olmayan bir şey yazmak ('yok', '-?'): satır sorunlu listesine düşer ve uygula reddedilir.",
+             "Başka ekranın şablonunu (ör. üretim adetleri) bu ekrana yüklemek: 'Bu dosya … şablonu' diye reddedilir.",
              "Kodun başında/sonunda boşluk: uygulama kırpar, ama Excel'deki VLOOKUP'lar bulamaz; kodları temiz yazın.",
-             "Aynı kod iki kez: son satır geçerli olur (önizlemede görünmez); tekrarları silin."],
+             "Aynı kod iki kez: son satır geçerli olur (önizlemede uyarı olarak görünür); tekrarları silin."],
     sayfa="S.ALMA BF", sutunlar=_salma_sutunlari(False), ornek=SALMA_ORNEK,
     baglanti="Veri Aktar › Satın alma fiyat listesi sekmesinin açıklama kutusuna (AktarimFormu) 'Şablonu indir'")
 
@@ -254,16 +262,20 @@ FIYAT_LISTESI = Sablon(
     no="02", ad="malzeme-fiyat-listesi", baslik="Malzeme fiyat listesi (fiyat güncelleme / revize)",
     nereye="Fiyat Çalışması › Malzeme Fiyatları › 'Fiyat listesi yükle' → dosya + geçerlilik tarihi → Önizle → neden → Uygula",
     kim="Satın alma", siklik="Gerektikçe (fiyat değişince, revize gelince)",
-    okuma=["İLK sayfa okunur (adı önemsiz); 1. satır başlık sayılır ve denetlenmez, veri 2. satırdan başlar.",
-           "Yalnız üç sütun okunur, SIRAYLA: A malzeme kodu, F bütçe birim fiyatı, I revize fiyat. B–E, G, H bilgi içindir.",
-           "Revize (I) doluysa ve F'den farklıysa geçerli fiyat I'dır; F 'ilk bütçe' olarak yanına kaydedilir.",
+    okuma=["'S.ALMA BF' adlı sayfa, yoksa ilk veri sayfası okunur. Başlık satırı ilk 30 satırda aranır; sütunlar BAŞLIK ADIYLA bulunur.",
+           "Zorunlu: malzeme kodu (Malzeme / Malzeme Kodu / Stok Kodu) ve fiyat (Bütçe Birim Fiyatları / Birim Fiyat / Fiyat). Revize: 'Revize' "
+           "başlıklı sütun ya da fiyat sütunundan sonraki ikinci fiyat sütunu (klasik düzende I). Diğer sütunlar bilgi içindir.",
+           "Revize doluysa ve F'den farklıysa geçerli fiyat revizedir; F 'ilk bütçe' olarak yanına kaydedilir.",
            "Yalnız sistemde fiyatı olan ve fiyatı DEĞİŞEN kodlar yazılır. Kartı / fiyatı olmayan kodlar önizlemede 'yeni' görünür ama YAZILMAZ: "
            "onlar için şablon 01 (Veri Aktar › Satın alma fiyat listesi) kullanılır.",
-           "Bu dosya şablon 01 ile aynı düzendedir: aynı dosya Veri Aktar'a da yüklenebilir (orada kart bilgileri de okunur)."],
-    hatalar=["CSV ya da eski .xls yüklemek: ekran bu uzantıları seçtirse de uygulama yalnız .xlsx okur ('dosya geçerli bir .xlsx değil').",
-             "Fiyatı metin olarak yazmak: satır 'hatalı' listesine düşer.",
+           "Elle girilmiş (Malzeme Fiyatları ekranından yazılmış) geçerli fiyatlar varsayılan olarak KORUNUR; önizlemede 'korunsun / üzerine "
+           "yazılsın' seçilir. %15 (TL) / %10 (döviz) üzeri değişimler uyarı olarak listelenir.",
+           "Bu dosya şablon 01 ile aynı düzendedir: aynı dosya Veri Aktar'a da yüklenebilir (orada kart bilgileri de okunur). Son yükleme "
+           "geri alınabilir (eklenen fiyat kayıtları silinir)."],
+    hatalar=["CSV ya da eski .xls yüklemek: dosya seçici yalnız .xlsx / .xlsm gösterir; başka uzantı anlaşılır bir mesajla reddedilir.",
+             "Fiyat hücresine sayıya çevrilemeyen bir şey yazmak: satır sorunlu listesine düşer, yazılmaz (0 yazılmaz).",
              "Yeni malzemeyi bu ekrandan eklemeye çalışmak: 'yeni' satırlar yazılmaz; Veri Aktar › Satın alma fiyat listesi kullanın.",
-             "Sütunları kaydırmak (ör. fiyatı E'ye yazmak): fiyat F'den okunur, yanlış sütun sessizce boş sayılır."],
+             "Elle düzeltilmiş fiyatı listeyle ezmek istemek: önizlemede 'üzerine yazılsın'ı seçin (varsayılan: korunur)."],
     sayfa="S.ALMA BF", sutunlar=_salma_sutunlari(True), ornek=FIYAT_LISTESI_ORNEK,
     baglanti="Malzeme Fiyatları › 'Fiyat listesi yükle' penceresine (FiyatListesiYukle) 'Şablonu indir'")
 
@@ -272,16 +284,16 @@ URETIM_ADETLERI = Sablon(
     no="03", ad="uretim-adetleri", baslik="Üretim adetleri (vardiya kapasitesi ve hedef üretim)",
     nereye="Fiyat Çalışması › Veri Aktar › 'Üretim adetleri' sekmesi → dosya → Önizle → neden → Uygula",
     kim="Muhasebe (üretim planlamadan gelen değerlerle)", siklik="Sezon başında; üretim planı değişince",
-    okuma=["'Üretim Adetleri' adlı sayfa okunur; dosyada tek sayfa varsa o sayfa okunur.",
-           "Başlık 2. satırdadır, 3. satır birim satırıdır (okunmaz), veri 4. satırdan başlar. 1. satır serbesttir.",
-           "A2 'ÜRÜN KODU', B2 'ÜRÜN ADI', G2 'HEDEF VARDİYALIK ÜRETİM' birebir denetlenir ve BÜYÜK HARF olmalıdır (İ noktalı): "
-           "'Hedef vardiyalık üretim' gibi küçük harfle yazılırsa dosya reddedilir.",
-           "Sütunlar SIRAYLA okunur: A kod, B ad, C net süredeki vardiyalık kapasite, D net süre, E toplam süredeki kapasite, F toplam süre, "
-           "G hedef vardiyalık üretim, H ortalama işçi sayısı.",
-           "Sayı olmayan hücreler ('-', '#DIV/0!', metin olarak yazılmış sayı) uyarısız 0 okunur. Aynı kod iki kez varsa ilk satır alınır."],
-    hatalar=["Başlıkları küçük harfle ya da noktasız I ile yazmak ('VARDIYALIK'): 'beklenen sütun düzeninde değil' hatası.",
-             "Birim satırını (3. satır) silmek: ilk ürün satırı birim satırı sanılıp atlanır.",
-             "Sayıları metin olarak girmek: uyarısız 0 okunur; önizlemede değerleri kontrol edin.",
+    okuma=["'Üretim Adetleri' adlı sayfa okunur (ad esnek); dosyada tek veri sayfası varsa o sayfa okunur.",
+           "Başlık satırı ilk 30 satırda aranır (şablonda 2. satır); hemen altındaki birim satırı ('(adet)', '(saat)') atlanır.",
+           "Sütunlar BAŞLIK ADIYLA bulunur; büyük/küçük harf ve İ/ı farkı önemsiz ('Hedef vardiyalık üretim' = 'HEDEF VARDIYALIK URETIM'). "
+           "Zorunlu: ÜRÜN KODU (= Stok Kodu), HEDEF VARDİYALIK ÜRETİM (= Hedef Üretim). Diğerleri isteğe bağlı; klasik düzende (A kod, G hedef) "
+           "adı tanınmayan sütunlar C-F, H sırasıyla okunur.",
+           "Boş ve '-' hücre 0 sayılır; metin sayı ('18.000,5') çevrilir; çevrilemeyen hücre ('#DIV/0!', 'abc') satırı sorunlu yapar, o satır "
+           "yazılmaz. Aynı kod iki kez varsa ilk satır alınır.",
+           "Yükleme günceller / ekler, dosyada olmayan ürünlerin kaydı silinmez. Son yükleme geri alınabilir."],
+    hatalar=["Hücreye '#DIV/0!' gibi hata değeri bırakmak: o ürün sorunlu listesine düşer ve yazılmaz; önizlemedeki listeyi kontrol edin.",
+             "Başka ekranın şablonunu (ör. gider dağıtım) yüklemek: 'Bu dosya … şablonu' diye reddedilir.",
              "Ürün kodu ürün kartındaki kodla aynı olmalı; farklı yazılan kod ayrı satır olarak kaydedilir."],
     sayfa="Üretim Adetleri", baslik_satiri=2, ust_baslik="ÜRETİM ADETLERİ (bu satır serbest; başlıklar 2. satırda)",
     ara_satir=["", "", "(adet)", "(saat)", "(adet)", "(saat)", "(adet)", "(kişi)"],
@@ -292,7 +304,7 @@ URETIM_ADETLERI = Sablon(
         Sutun("NET SÜRE", "I", 10, "sayi", "Net çalışma süresi (saat). Boş = 0.", "6,5"),
         Sutun("TOPLAM SÜREDEKİ KAPASİTE", "I", 16, "sayi", "Toplam sürede vardiya başına kapasite (adet). Boş = 0.", "23.400"),
         Sutun("TOPLAM SÜRE", "I", 10, "sayi", "Toplam vardiya süresi (saat). Boş = 0.", "7,5"),
-        Sutun("HEDEF VARDİYALIK ÜRETİM", "Z", 16, "sayi", "Hedeflenen vardiya üretim adedi. Başlık birebir bu olmalı.", "18.000"),
+        Sutun("HEDEF VARDİYALIK ÜRETİM", "Z", 16, "sayi", "Hedeflenen vardiya üretim adedi. Başlık adı esnek (büyük/küçük harf, İ/ı ve boşluk farkı önemsiz).", "18.000"),
         Sutun("ORTALAMA İŞÇİ SAYISI", "I", 14, "sayi", "Vardiyadaki ortalama işçi sayısı (kişi). Boş = 0.", "17"),
     ],
     ornek=[[URUN1[0], URUN1[1], 20700, 6.5, 23400, 7.5, 18000, 17],
@@ -407,7 +419,10 @@ GIDER = Sablon(
            "Düzen denetimi: D3, D12, D17, D26, D63, D66 'Gider Toplamı' ile, A69 'Ambalaj' ile başlamalı; tüm toplamlar boşsa dosya reddedilir.",
            "Toplam hücresine '=49024334,97*1,35*1,3' gibi taban × çarpan formülü yazılırsa çarpanlar uygulamada ayrı ayrı düzenlenebilir kalır; "
            "düz sayı da olur. Formüllü dosyayı Excel'de kaydedip yükleyin (uygulama formülün son hesaplanan değerini okur).",
-           "Önizleme yalnız değişen havuzları gösterir; uygula değişen havuzları ve ambalaj tablosunu seçili çalışmaya yazar."],
+           "Önizleme yalnız değişen havuzları gösterir; uygula değişen havuzları ve ambalaj tablosunu seçili çalışmaya yazar.",
+           "Metin olarak yazılmış sayılar çevrilir; çevrilemeyen hücre sorunlu listelenir ve düzeltilene kadar hiçbir şey yazılmaz.",
+           "Ambalaj tablosu dosyadakiyle DEĞİŞTİRİLİR: dosyada mevcut ambalaj sınıflarının yarısından azı varsa 'N kalem silinecek' onayı "
+           "istenir. Son yükleme geri alınabilir (havuzlar ve ambalaj tablosu önceki haline döner)."],
     hatalar=["Saniye bazlı havuzda (dolum, etiket, endirekt, diğer GÜG) F hücresini boş bırakmak: uygula 'dağıtım bazı 0'dan büyük olmalı' der.",
              "Sınıf / hat / ambalaj adını ürün kartındakinden farklı yazmak ('Turşu / Turşu' ile 'Turşu/Turşu'): o ürüne pay düşmez.",
              "Satır eklemek: tüm değerler kayar ve yanlış havuza yazılır. Boş satırları kullanın, satır eklemeyin.",
@@ -558,10 +573,12 @@ RECETE = Sablon(
            "Etiketlerden biri eksikse sayfa 'ürün sayfası düzeninde değil' diye hatalı listesine düşer.",
            "Dosyada S.ALMA BF sayfası varsa 'elle fiyat' ayrımı fiyat listesine göre yapılır (M boş = listeden). Bu şablonda o sayfa boş durur.",
            "Var olan ürünün kartına ve üretim bilgilerine dokunulmaz, yalnız yeni reçete versiyonu açılır (eski versiyon geçmişte kalır). "
-           "Sistemde olmayan ürün için kart ve üretim bilgileri bu sayfadan açılır."],
-    hatalar=["S.ALMA BF sayfasını silmek ya da ürün sayfasını tek başına kaydetmek: boş birim fiyat hücreleri 'elle fiyat 0' okunur, maliyet düşük çıkar. "
-             "Önizlemede 'elle fiyat' sayısı reçete satır sayısına eşitse bu olmuştur.",
-             "K (brüt miktar) formülünü silmek: boş K 'elle brüt miktar 0' sayılır. Formülü geri kopyalayın.",
+           "Sistemde olmayan ürün için kart ve üretim bilgileri bu sayfadan açılır.",
+           "Son yükleme geri alınabilir: açılan reçete versiyonları silinir, önceki versiyon yeniden aktif olur; bu yüklemede açılan ürün kaldırılır."],
+    hatalar=["M (birim fiyat) hücresine sayı yazmak: o satır 'elle fiyat' olur. Boş M artık 'elle 0' SAYILMAZ (fiyat Malzeme Fiyatları'ndan "
+             "gelir); önizlemedeki 'elle fiyat' sayısını kontrol edin.",
+             "K (brüt miktar) hücresine sayı yazmak: 'elle brüt miktar' olur. Boş K artık 'elle 0' sayılmaz (fire kuralı uygulanır).",
+             "I / J / K / M hücresine sayıya çevrilemeyen bir şey yazmak: o sayfa okunamayan sayfalar listesine düşer, hücre sorunlu satırlarda görünür.",
              "Dosyayı Excel'de açıp kaydetmeden (ör. başka araçla doldurup) yüklemek: K formüllerinin değeri hesaplanmamış olur.",
              "D sütunundaki etiket metinlerini değiştirmek ya da satır ekleyip etiketleri reçete alanına kaydırmak.",
              "Reçeteye 93'ten fazla malzeme: 100. satırdaki etiketin üstüne satır ekleyin (etiket aşağı kayar, sorun olmaz)."],
@@ -573,8 +590,10 @@ STOK = Sablon(
     no="06", ad="stokta-kalan", baslik="Stokta kalan (geçen yıldan devreden ürün stoku)",
     nereye="Fiyat Çalışması › Veri Aktar › 'Stokta kalan' sekmesi → dosya → Önizle → neden → Uygula",
     kim="Muhasebe", siklik="Sezon başında",
-    okuma=["İLK sayfa okunur; 1. satır başlıktır. Sütunlar BAŞLIK ADIYLA bulunur (sıra serbest; büyük/küçük, Türkçe harf ve boşluk/alt çizgi farkı önemsiz).",
-           "Zorunlu başlıklar: urun_kodu, stok_adet, stok_birim_maliyet. İsteğe bağlı: enflasyon, uretim_adedi.",
+    okuma=["'Stokta Kalan' sayfası, yoksa ilk veri sayfası okunur; başlık satırı ilk 30 satırda aranır. Sütunlar BAŞLIK ADIYLA bulunur (sıra "
+           "serbest; büyük/küçük, Türkçe harf ve boşluk/alt çizgi farkı önemsiz).",
+           "Zorunlu başlıklar: urun_kodu (= Ürün Kodu, Stok Kodu), stok_adet (= Stok Adedi, Miktar), stok_birim_maliyet (= Birim Maliyet). "
+           "İsteğe bağlı: enflasyon, uretim_adedi (= Üretim Adedi). Son yükleme geri alınabilir.",
            "Ürün sistemde olmalı ve dosyada bir kez geçmeli. Hatalı satır varsa önizlemede listelenir ve hiçbir satır yazılmaz.",
            "Kayıtlar seçili çalışmaya yazılır; yeni çalışma kopyalanırken taşınmaz.",
            "Uygulamadaki 'Şablonu indir' bağlantısı aynı başlıkları verir (Veri Aktar › Stokta kalan)."],
@@ -599,16 +618,19 @@ SATIS = Sablon(
     no="07", ad="satis-gecmisi", baslik="Satış geçmişi (geçen yıl satış fiyatları)",
     nereye="Fiyat Çalışması › Satış Geçmişi › dosya seç → Yükle (aynı kart: Veri Aktar › 'Satış geçmişi' sekmesi)",
     kim="Muhasebe (satış raporundan)", siklik="Sezon başında (geçen yılın tamamı); istenirse ay sonunda ek",
-    okuma=["İLK sayfa okunur; 1. satır başlıktır. Sütunlar BAŞLIK ADIYLA bulunur (sıra serbest; 'Ürün Kodu', 'urun_kodu', 'URUNKODU' aynı).",
+    okuma=["İLK veri sayfası okunur; başlık satırı ilk 30 satırda aranır. Sütunlar BAŞLIK ADIYLA bulunur (sıra serbest; 'Ürün Kodu', "
+           "'urun_kodu', 'URUNKODU' aynı; eş anlamlılar: Müşteri = Cari, Tarih = Fatura Tarihi, Fiyat = Birim Fiyat, Para Birimi = Döviz, "
+           "Adet = Miktar).",
            "Altı başlık da zorunludur: urun_kodu, musteri, tarih, fiyat, para_birimi, adet. .csv (; ya da ,) da kabul edilir.",
            "Tarih: Excel tarih hücresi, YYYY-AA-GG ya da GG.AA.YYYY. Sayı: Excel sayı hücresi, 1234.56, 1234,56 ya da 1.234,56.",
            "Tek işlem: herhangi bir satır hatalıysa hiçbir satır eklenmez, hatalar satır numarasıyla listelenir. En çok 20.000 satır.",
-           "Yükleme ekler (var olanın yerine geçmez): aynı dosyayı iki kez yüklemek satırları ikiler.",
+           "Yükleme ekler; sistemde aynısı (ürün, müşteri, tarih, fiyat, adet) olan satırlar ATLANIR: aynı dosyayı iki kez yüklemek satırları "
+           "ikilemez ('Önizle' kaç satırın zaten kayıtlı olduğunu gösterir). Son yükleme geri alınabilir (eklenen satırlar silinir).",
            "Uygulamadaki 'Şablonu indir' bağlantısı aynı başlıkları verir."],
     hatalar=["Belirsiz sayı: '2.000' (nokta + 3 hane, virgülsüz) ve '1,234.56' reddedilir; Excel sayı hücresi kullanın.",
              "Para birimini 'TRY' ya da '₺' yazmak: TL, USD, EUR, GBP, CHF, RUB, ZAR'dan biri olmalı.",
              "Ürün kodu sistemde yok: 'ürün bulunamadı' (önce ürün kartı açılmalı).",
-             "Aynı dosyayı iki kez yüklemek: satırlar ikilenir; yanlış yüklemede Satış Geçmişi listesinden silin."],
+             "Yanlış dosya yüklemek: 'Son yükleme — Geri al' ile eklenen satırları kaldırın."],
     sayfa="Satış Geçmişi",
     sutunlar=[
         Sutun("urun_kodu", "Z", 14, "metin", "Ürün kodu (sistemde kayıtlı).", URUN1[0]),
@@ -633,7 +655,8 @@ LISTE = Sablon(
     okuma=["İLK sayfa okunur; 1. satır başlıktır. Sütunlar BAŞLIK ADIYLA bulunur (satış geçmişi okuyucusuyla aynı kurallar). .csv de olur.",
            "Zorunlu başlıklar: urun_kodu, yil, liste_fiyati. İsteğe bağlı: birim_maliyet, pazar.",
            "Yalnız Berrak markalı ürünler kabul edilir (ürün kartında marka: Berrak).",
-           "Aynı ürün + yıl + pazar yeniden yüklenirse eski değerin yerine geçer. Herhangi bir satır hatalıysa hiçbir satır yazılmaz.",
+           "Aynı ürün + yıl + pazar yeniden yüklenirse eski değerin yerine geçer. Herhangi bir satır hatalıysa hiçbir satır yazılmaz. "
+           "'Önizle' yeni / değişecek / aynı sayılarını gösterir; son yükleme geri alınabilir (eski değerler geri yazılır).",
            "Uygulamadaki 'Şablonu indir' bağlantısı aynı başlıkları verir."],
     hatalar=["Berrak olmayan ürün: 'liste fiyatı yalnız Berrak markalı ürünlere girilir'.",
              "Pazarı 'İhracat' yazmak: yalnız Yurtiçi, Yurtdışı ya da boş (boş = Yurtiçi).",
@@ -682,17 +705,19 @@ CANIAS = Sablon(
     kim="Muhasebe", siklik="Gerektikçe (Canias'ta reçete değişince); her ay yeniden yüklenmez",
     okuma=["Canias'tan böyle alınır: ürün ağacı raporu (sonuç tablosu 'TBLRESULT') Excel'e aktarılır; başlıklar bu şablondakiyle aynıdır. "
            "Canias dökümünü olduğu gibi yükleyebilirsiniz; bu şablon elle hazırlanacak ya da düzeltilecek dökümler içindir.",
-           "İLK sayfa okunur; 1. satır başlıktır. Sütunlar BAŞLIK ADIYLA bulunur (sıra serbest) ama başlık metni BİREBİR aynı olmalı "
-           "(büyük/küçük harf ve Türkçe harf dahil; 'Fire Oranı' ≠ 'Fire Orani').",
+           "İLK sayfa okunur; başlık satırı aranır. Sütunlar BAŞLIK ADIYLA bulunur (sıra serbest; büyük/küçük harf, Türkçe harf ve boşluk farkı "
+           "önemsiz: 'Fire Oranı' = 'FIRE ORANI'; bilinen eş anlamlılar tanınır).",
            "Zorunlu başlıklar: Alternatif Numarası, Malzeme Kodu, Malzeme Açıklaması, Satır No, Ürün Ağacı Kalem Tipi, Tüketim Malzeme Kodu, "
            "Tüketim Malzeme Adı, Tüketim Miktarı, Tüketim Birimi, Fire Oranı. 'Fireli Miktar' okunmaz.",
            "Tüketim Malzeme Kodu boş satır ürün başlığıdır, atlanır. Aşama koddan bulunur: 02 ile başlayan → 40 (üretim hattı), 03 → 50 (etiketleme), "
            "diğerleri → 20.",
-           "Yükleme TÜM kalıcı reçeteleri dosyadakilerle değiştirir; ürün başına alternatif seçimleri ve elle düzeltilmiş ürünler korunur."],
+           "Yükleme TÜM kalıcı reçeteleri dosyadakilerle değiştirir; ürün başına alternatif seçimleri ve elle düzeltilmiş ürünler korunur. "
+           "Önce önizlenir; dosyada mevcut reçetelerin yarısından azı varsa onay istenir; son yükleme geri alınabilir.",
+           "Metin olarak yazılmış sayılar çevrilir; çevrilemeyen hücre satırı sorunlu yapar (0 sayılmaz)."],
     hatalar=["Alternatif numarasını sayı olarak girmek: Excel '00'ı 0 yapar ve varsayılan alternatif '00' bulunamaz. Sütun metin biçimlidir; '00' yazın.",
              "Fire oranını oran olarak yazmak (0,02): yüzde beklenir (2 = %2); 0,02 yazılırsa %0,02 sayılır.",
-             "Miktarı metin olarak yazmak ('1,05' metin): uyarısız 0 okunur. Sayı hücresi kullanın.",
-             "Başlıkları Türkçe harfsiz ya da farklı yazmak: 'Canias ürün ağacı dökümü bekleniyor; sütun eksik'."],
+             "Miktara sayıya çevrilemeyen bir şey yazmak: satır sorunlu listelenir, yazılmaz.",
+             "Zorunlu bir başlığı hiç koymamak: hangi sütunun eksik olduğu söylenir, hiçbir şey yazılmaz."],
     sayfa="TBLRESULT",
     sutunlar=[
         Sutun("Alternatif Numarası", "Z", 12, "metin", "Reçete alternatifi; boşsa '00' (varsayılan). Metin olarak yazın.", "00"),
@@ -712,11 +737,13 @@ CANIAS = Sablon(
 
 # ------------------------------------------------------------------------------------------------ 10-16 SMM aylık kaynaklar
 _O = lambda ad="—": Sutun(ad, "O", 9, "metin", "Uygulama okumaz; boş kalabilir (SMM Excel'indeki yerini korur).")
-SMM_ORTAK_OKUMA = ("'{sayfa}' adlı sayfa okunur; yoksa İLK sayfa okunur (SMM Excel'inin tamamı da, tek sayfalık rapor da olur).",
-                   "Başlık satırı ilk 8 satırda '{baslik}' hücresiyle bulunur (BİREBİR, boşluk ve büyük/küçük harf dahil); veri onun altından başlar.",
-                   "Diğer sütunlar SIRAYLA okunur (başlık metni önemsiz): sütun yerlerini değiştirmeyin.",
-                   "Sayılar Excel sayı hücresi olmalı: metin olarak yazılmış sayı ('1.234,56') uyarısız 0 okunur.",
-                   "Yükleme o kaynağın dönemdeki eski verisinin YERİNE geçer (yeniden yüklemek güvenlidir). Kilitli (kapatılmış) döneme yüklenemez.")
+SMM_ORTAK_OKUMA = ("'{sayfa}' adlı sayfa okunur (ad esnek); yoksa İLK sayfa okunur (SMM Excel'inin tamamı da, tek sayfalık rapor da olur).",
+                   "Başlık satırı '{baslik}' hücresiyle bulunur; büyük/küçük harf, Türkçe harf (İ/ı) ve boşluk farkı önemsiz, bilinen eş anlamlılar "
+                   "tanınır ('Malzeme Kodu' = 'Stok Kodu' = 'Malzeme (Sınıf) Kodu'). Veri onun altından başlar.",
+                   "Diğer sütunlar şablondaki yerlerinden okunur: sütun yerlerini değiştirmeyin.",
+                   "Metin olarak yazılmış sayılar ('1.234,56') çevrilir; çevrilemeyen hücre satırı sorunlu yapar (0 sayılmaz), önizlemede listelenir.",
+                   "Önce önizlenir, sonra uygulanır. Yükleme o kaynağın dönemdeki eski verisinin YERİNE geçer; boş dosya reddedilir, yeni dosyada "
+                   "mevcut kalemlerin yarısından azı varsa onay istenir; son yükleme geri alınabilir. Kilitli (kapatılmış) döneme yüklenemez.")
 
 
 def _smm_okuma(sayfa: str, baslik: str, ek: list[str]) -> list[str]:
@@ -733,14 +760,14 @@ SMM_ALIM = Sablon(
                      ["Kod B sütunundadır. Okunan: B kod, C ad, F birim, G giriş (alım) miktarı, K tutar (TL), L çıkış miktarı, T hareket türü.",
                       "Aynı kodun satırları toplanır. T 'Satış' ise L satılan miktara eklenir; diğer satırlarda G ve K alıma eklenir.",
                       "Tutar (K) TL'dir: dövizli alımda kur çevrimini satırda yapın."]),
-    hatalar=["Başlığı 'Malzeme (Sınıf) Kodu' (boşluklu) yazmak: bu kaynakta boşluksuz 'Malzeme(Sınıf)Kodu' aranır ('başlık bulunamadı').",
-             "Satış satırında T'yi 'SATIŞ' ya da 'Satis' yazmak: yalnız birebir 'Satış' satış sayılır.",
+    hatalar=["Kod sütununu hiç koymamak: 'başlık bulunamadı' (hangi sütunun eksik olduğu söylenir). Başlık yazımı esnektir.",
+             "Satış satırında T'yi boş bırakmak: satır alım sayılır ('Satış', 'SATIŞ', 'Satis' satış sayılır).",
              "Tutarı döviz olarak bırakmak: K TL kabul edilir, ortalama maliyet bozulur.",
              "Sütun eklemek / silmek: miktar ve tutar yanlış sütundan okunur."],
     sayfa="HM-YM ALIŞ SATIŞ", baslik_satiri=2, ust_baslik="HAMMADDE - YARI MAMUL ALIŞ / SATIŞ RAPORU (bu satır serbest)",
     sutunlar=[
         Sutun("Fiş No", "O", 12, "metin", "Uygulama okumaz.", "ALS-00001"),
-        Sutun("Malzeme(Sınıf)Kodu", "Z", 16, "metin", "Malzeme kodu. Başlık birebir bu olmalı (boşluksuz).", "99.10.001"),
+        Sutun("Malzeme(Sınıf)Kodu", "Z", 16, "metin", "Malzeme kodu. Başlık adı esnek (büyük/küçük harf ve boşluk farkı önemsiz).", "99.10.001"),
         Sutun("Malzeme Açıklaması", "I", 30, "metin", "Malzeme adı (kalem dönemde yoksa ad olarak kullanılır).", "Test Taze Hıyar"),
         Sutun("Tarih", "O", 12, "tarih", "Uygulama okumaz.", "05.11.2026"),
         Sutun("Depo", "O", 10, "metin", "Uygulama okumaz.", "Merkez"),
@@ -767,12 +794,12 @@ SMM_IADE = Sablon(
     nereye=SMM_NEREYE.format(ad="Alım iadeleri"), kim="Muhasebe", siklik="Her ay sonunda (iade varsa)",
     okuma=_smm_okuma("İADELER", "Malzeme (Sınıf) Kodu",
                      ["Kod A sütunundadır. Okunan: A kod, B ad, E birim, H iade miktarı, I iade tutarı (TL). Aynı kodun satırları toplanır."]),
-    hatalar=["Başlığı boşluksuz 'Malzeme(Sınıf)Kodu' yazmak: bu kaynakta BOŞLUKLU 'Malzeme (Sınıf) Kodu' aranır.",
+    hatalar=["Kod sütununu hiç koymamak: 'başlık bulunamadı'. Başlık yazımı esnektir ('Malzeme(Sınıf)Kodu' = 'Malzeme (Sınıf) Kodu').",
              "İade miktarını eksi yazmak: iade zaten düşülür; artı yazın.",
              "Tutar sütununu (I) boş bırakmak: iade tutarı 0 sayılır."],
     sayfa="İADELER", baslik_satiri=2, ust_baslik="ALIM İADELERİ (bu satır serbest)",
     sutunlar=[
-        Sutun("Malzeme (Sınıf) Kodu", "Z", 16, "metin", "Malzeme kodu. Başlık birebir bu olmalı (boşluklu).", "99.10.001"),
+        Sutun("Malzeme (Sınıf) Kodu", "Z", 16, "metin", "Malzeme kodu. Başlık adı esnek (büyük/küçük harf ve boşluk farkı önemsiz).", "99.10.001"),
         Sutun("Malzeme Açıklaması", "I", 30, "metin", "Malzeme adı.", "Test Taze Hıyar"),
         Sutun("Tarih", "O", 12, "tarih", "Uygulama okumaz.", "12.11.2026"),
         Sutun("Fiş No", "O", 10, "metin", "Uygulama okumaz.", "IAD-001"),
@@ -793,12 +820,12 @@ SMM_URETIM = Sablon(
                      ["Kod A sütunundadır. Okunan: A kod, B ad, O üretim miktarı (15. sütun). Aynı kodun satırları toplanır.",
                       "Hem mamul (03...) hem yarı mamul (02...) hem ara mamul (01...) üretimleri yazılır."]),
     hatalar=["Üretim miktarını C ya da başka bir sütuna yazmak: yalnız O sütunu okunur (C-N boş kalabilir).",
-             "Başlığı 'Malzeme Kodu' (boşluklu) yazmak: bu kaynakta boşluksuz 'MalzemeKodu' aranır.",
+             "Kod sütununu hiç koymamak: 'başlık bulunamadı'. Başlık yazımı esnektir ('MalzemeKodu' = 'Malzeme Kodu').",
              "O sütununa yıl içi toplamı yazmak: SMM Excel'inde bu sütun 'yıl içi toplam' diye anılıyor; dönem hesabında ayın üretimi olarak kullanılır "
              "(muhasebeyle teyit edilmeli, rehberdeki açık soruya bakın)."],
     sayfa="ÜRETİM", baslik_satiri=2, ust_baslik="ÜRETİM MİKTARLARI (bu satır serbest)",
     sutunlar=[
-        Sutun("MalzemeKodu", "Z", 14, "metin", "Üretilen mamul / yarı mamul kodu. Başlık birebir bu olmalı (boşluksuz).", "03.99.001"),
+        Sutun("MalzemeKodu", "Z", 14, "metin", "Üretilen mamul / yarı mamul kodu. Başlık adı esnek (büyük/küçük harf ve boşluk farkı önemsiz).", "03.99.001"),
         Sutun("Malzeme Açıklaması", "I", 32, "metin", "Ürün adı.", "Test Berrak Turşu 370 ml"),
         Sutun("Birim", "O", 8, "metin", "Uygulama okumaz (bilgi).", "AD"),
     ] + [_O() for _ in range(11)] + [
@@ -815,12 +842,12 @@ SMM_SAYIM = Sablon(
     okuma=_smm_okuma("DSS", "StokKartıKodu",
                      ["Kod A sütunundadır. Okunan: A kod, B ad, C sayım miktarı. Aynı kodun satırları toplanır.",
                       "Sayımda olmayan kalemin sayımı 0 olur (yükleme o kaynağı baştan yazar)."]),
-    hatalar=["Başlığı 'Stok Kartı Kodu' (boşluklu) yazmak: birebir 'StokKartıKodu' aranır.",
+    hatalar=["Kod sütununu hiç koymamak: 'başlık bulunamadı'. Başlık yazımı esnektir ('StokKartıKodu' = 'Stok Kartı Kodu').",
              "Sayım miktarını D ya da E sütununa yazmak: yalnız C okunur.",
              "Sıfır sayımlı kalemi listeden çıkarmak sorun değildir; ama yanlışlıkla bir kalemi atlamak onu 0 yapar."],
     sayfa="DSS", baslik_satiri=2, ust_baslik="DÖNEM SONU SAYIM (bu satır serbest)",
     sutunlar=[
-        Sutun("StokKartıKodu", "Z", 14, "metin", "Stok kodu. Başlık birebir bu olmalı.", "99.10.001"),
+        Sutun("StokKartıKodu", "Z", 14, "metin", "Stok kodu. Başlık adı esnek (büyük/küçük harf, İ/ı ve boşluk farkı önemsiz).", "99.10.001"),
         Sutun("StokKartıAdı", "I", 32, "metin", "Stok adı.", "Test Taze Hıyar"),
         Sutun("Sayım Miktarı", "Z", 13, "sayi", "Dönem sonu sayılan miktar (stok biriminde).", "2.100"),
         Sutun("Birim", "O", 8, "metin", "Uygulama okumaz (bilgi).", "KG"),
@@ -836,11 +863,11 @@ SMM_SAHIT = Sablon(
     okuma=_smm_okuma("ŞAHİT", "StokKodu",
                      ["Kod A sütunundadır. Okunan: A kod, B ad, J toplam miktar (10. sütun, sayı hücresi). Aynı kodun satırları toplanır."]),
     hatalar=["Miktarı C-I sütunlarına yazmak: yalnız J okunur.",
-             "J'yi metin olarak yazmak: o satır atlanır (sayı hücresi değilse okunmaz).",
-             "Başlığı 'Stok Kodu' yazmak: birebir 'StokKodu' aranır."],
+             "J'ye sayıya çevrilemeyen bir şey yazmak: satır sorunlu listelenir, yazılmaz (metin sayı '12' çevrilir).",
+             "Kod sütununu hiç koymamak: 'başlık bulunamadı'. Başlık yazımı esnektir ('StokKodu' = 'Stok Kodu')."],
     sayfa="ŞAHİT", baslik_satiri=2, ust_baslik="ŞAHİT NUMUNE (bu satır serbest)",
     sutunlar=[
-        Sutun("StokKodu", "Z", 14, "metin", "Ürün kodu. Başlık birebir bu olmalı.", "03.99.001"),
+        Sutun("StokKodu", "Z", 14, "metin", "Ürün kodu. Başlık adı esnek (büyük/küçük harf, İ/ı ve boşluk farkı önemsiz).", "03.99.001"),
         Sutun("StokAdı", "I", 32, "metin", "Ürün adı.", "Test Berrak Turşu 370 ml"),
         Sutun("Birim", "O", 8, "metin", "Uygulama okumaz (bilgi).", "AD"),
     ] + [_O() for _ in range(6)] + [
@@ -922,27 +949,30 @@ def kitap(t: Sablon, dolu: bool = False) -> Workbook:
         tablo_sayfasi(ws, t, t.ornek if dolu else [])
         tablo_sayfasi(wb.create_sheet("Örnek"), t, t.ornek)
         aciklama_sayfasi(wb.create_sheet("Açıklama"), t)
+    # Gizli '_sablon' sayfası (en sonda): uygulama yanlış ekrana yüklenen şablonu bununla tanır. Kimlik sırası = şablon numarası.
+    sablon_kimligi_yaz(wb, KIMLIKLER[int(t.no) - 1])
     wb.active = 0
     return wb
 
 
 # ------------------------------------------------------------------------------------------------ rehber (Markdown)
 # Doldurulacak sayfa boş bırakılıp yüklenirse ne olur (11-16-2026-dogrula.py ile uygulamanın okuyucularında denendi).
+_BOS_ORTAK = " Mevcut veri değişmez."
 BOS_DAVRANIS = {
-    "01": "Hata vermez; önizleme boş gelir (yazılacak bir şey yok).",
-    "02": "Hata vermez; önizleme boş gelir.",
-    "03": "Hata: 'Üretim Adetleri sayfasında satır yok'.",
-    "04": "Hata: 'Gider Dağıtım sayfası beklenen düzen değil' (bütün toplamlar boş).",
-    "05": "Önizlemede '001' sayfası 'reçete satırı yok' diye hatalı listesinde görünür; yazılacak sayfa olmaz.",
-    "06": "Hata vermez; önizleme 0 satır gösterir.",
-    "07": "Hata: 'dosyada veri satırı yok'.",
-    "08": "Hata: 'dosyada veri satırı yok'.",
-    "09": "Hata: 'dosyada reçete satırı yok'.",
-    "15": "Hata: 'gider mizanında 720 / 730 bulunamadı'.",
-    "16": "Hata: 'stok mizanında 15x hesabı bulunamadı'.",
+    "01": "Hata: 'Dosyada okunabilen malzeme satırı yok'." + _BOS_ORTAK,
+    "02": "Hata: 'Dosyada okunabilen fiyat satırı yok'." + _BOS_ORTAK,
+    "03": "Hata: 'Üretim Adetleri sayfasında satır yok'." + _BOS_ORTAK,
+    "04": "Hata: 'Gider Dağıtım sayfası beklenen düzen değil' (bütün toplamlar boş)." + _BOS_ORTAK,
+    "05": "Önizlemede '001' sayfası 'reçete satırı yok' diye okunamayan sayfalar listesinde görünür; yazılacak sayfa olmaz." + _BOS_ORTAK,
+    "06": "Hata: 'Dosyada okunabilen stok satırı yok'." + _BOS_ORTAK,
+    "07": "Hata: 'dosyada veri satırı yok'." + _BOS_ORTAK,
+    "08": "Hata: 'dosyada veri satırı yok'." + _BOS_ORTAK,
+    "09": "Hata: 'dosyada reçete satırı yok'." + _BOS_ORTAK,
+    "15": "Hata: 'gider mizanında 720 / 730 bulunamadı'." + _BOS_ORTAK,
+    "16": "Hata: 'stok mizanında 15x hesabı bulunamadı'." + _BOS_ORTAK,
 }
-SMM_BOS = ("DİKKAT: hata vermez. Yükleme başarılı görünür ve bu kaynağın dönemdeki değerlerini SIFIRLAR (0 kalem). Yanlışlıkla boş ya da "
-           "yanlış dosya yüklenirse doğru dosyayı yeniden yükleyin.")
+SMM_BOS = ("Hata verir (boş dosya); bu kaynağın dönemdeki değerleri DEĞİŞMEZ. Yeni dosyada mevcut kalemlerin yarısından azı varsa "
+           "'N kalem silinecek. Emin misiniz?' diye sorulur. Yanlış yüklemede 'Son yükleme — Geri al' ile önceki duruma dönülür.")
 for _no in ("10", "11", "12", "13", "14"):
     BOS_DAVRANIS[_no] = SMM_BOS
 
@@ -979,9 +1009,20 @@ def rehber_md() -> str:
     a("**Renkler:** koyu yeşil başlık = zorunlu sütun · açık gri = isteğe bağlı · soluk italik = uygulama okumaz (yerini korumak için durur, "
       "boş kalabilir). Gider dağıtım ve ürün reçetesi sabit hücre düzenindedir: yeşil hücreler zorunlu, gri hücreler isteğe bağlıdır.")
     a("")
-    a("**Genel kurallar:** dosya .xlsx olmalı (satış geçmişi ve liste fiyatları .csv de kabul eder). Sayılar Excel sayı hücresi olmalı: "
-      "metin olarak yazılmış sayı bazı yüklemelerde hata verir, bazılarında uyarısız 0 okunur. Başlık metinlerini ve sayfa adlarını değiştirmeyin. "
-      "Boyut sınırı: Veri Aktar ve Malzeme Fiyatları 25 MB, satış geçmişi ve liste fiyatları 10 MB, Maliyet Muhasebesi 60 MB.")
+    a("**Genel kurallar (16.11.2026 yükleme güvenliği sonrası):** dosya .xlsx olmalı (satış geçmişi ve liste fiyatları .csv de kabul eder; "
+      ".xls ve fiyat listesinde .csv anlaşılır bir hata mesajıyla reddedilir). Kendi Excel'inizi de yükleyebilirsiniz: başlıklar adıyla bulunur; "
+      "büyük/küçük harf, Türkçe harf (İ/ı), fazla boşluk ve noktalama fark etmez, bilinen eş anlamlılar tanınır ('Malzeme Kodu' = 'Stok Kodu', "
+      "'Birim Fiyat' = 'Fiyat', 'Para Birimi' = 'Döviz' = 'PB'...). Başlık satırı ilk 30 satırda aranır; zorunlu bir sütun yoksa hangisinin eksik "
+      "olduğu söylenir. Metin olarak yazılmış sayılar ('1.234,56', '%17', '17 TL') sayıya çevrilir; çevrilemeyen hücre 0 SAYILMAZ, satır "
+      "'sorunlu' listesine düşer ve yazılmaz (sorunlu satırların tümü önizlemeden Excel olarak indirilebilir).")
+    a("")
+    a("**Yanlış dosya ve veri kaybına karşı:** her şablonda gizli bir kimlik sayfası vardır; başka ekranın şablonu yüklenirse 'Bu dosya … şablonu; "
+      "burası … yüklemesi' diye reddedilir. Boş dosya hiçbir zaman veriyi silmez (hata verir, mevcut veri değişmez). Yükleme mevcut kayıtları "
+      "değiştiriyorsa ve yeni dosyada mevcut kayıtların yarısından azı varsa 'N kalem silinecek. Emin misiniz?' diye sorulur. Her yükleme önce "
+      "önizlenir (okunan / yeni / değişen / aynı / silinecek / atlanan sayıları ve sorunlu satırlar). Her yükleme ekranında 'Son yükleme: tarih, "
+      "kişi, özet — Geri al' satırı vardır: son yükleme onay sorusuyla geri alınır ve veri yüklemeden önceki haline döner.")
+    a("")
+    a("Boyut sınırı: Veri Aktar ve Malzeme Fiyatları 25 MB, satış geçmişi ve liste fiyatları 10 MB, Maliyet Muhasebesi 60 MB.")
     a("")
     a("## Sezon başında sırayla")
     a("")
@@ -1067,8 +1108,10 @@ def rehber_md() -> str:
     a("| Üretim Adetleri | Hayır | Şablon 03 düzeni; sayfa yoksa kapasite boş kalır |")
     a("| Diğer sayfalar (Teklif Kapak vb.) | — | Okunmaz |")
     a("")
-    a("Kritik: kitap Excel'de kaydedilmiş olmalı (uygulama formüllerin son hesaplanan değerini okur). Kitabın beklenen yapıda olmaması "
-      "'çalışma kitabı beklenen yapıda değil' hatası verir ve hiçbir şey yazılmaz. Uydurma örnek kitap: "
+    a("Kritik: kitap Excel'de kaydedilmiş olmalı (uygulama formüllerin son hesaplanan değerini okur). Sayfa adları esnektir (büyük/küçük harf, "
+      "Türkçe harf, boşluk); S.ALMA BF, Gider Dağıtım ya da ürün sayfası yoksa hangilerinin eksik olduğu söylenir ve hiçbir şey yazılmaz. "
+      "Başka bir şablonun dosyası (ör. 03) buraya yüklenirse reddedilir. 'Tamamla' modunda son yükleme geri alınabilir (eklenen kayıtlar "
+      "silinir); 'yeni çalışma' modunda geri almak, açılan çalışmayı silmektir. Uydurma örnek kitap: "
       f"`{ORNEK_KLASOR}11-16-2026-fiyat-calismasi-butce.xlsx` (gerçekleşen için `11-16-2026-fiyat-calismasi-gerceklesen.xlsx`). "
       "Bu klasör test döngüsü için yeniden üretilir; dosya adları değişirse aynı klasördeki 'fiyat-calismasi' dosyalarına bakın.")
     a("")
@@ -1112,8 +1155,9 @@ def rehber_md() -> str:
       "16 şablonun 16'sı hatasız okundu ve satır sayıları örnekle aynı çıktı. Ayrıntı: `sablonlar/11-16-2026-dogrulama-sonucu.txt`. "
       "Yeniden denemek için proje kökünden: `.venv\\Scripts\\python.exe sablonlar\\11-16-2026-dogrula.py`.")
     a("")
-    a("Bir uyarı: ürün reçetesi (05) şablonunun yalnız Örnek sayfası tek başına yüklenirse 7 satırın 7'si 'elle fiyat' sayıldı (boş birim fiyat = 0). "
-      "Bu yüzden şablonda boş 'S.ALMA BF' sayfası durur; silinmemeli.")
+    a("Ürün reçetesi (05): eskiden yalnız Örnek sayfası tek başına yüklenince boş birim fiyat hücreleri 'elle fiyat 0' sayılıyordu; "
+      "16.11.2026'dan beri boş M (birim fiyat) ve boş K (brüt miktar) hücresi 'değer yok' sayılır (fiyat Malzeme Fiyatları'ndan, brüt fire "
+      "kuralından gelir). Şablondaki boş 'S.ALMA BF' sayfası yine de silinmemeli (formül yerine sayı yazılmış fiyatların ayrımı için).")
     a("")
     return "\n".join(y)
 

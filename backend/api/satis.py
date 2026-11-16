@@ -6,7 +6,8 @@ from openpyxl import Workbook
 from ..servisler import satis_okuyucu, satis_servisi as ss
 from ..servisler.hatalar import DogrulamaHatasi
 from .bagimliliklar import OturumDep, kullanici_ver
-from .semalar import HATA_404_422, SatisCikis, SatisGiris, SatisListesi, SatisYuklemeOzeti
+from .import_ import geri_al_uclari
+from .semalar import HATA_404_422, SatisCikis, SatisGiris, SatisListesi, SatisOnizleme, SatisYuklemeOzeti
 
 ACIKLAMA = [
     "Başlıklar: urun_kodu, musteri, tarih, fiyat, para_birimi, adet (ilk sayfada, ilk satır).",
@@ -35,14 +36,28 @@ def ekle(s: OturumDep, g: SatisGiris, k: str = Depends(kullanici_ver)):
     return ss.ekle(s, g.urun_kodu, g.musteri, g.tarih, g.fiyat, g.para_birimi, g.adet, k)
 
 
-@router.post("/satis-gecmisi/yukle", response_model=SatisYuklemeOzeti, responses=HATA_404_422)
-def yukle(s: OturumDep, dosya: UploadFile = File(...), k: str = Depends(kullanici_ver)):
-    """CSV/xlsx yükler. Tek işlem: herhangi bir satır hatalıysa 422 döner (`alanlar.hatalar` = [{satir_no, mesaj}]) ve hiçbir satır yazılmaz."""
+@router.post("/satis-gecmisi/onizle", response_model=SatisOnizleme, responses=HATA_404_422)
+def onizle(s: OturumDep, dosya: UploadFile = File(...)):
+    """Hiçbir şey yazmaz: eklenecek, sistemde zaten kayıtlı (atlanacak) ve hatalı satırlar."""
     icerik = dosya.file.read(satis_okuyucu.MAKS_BAYT + 1)
-    eklenen, hatalar = ss.toplu_yukle(s, satis_okuyucu.oku(icerik, dosya.filename or ""), k, dosya.filename or "")
+    return ss.onizle(s, satis_okuyucu.oku(icerik, dosya.filename or ""))
+
+
+@router.post("/satis-gecmisi/yukle", response_model=SatisYuklemeOzeti, responses=HATA_404_422)
+def yukle(s: OturumDep, dosya: UploadFile = File(...), k: str = Depends(kullanici_ver),
+          kayitlilari_da_ekle: bool = Query(False, description="Sistemde aynısı olan satırları da ekle (varsayılan: atlanır, ikilenmez)"),
+          onay: bool = Query(False, description="Satır kaybı onayı (bu yükleme kayıt silmez; diğer yüklemelerle aynı imza)")):
+    """CSV/xlsx yükler. Tek işlem: herhangi bir satır hatalıysa 422 döner (`alanlar.hatalar` = [{satir_no, mesaj}]) ve hiçbir satır yazılmaz.
+    Sistemde zaten kayıtlı satırlar (ürün, müşteri, tarih, fiyat, adet) atlanır."""
+    icerik = dosya.file.read(satis_okuyucu.MAKS_BAYT + 1)
+    eklenen, hatalar, atlanan = ss.toplu_yukle_ayrintili(s, satis_okuyucu.oku(icerik, dosya.filename or ""), k, dosya.filename or "",
+                                                         kayitlilari_da_ekle)
     if hatalar:
         raise DogrulamaHatasi("dosyada hatalı satırlar var; hiçbir satır eklenmedi", {"hatalar": hatalar})
-    return {"eklenen": eklenen, "hatalar": []}
+    return {"eklenen": eklenen, "hatalar": [], "atlanan_kayitli": atlanan}
+
+
+geri_al_uclari(router, "/satis-gecmisi", "satis_gecmisi", senaryolu=False, etiket="Satış geçmişi")
 
 
 @router.get("/satis-gecmisi/sablon.xlsx", response_model=None,

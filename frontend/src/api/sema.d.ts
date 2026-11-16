@@ -783,6 +783,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/import/fiyat-listesi/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fiyat listesi: geri alınabilecek son yükleme */
+        get: operations["fiyat_listesi_son_yukleme_api_v1_import_fiyat_listesi_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/import/fiyat-listesi/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fiyat listesi: son yüklemeyi geri al */
+        post: operations["fiyat_listesi_geri_al_api_v1_import_fiyat_listesi_son_yuklemeyi_geri_al_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/import/excel-tam/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tüm çalışma kitabı (tamamla): geri alınabilecek son yükleme */
+        get: operations["excel_tam_son_yukleme_api_v1_import_excel_tam_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/import/excel-tam/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tüm çalışma kitabı (tamamla): son yüklemeyi geri al */
+        post: operations["excel_tam_geri_al_api_v1_import_excel_tam_son_yuklemeyi_geri_al_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/disa-aktar/urunler.xlsx": {
         parameters: {
             query?: never;
@@ -994,6 +1062,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/satis-gecmisi/onizle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Onizle
+         * @description Hiçbir şey yazmaz: eklenecek, sistemde zaten kayıtlı (atlanacak) ve hatalı satırlar.
+         */
+        post: operations["onizle_api_v1_satis_gecmisi_onizle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/satis-gecmisi/yukle": {
         parameters: {
             query?: never;
@@ -1006,8 +1094,43 @@ export interface paths {
         /**
          * Yukle
          * @description CSV/xlsx yükler. Tek işlem: herhangi bir satır hatalıysa 422 döner (`alanlar.hatalar` = [{satir_no, mesaj}]) ve hiçbir satır yazılmaz.
+         *     Sistemde zaten kayıtlı satırlar (ürün, müşteri, tarih, fiyat, adet) atlanır.
          */
         post: operations["yukle_api_v1_satis_gecmisi_yukle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/satis-gecmisi/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Satış geçmişi: geri alınabilecek son yükleme */
+        get: operations["satis_gecmisi_son_yukleme_api_v1_satis_gecmisi_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/satis-gecmisi/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Satış geçmişi: son yüklemeyi geri al */
+        post: operations["satis_gecmisi_geri_al_api_v1_satis_gecmisi_son_yuklemeyi_geri_al_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1242,6 +1365,142 @@ export interface paths {
          * @description Seçilen sayfalar için yeni reçete versiyonu (eski versiyon geçmişte kalır). Kilitli çalışmaya yazılmaz.
          */
         post: operations["recete_uygula_api_v1_aktarim_recete_uygula_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/uretim-adetleri/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Üretim adetleri: geri alınabilecek son yükleme */
+        get: operations["uretim_adetleri_son_yukleme_api_v1_aktarim_uretim_adetleri_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/uretim-adetleri/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Üretim adetleri: son yüklemeyi geri al */
+        post: operations["uretim_adetleri_geri_al_api_v1_aktarim_uretim_adetleri_son_yuklemeyi_geri_al_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/satin-alma/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Satın alma fiyat listesi: geri alınabilecek son yükleme */
+        get: operations["satin_alma_son_yukleme_api_v1_aktarim_satin_alma_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/satin-alma/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Satın alma fiyat listesi: son yüklemeyi geri al */
+        post: operations["satin_alma_geri_al_api_v1_aktarim_satin_alma_son_yuklemeyi_geri_al_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/gider-dagitim/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gider dağıtım: geri alınabilecek son yükleme */
+        get: operations["gider_dagitim_son_yukleme_api_v1_aktarim_gider_dagitim_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/gider-dagitim/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Gider dağıtım: son yüklemeyi geri al */
+        post: operations["gider_dagitim_geri_al_api_v1_aktarim_gider_dagitim_son_yuklemeyi_geri_al_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/recete/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ürün reçetesi: geri alınabilecek son yükleme */
+        get: operations["recete_son_yukleme_api_v1_aktarim_recete_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/recete/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ürün reçetesi: son yüklemeyi geri al */
+        post: operations["recete_geri_al_api_v1_aktarim_recete_son_yuklemeyi_geri_al_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1601,6 +1860,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/liste-fiyatlari/onizle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Onizle
+         * @description Hiçbir şey yazmaz: yeni / değişecek / aynı (ürün, yıl, pazar) ve hatalı satırlar.
+         */
+        post: operations["onizle_api_v1_liste_fiyatlari_onizle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/liste-fiyatlari/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liste fiyatları: geri alınabilecek son yükleme */
+        get: operations["liste_fiyatlari_son_yukleme_api_v1_liste_fiyatlari_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/liste-fiyatlari/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Liste fiyatları: son yüklemeyi geri al */
+        post: operations["liste_fiyatlari_geri_al_api_v1_liste_fiyatlari_son_yuklemeyi_geri_al_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/liste-fiyatlari/yukle": {
         parameters: {
             query?: never;
@@ -1794,6 +2107,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/smm/donemler/yukle/onizle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Yukle Onizle
+         * @description SMM Excel'i önizlemesi (yazmaz): dönem, kalem sayıları, dönem varsa yeni / değişen / silinecek kalem, metin sayı hücreleri, uyarılar.
+         */
+        post: operations["yukle_onizle_api_v1_smm_donemler_yukle_onizle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/smm/donemler/yukle": {
         parameters: {
             query?: never;
@@ -1806,8 +2139,50 @@ export interface paths {
         /**
          * Yukle
          * @description SMM Excel'i (.xlsx). Dönem verilmezse dosya adından çıkarılır (ör. '09-2026 SMM.xlsx'). Dönem yüklüyse 409; `uzerine_yaz=true` ile baştan yazılır.
+         *     Üzerine yazarken dosyadaki kalem dönemdekinin yarısından azsa 409 `satir_kaybi_onayi`; `onay=true` ile yazılır. Kalem yoksa 422 `bos_dosya`.
          */
         post: operations["yukle_api_v1_smm_donemler_yukle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/donemler/{donem_id}/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Donem Son Yukleme
+         * @description Dönemin geri alınabilecek son SMM Excel'i yüklemesi; yoksa `son: null`.
+         */
+        get: operations["donem_son_yukleme_api_v1_smm_donemler__donem_id__son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/donemler/{donem_id}/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Donem Geri Al
+         * @description Son SMM Excel'i yüklemesini geri alır: üzerine yazıldıysa dönem önceki hâline döner, yeni dönem açtıysa dönem silinir.
+         *     Dönem kapalıysa 409 `donem_kilitli`; açılışını bu dönemden devralan dönem varsa 409 `devralan_donem_var`; yükleme yoksa 404 `yedek_yok`.
+         */
+        post: operations["donem_geri_al_api_v1_smm_donemler__donem_id__son_yuklemeyi_geri_al_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2018,9 +2393,50 @@ export interface paths {
         put?: never;
         /**
          * Recete Yukle
-         * @description Tüm kalıcı reçeteleri dosyadakilerle değiştirir; ürün başına alternatif seçimleri korunur.
+         * @description Tüm kalıcı reçeteleri dosyadakilerle değiştirir; ürün başına alternatif seçimleri korunur. Okunabilen satır yoksa 422 `bos_dosya`;
+         *     dosyadaki ürün mevcut ürünlerin yarısından azsa 409 `satir_kaybi_onayi` (`onay=true` ile yazılır).
          */
         post: operations["recete_yukle_api_v1_smm_receteler_yukle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/receteler/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recete Son Yukleme
+         * @description Geri alınabilecek son Canias dökümü yüklemesi; yoksa `son: null`.
+         */
+        get: operations["recete_son_yukleme_api_v1_smm_receteler_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/receteler/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recete Geri Al
+         * @description Kalıcı reçeteleri son yüklemeden önceki hâline döndürür (elle değiştirilmiş ürünlere dokunulmaz). Yükleme yoksa 404 `yedek_yok`.
+         */
+        post: operations["recete_geri_al_api_v1_smm_receteler_son_yuklemeyi_geri_al_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2266,6 +2682,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/smm/donemler/{donem_id}/veri/{kaynak}/onizle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Veri Onizle
+         * @description Yüklemeden önce: yeni / değişen / aynı / sıfırlanacak kalem, sorunlu satırlar (yazılmayacak), uyarılar. Hiçbir şey yazılmaz.
+         */
+        post: operations["veri_onizle_api_v1_smm_donemler__donem_id__veri__kaynak__onizle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/smm/donemler/{donem_id}/veri/{kaynak}": {
         parameters: {
             query?: never;
@@ -2278,8 +2714,51 @@ export interface paths {
         /**
          * Veri Yukle
          * @description Tek bir veri kaynağını (alim, iade, uretim, sayim, sahit, gider_mizan, stok_mizan) dosyadan yükler; o kaynağın eski verisi yerine geçer.
+         *
+         *     Okunabilen satır yoksa 422 `bos_dosya` (veri değişmez). Dosyadaki kayıt mevcut verinin yarısından azsa 409 `satir_kaybi_onayi`
+         *     (`alanlar`: mevcut, yeni, silinecek); `onay=true` ile yazılır. Başka kaynağın / şablonun dosyası 422 `yanlis_kaynak` / `yanlis_sablon`.
          */
         post: operations["veri_yukle_api_v1_smm_donemler__donem_id__veri__kaynak__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/donemler/{donem_id}/veri/{kaynak}/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Veri Son Yukleme
+         * @description Geri alınabilecek son yükleme (tarih, kişi, özet); yoksa `son: null`.
+         */
+        get: operations["veri_son_yukleme_api_v1_smm_donemler__donem_id__veri__kaynak__son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/donemler/{donem_id}/veri/{kaynak}/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Veri Geri Al
+         * @description Kaynağın son yüklemesinden önceki hâlini geri yazar. Dönem kapalıysa 409 `donem_kilitli`; geri alınacak yükleme yoksa 404 `yedek_yok`.
+         */
+        post: operations["veri_geri_al_api_v1_smm_donemler__donem_id__veri__kaynak__son_yuklemeyi_geri_al_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2581,6 +3060,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/aktarim/stok-devri/son-yukleme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stokta kalan: geri alınabilecek son yükleme */
+        get: operations["stok_devri_son_yukleme_api_v1_aktarim_stok_devri_son_yukleme_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/aktarim/stok-devri/son-yuklemeyi-geri-al": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stokta kalan: son yüklemeyi geri al */
+        post: operations["stok_devri_geri_al_api_v1_aktarim_stok_devri_son_yuklemeyi_geri_al_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/analiz/fiyat-egilimi": {
         parameters: {
             query?: never;
@@ -2786,6 +3299,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sablonlar/sorunlu-satirlar.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sorunlu Satirlar */
+        post: operations["sorunlu_satirlar_api_v1_sablonlar_sorunlu_satirlar_xlsx_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sablonlar/{kimlik}.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sablon Indir */
+        get: operations["sablon_indir_api_v1_sablonlar__kimlik__xlsx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2944,6 +3491,19 @@ export interface components {
             /** Havuz */
             havuz: components["schemas"]["AktarimHavuz"][];
             ambalaj: components["schemas"]["AktarimAmbalaj"];
+            /**
+             * @default {
+             *       "okunan": 0,
+             *       "yeni": 0,
+             *       "degisen": 0,
+             *       "ayni": 0,
+             *       "silinecek": 0,
+             *       "atlanan": 0,
+             *       "sorunlu": [],
+             *       "uyarilar": []
+             *     }
+             */
+            ozet: components["schemas"]["YuklemeOzeti"];
         };
         /** AktarimOnizleRecete */
         AktarimOnizleRecete: {
@@ -2951,6 +3511,19 @@ export interface components {
             sayfalar: components["schemas"]["ReceteAktarimSayfasi"][];
             /** Hatali */
             hatali: components["schemas"]["ReceteAktarimHatasi"][];
+            /**
+             * @default {
+             *       "okunan": 0,
+             *       "yeni": 0,
+             *       "degisen": 0,
+             *       "ayni": 0,
+             *       "silinecek": 0,
+             *       "atlanan": 0,
+             *       "sorunlu": [],
+             *       "uyarilar": []
+             *     }
+             */
+            ozet: components["schemas"]["YuklemeOzeti"];
         };
         /** AktarimOnizleSatinAlma */
         AktarimOnizleSatinAlma: {
@@ -2970,6 +3543,19 @@ export interface components {
             revize: components["schemas"]["RevizeFiyat"][];
             /** Revize Sayisi */
             revize_sayisi: number;
+            /**
+             * @default {
+             *       "okunan": 0,
+             *       "yeni": 0,
+             *       "degisen": 0,
+             *       "ayni": 0,
+             *       "silinecek": 0,
+             *       "atlanan": 0,
+             *       "sorunlu": [],
+             *       "uyarilar": []
+             *     }
+             */
+            ozet: components["schemas"]["YuklemeOzeti"];
         };
         /** AktarimOnizleUretim */
         AktarimOnizleUretim: {
@@ -2981,6 +3567,19 @@ export interface components {
             ayni: number;
             /** Uyarilar */
             uyarilar: string[];
+            /**
+             * @default {
+             *       "okunan": 0,
+             *       "yeni": 0,
+             *       "degisen": 0,
+             *       "ayni": 0,
+             *       "silinecek": 0,
+             *       "atlanan": 0,
+             *       "sorunlu": [],
+             *       "uyarilar": []
+             *     }
+             */
+            ozet: components["schemas"]["YuklemeOzeti"];
         };
         /** AktarimUretimDegisen */
         AktarimUretimDegisen: {
@@ -3504,6 +4103,11 @@ export interface components {
             senaryo: number;
             /** Gecerlilik Basi */
             gecerlilik_basi?: string | null;
+            /**
+             * Elle Ustune Yaz
+             * @default false
+             */
+            elle_ustune_yaz: boolean;
         };
         /** Body_fiyat_uygula_api_v1_import_fiyat_listesi_uygula_post */
         Body_fiyat_uygula_api_v1_import_fiyat_listesi_uygula_post: {
@@ -3518,6 +4122,18 @@ export interface components {
             gecerlilik_basi: string;
             /** Neden */
             neden: string;
+            /**
+             * Elle Ustune Yaz
+             * @description Elle girilmiş fiyatların da üzerine yaz (varsayılan: korunur)
+             * @default false
+             */
+            elle_ustune_yaz: boolean;
+            /**
+             * Onay
+             * @description Satır kaybı onayı (bu yükleme kayıt silmez; diğer yüklemelerle aynı imza)
+             * @default false
+             */
+            onay: boolean;
         };
         /** Body_gider_onizle_api_v1_aktarim_gider_dagitim_onizle_post */
         Body_gider_onizle_api_v1_aktarim_gider_dagitim_onizle_post: {
@@ -3534,6 +4150,12 @@ export interface components {
             senaryo: number;
             /** Neden */
             neden: string;
+            /**
+             * Onay
+             * @description Satır kaybı onayı: dosya mevcut kayıtların yarısından azını içeriyorsa 409 sonrası true ile yeniden gönderin
+             * @default false
+             */
+            onay: boolean;
         };
         /** Body_onizle_api_v1_aktarim_stok_devri_onizle_post */
         Body_onizle_api_v1_aktarim_stok_devri_onizle_post: {
@@ -3541,6 +4163,16 @@ export interface components {
             dosya: string;
             /** Senaryo */
             senaryo: number;
+        };
+        /** Body_onizle_api_v1_liste_fiyatlari_onizle_post */
+        Body_onizle_api_v1_liste_fiyatlari_onizle_post: {
+            /** Dosya */
+            dosya: string;
+        };
+        /** Body_onizle_api_v1_satis_gecmisi_onizle_post */
+        Body_onizle_api_v1_satis_gecmisi_onizle_post: {
+            /** Dosya */
+            dosya: string;
         };
         /** Body_recete_onizle_api_v1_aktarim_recete_onizle_post */
         Body_recete_onizle_api_v1_aktarim_recete_onizle_post: {
@@ -3564,11 +4196,22 @@ export interface components {
             neden: string;
             /** Sayfalar */
             sayfalar: string[];
+            /**
+             * Onay
+             * @description Satır kaybı onayı: dosya mevcut kayıtların yarısından azını içeriyorsa 409 sonrası true ile yeniden gönderin
+             * @default false
+             */
+            onay: boolean;
         };
         /** Body_recete_yukle_api_v1_smm_receteler_yukle_post */
         Body_recete_yukle_api_v1_smm_receteler_yukle_post: {
             /** Dosya */
             dosya: string;
+            /**
+             * Onay
+             * @default false
+             */
+            onay: boolean;
         };
         /** Body_satin_alma_onizle_api_v1_aktarim_satin_alma_onizle_post */
         Body_satin_alma_onizle_api_v1_aktarim_satin_alma_onizle_post: {
@@ -3597,6 +4240,12 @@ export interface components {
              * @default false
              */
             kartlari_guncelle: boolean;
+            /**
+             * Onay
+             * @description Satır kaybı onayı: dosya mevcut kayıtların yarısından azını içeriyorsa 409 sonrası true ile yeniden gönderin
+             * @default false
+             */
+            onay: boolean;
         };
         /** Body_uretim_onizle_api_v1_aktarim_uretim_adetleri_onizle_post */
         Body_uretim_onizle_api_v1_aktarim_uretim_adetleri_onizle_post: {
@@ -3613,6 +4262,12 @@ export interface components {
             senaryo: number;
             /** Neden */
             neden: string;
+            /**
+             * Onay
+             * @description Satır kaybı onayı: dosya mevcut kayıtların yarısından azını içeriyorsa 409 sonrası true ile yeniden gönderin
+             * @default false
+             */
+            onay: boolean;
         };
         /** Body_uygula_api_v1_aktarim_stok_devri_uygula_post */
         Body_uygula_api_v1_aktarim_stok_devri_uygula_post: {
@@ -3622,11 +4277,26 @@ export interface components {
             senaryo: number;
             /** Neden */
             neden: string;
+            /**
+             * Onay
+             * @default false
+             */
+            onay: boolean;
+        };
+        /** Body_veri_onizle_api_v1_smm_donemler__donem_id__veri__kaynak__onizle_post */
+        Body_veri_onizle_api_v1_smm_donemler__donem_id__veri__kaynak__onizle_post: {
+            /** Dosya */
+            dosya: string;
         };
         /** Body_veri_yukle_api_v1_smm_donemler__donem_id__veri__kaynak__post */
         Body_veri_yukle_api_v1_smm_donemler__donem_id__veri__kaynak__post: {
             /** Dosya */
             dosya: string;
+            /**
+             * Onay
+             * @default false
+             */
+            onay: boolean;
         };
         /** Body_yukle_api_v1_liste_fiyatlari_yukle_post */
         Body_yukle_api_v1_liste_fiyatlari_yukle_post: {
@@ -3651,6 +4321,20 @@ export interface components {
              * @default false
              */
             uzerine_yaz: boolean;
+            /**
+             * Onay
+             * @default false
+             */
+            onay: boolean;
+        };
+        /** Body_yukle_onizle_api_v1_smm_donemler_yukle_onizle_post */
+        Body_yukle_onizle_api_v1_smm_donemler_yukle_onizle_post: {
+            /** Dosya */
+            dosya: string;
+            /** Yil */
+            yil?: number | null;
+            /** Ay */
+            ay?: number | null;
         };
         /** CarpanCikis */
         CarpanCikis: {
@@ -3845,6 +4529,19 @@ export interface components {
             /** Toplam */
             toplam: number;
         };
+        /** FiyatBuyukDegisim */
+        FiyatBuyukDegisim: {
+            /** Kod */
+            kod: string;
+            /** Eski */
+            eski: string;
+            /** Yeni */
+            yeni: string;
+            /** Para */
+            para?: string | null;
+            /** Oran */
+            oran: string;
+        };
         /** FiyatDegisen */
         FiyatDegisen: {
             /** Kod */
@@ -3962,6 +4659,17 @@ export interface components {
             /** Olusturma Zamani */
             olusturma_zamani: string | null;
         };
+        /** FiyatListesiElle */
+        FiyatListesiElle: {
+            /** Kod */
+            kod: string;
+            /** Eski */
+            eski: string;
+            /** Yeni */
+            yeni: string;
+            /** Olusturan */
+            olusturan?: string | null;
+        };
         /** FiyatListesiOnizleme */
         FiyatListesiOnizleme: {
             /** Yeni */
@@ -3977,6 +4685,29 @@ export interface components {
              * @default []
              */
             revize: components["schemas"]["FiyatListesiRevize"][];
+            /**
+             * Elle
+             * @default []
+             */
+            elle: components["schemas"]["FiyatListesiElle"][];
+            /**
+             * Buyuk Degisim
+             * @default []
+             */
+            buyuk_degisim: components["schemas"]["FiyatBuyukDegisim"][];
+            /**
+             * @default {
+             *       "okunan": 0,
+             *       "yeni": 0,
+             *       "degisen": 0,
+             *       "ayni": 0,
+             *       "silinecek": 0,
+             *       "atlanan": 0,
+             *       "sorunlu": [],
+             *       "uyarilar": []
+             *     }
+             */
+            ozet: components["schemas"]["YuklemeOzeti"];
         };
         /** FiyatListesiRevize */
         FiyatListesiRevize: {
@@ -3993,6 +4724,11 @@ export interface components {
             yazilan: number;
             /** Kodlar */
             kodlar: string[];
+            /**
+             * Korunan Elle
+             * @default 0
+             */
+            korunan_elle: number;
         };
         /** FiyatYeni */
         FiyatYeni: {
@@ -4038,6 +4774,12 @@ export interface components {
             govde: {
                 [key: string]: unknown;
             };
+        };
+        /** GeriAlSonucu */
+        GeriAlSonucu: {
+            geri_alinan: components["schemas"]["SonYukleme"];
+            /** Mesaj */
+            mesaj: string;
         };
         /** GiderAnahtari */
         GiderAnahtari: {
@@ -5082,6 +5824,23 @@ export interface components {
             /** Ornek */
             ornek: boolean;
         };
+        /**
+         * ListeOnizleme
+         * @description Liste fiyatı dosyası önizlemesi: hiçbir şey yazmaz.
+         */
+        ListeOnizleme: {
+            /** Okunan */
+            okunan: number;
+            /** Yeni */
+            yeni: number;
+            /** Degisen */
+            degisen: number;
+            /** Ayni */
+            ayni: number;
+            /** Hatalar */
+            hatalar: components["schemas"]["SatisYuklemeHatasi"][];
+            ozet: components["schemas"]["YuklemeOzeti"];
+        };
         /** ListeOrnekOzeti */
         ListeOrnekOzeti: {
             /** Yazilan */
@@ -5805,6 +6564,21 @@ export interface components {
             /** Toplam */
             toplam: number;
         };
+        /**
+         * SatisOnizleme
+         * @description Satış geçmişi dosyası önizlemesi: hiçbir şey yazmaz. kayitli: sistemde aynısı (ürün, müşteri, tarih, fiyat, adet) olan satır.
+         */
+        SatisOnizleme: {
+            /** Okunan */
+            okunan: number;
+            /** Eklenecek */
+            eklenecek: number;
+            /** Kayitli */
+            kayitli: number;
+            /** Hatalar */
+            hatalar: components["schemas"]["SatisYuklemeHatasi"][];
+            ozet: components["schemas"]["YuklemeOzeti"];
+        };
         /** SatisYuklemeHatasi */
         SatisYuklemeHatasi: {
             /** Satir No */
@@ -5818,6 +6592,11 @@ export interface components {
             eklenen: number;
             /** Hatalar */
             hatalar: components["schemas"]["SatisYuklemeHatasi"][];
+            /**
+             * Atlanan Kayitli
+             * @default 0
+             */
+            atlanan_kayitli: number;
         };
         /** SenaryoCikis */
         SenaryoCikis: {
@@ -6078,6 +6857,46 @@ export interface components {
             ornek: {
                 [key: string]: string | null;
             }[];
+            /**
+             * Okunan
+             * @default 0
+             */
+            okunan: number;
+            /**
+             * Yeni
+             * @default 0
+             */
+            yeni: number;
+            /**
+             * Degisen
+             * @default 0
+             */
+            degisen: number;
+            /**
+             * Ayni
+             * @default 0
+             */
+            ayni: number;
+            /**
+             * Silinecek
+             * @default 0
+             */
+            silinecek: number;
+            /**
+             * Atlanan
+             * @default 0
+             */
+            atlanan: number;
+            /**
+             * Sorunlu
+             * @default []
+             */
+            sorunlu: components["schemas"]["SorunluSatir"][];
+            /**
+             * Uyarilar
+             * @default []
+             */
+            uyarilar: string[];
         };
         /** SmmAsamaGiris */
         SmmAsamaGiris: {
@@ -6444,6 +7263,78 @@ export interface components {
             kilitleyen?: string | null;
             /** Kilit Zamani */
             kilit_zamani?: string | null;
+        };
+        /**
+         * SmmDonemExcelOnizleme
+         * @description SMM dönem Excel'i önizlemesi (yazmaz). `mevcut_donem_id` doluysa dönem zaten var: yükleme 'üzerine yaz' onayı ister.
+         */
+        SmmDonemExcelOnizleme: {
+            /**
+             * Okunan
+             * @default 0
+             */
+            okunan: number;
+            /**
+             * Yeni
+             * @default 0
+             */
+            yeni: number;
+            /**
+             * Degisen
+             * @default 0
+             */
+            degisen: number;
+            /**
+             * Ayni
+             * @default 0
+             */
+            ayni: number;
+            /**
+             * Silinecek
+             * @default 0
+             */
+            silinecek: number;
+            /**
+             * Atlanan
+             * @default 0
+             */
+            atlanan: number;
+            /**
+             * Sorunlu
+             * @default []
+             */
+            sorunlu: components["schemas"]["SorunluSatir"][];
+            /**
+             * Uyarilar
+             * @default []
+             */
+            uyarilar: string[];
+            /** Yil */
+            yil: number;
+            /** Ay */
+            ay: number;
+            /** Donem Ad */
+            donem_ad: string;
+            /** Mevcut Donem Id */
+            mevcut_donem_id?: number | null;
+            /**
+             * Kilitli
+             * @default false
+             */
+            kilitli: boolean;
+            /** Kalem */
+            kalem: number;
+            /**
+             * Mevcut Kalem
+             * @default 0
+             */
+            mevcut_kalem: number;
+            /** Recete Satiri */
+            recete_satiri: number;
+            /** Iscilik */
+            iscilik: number;
+            /** Sayfalar */
+            sayfalar: string[];
         };
         /** SmmDonemListesi */
         SmmDonemListesi: {
@@ -6817,6 +7708,72 @@ export interface components {
             /** Fark Yuzde */
             fark_yuzde: string | null;
         };
+        /**
+         * SmmKaynakOnizleme
+         * @description Aylık kaynak önizlemesi (yazmaz). Kalem kaynaklarında sayılar kalem, mizanlarda hesap bazındadır. `silinecek`: değeri sıfırlanacak
+         *     (mizanda: silinecek) mevcut kayıt. `mevcut` / `dosyadaki`: satır kaybı denetiminin karşılaştırdığı sayılar (yarıdan azsa onay istenir).
+         */
+        SmmKaynakOnizleme: {
+            /**
+             * Okunan
+             * @default 0
+             */
+            okunan: number;
+            /**
+             * Yeni
+             * @default 0
+             */
+            yeni: number;
+            /**
+             * Degisen
+             * @default 0
+             */
+            degisen: number;
+            /**
+             * Ayni
+             * @default 0
+             */
+            ayni: number;
+            /**
+             * Silinecek
+             * @default 0
+             */
+            silinecek: number;
+            /**
+             * Atlanan
+             * @default 0
+             */
+            atlanan: number;
+            /**
+             * Sorunlu
+             * @default []
+             */
+            sorunlu: components["schemas"]["SorunluSatir"][];
+            /**
+             * Uyarilar
+             * @default []
+             */
+            uyarilar: string[];
+            /** Kaynak */
+            kaynak: string;
+            /** Ad */
+            ad: string;
+            donem: components["schemas"]["SmmDonemCikis"];
+            /** Mevcut */
+            mevcut: number;
+            /** Dosyadaki */
+            dosyadaki: number;
+            /**
+             * Elle Silinecek
+             * @default 0
+             */
+            elle_silinecek: number;
+            /**
+             * Yeni Kalem
+             * @default 0
+             */
+            yeni_kalem: number;
+        };
         /** SmmKaynakSon */
         SmmKaynakSon: {
             /** Dosya */
@@ -6832,6 +7789,56 @@ export interface components {
              * @default false
              */
             excel: boolean;
+        };
+        /**
+         * SmmKaynakYuklemeSonucu
+         * @description Aylık kaynak yüklemesinin özeti; `sorunlu` satırlar yazılmadı.
+         */
+        SmmKaynakYuklemeSonucu: {
+            /**
+             * Okunan
+             * @default 0
+             */
+            okunan: number;
+            /**
+             * Yeni
+             * @default 0
+             */
+            yeni: number;
+            /**
+             * Degisen
+             * @default 0
+             */
+            degisen: number;
+            /**
+             * Ayni
+             * @default 0
+             */
+            ayni: number;
+            /**
+             * Silinecek
+             * @default 0
+             */
+            silinecek: number;
+            /**
+             * Atlanan
+             * @default 0
+             */
+            atlanan: number;
+            /**
+             * Sorunlu
+             * @default []
+             */
+            sorunlu: components["schemas"]["SorunluSatir"][];
+            /**
+             * Uyarilar
+             * @default []
+             */
+            uyarilar: string[];
+            /** Kaynak */
+            kaynak: string;
+            /** Ad */
+            ad: string;
         };
         /** SmmKilitCikis */
         SmmKilitCikis: {
@@ -7639,6 +8646,7 @@ export interface components {
             turler: string[];
             grupsuz?: components["schemas"]["SmmGrupsuzKalemler"] | null;
             devir?: components["schemas"]["SmmVeriDevir"] | null;
+            yukleme?: components["schemas"]["SmmKaynakYuklemeSonucu"] | null;
         };
         /** SmmVeriKaynagi */
         SmmVeriKaynagi: {
@@ -7764,6 +8772,52 @@ export interface components {
             /** Ana Ad */
             ana_ad?: string | null;
         };
+        /** SonYukleme */
+        SonYukleme: {
+            /** Id */
+            id: number;
+            /** Zaman */
+            zaman: string | null;
+            /** Olusturan */
+            olusturan: string;
+            /** Ozet */
+            ozet: string;
+            /** Kaynak Dosya */
+            kaynak_dosya: string | null;
+        };
+        /**
+         * SonYuklemeYaniti
+         * @description `son`: geri alınabilecek son yükleme; yoksa null.
+         */
+        SonYuklemeYaniti: {
+            son: components["schemas"]["SonYukleme"] | null;
+        };
+        /**
+         * SorunluSatir
+         * @description Okunamayan / yazılmayacak dosya satırı. satir: Excel satır numarası (yoksa null).
+         */
+        SorunluSatir: {
+            /** Satir */
+            satir?: number | null;
+            /** Kod */
+            kod?: string | null;
+            /** Alan */
+            alan?: string | null;
+            /** Deger */
+            deger?: string | null;
+            /** Neden */
+            neden: string;
+        };
+        /** SorunluSatirlarGirdi */
+        SorunluSatirlarGirdi: {
+            /**
+             * Baslik
+             * @default Sorunlu satırlar
+             */
+            baslik: string;
+            /** Satirlar */
+            satirlar: components["schemas"]["SorunluSatir"][];
+        };
         /** StokDevriAktarimHatasi */
         StokDevriAktarimHatasi: {
             /** Satir No */
@@ -7869,6 +8923,19 @@ export interface components {
             degisen: number;
             /** Ayni */
             ayni: number;
+            /**
+             * @default {
+             *       "okunan": 0,
+             *       "yeni": 0,
+             *       "degisen": 0,
+             *       "ayni": 0,
+             *       "silinecek": 0,
+             *       "atlanan": 0,
+             *       "sorunlu": [],
+             *       "uyarilar": []
+             *     }
+             */
+            ozet: components["schemas"]["YuklemeOzeti"];
         };
         /** StokDevriSatiri */
         StokDevriSatiri: {
@@ -8622,6 +9689,52 @@ export interface components {
             tamam: number;
             /** Sorunlar */
             sorunlar: components["schemas"]["YonetimKontrolSorunu"][];
+        };
+        /**
+         * YuklemeOzeti
+         * @description Her önizlemenin standart özeti (mevcut alanlara ek). silinecek: yüklenirse kaybolacak mevcut kayıt sayısı.
+         */
+        YuklemeOzeti: {
+            /**
+             * Okunan
+             * @default 0
+             */
+            okunan: number;
+            /**
+             * Yeni
+             * @default 0
+             */
+            yeni: number;
+            /**
+             * Degisen
+             * @default 0
+             */
+            degisen: number;
+            /**
+             * Ayni
+             * @default 0
+             */
+            ayni: number;
+            /**
+             * Silinecek
+             * @default 0
+             */
+            silinecek: number;
+            /**
+             * Atlanan
+             * @default 0
+             */
+            atlanan: number;
+            /**
+             * Sorunlu
+             * @default []
+             */
+            sorunlu: components["schemas"]["SorunluSatir"][];
+            /**
+             * Uyarilar
+             * @default []
+             */
+            uyarilar: string[];
         };
         /** ZamEtkisiCikis */
         ZamEtkisiCikis: {
@@ -11306,6 +12419,188 @@ export interface operations {
             };
         };
     };
+    fiyat_listesi_son_yukleme_api_v1_import_fiyat_listesi_son_yukleme_get: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    fiyat_listesi_geri_al_api_v1_import_fiyat_listesi_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    excel_tam_son_yukleme_api_v1_import_excel_tam_son_yukleme_get: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    excel_tam_geri_al_api_v1_import_excel_tam_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
     urunler_xlsx_api_v1_disa_aktar_urunler_xlsx_get: {
         parameters: {
             query: {
@@ -11839,9 +13134,56 @@ export interface operations {
             };
         };
     };
-    yukle_api_v1_satis_gecmisi_yukle_post: {
+    onizle_api_v1_satis_gecmisi_onizle_post: {
         parameters: {
             query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_onizle_api_v1_satis_gecmisi_onizle_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SatisOnizleme"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    yukle_api_v1_satis_gecmisi_yukle_post: {
+        parameters: {
+            query?: {
+                /** @description Sistemde aynısı olan satırları da ekle (varsayılan: atlanır, ikilenmez) */
+                kayitlilari_da_ekle?: boolean;
+                /** @description Satır kaybı onayı (bu yükleme kayıt silmez; diğer yüklemelerle aynı imza) */
+                onay?: boolean;
+            };
             header?: {
                 "x-kullanici"?: string | null;
             };
@@ -11865,6 +13207,93 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    satis_gecmisi_son_yukleme_api_v1_satis_gecmisi_son_yukleme_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    satis_gecmisi_geri_al_api_v1_satis_gecmisi_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12422,6 +13851,370 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AktarimUygulaRecete"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    uretim_adetleri_son_yukleme_api_v1_aktarim_uretim_adetleri_son_yukleme_get: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    uretim_adetleri_geri_al_api_v1_aktarim_uretim_adetleri_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    satin_alma_son_yukleme_api_v1_aktarim_satin_alma_son_yukleme_get: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    satin_alma_geri_al_api_v1_aktarim_satin_alma_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    gider_dagitim_son_yukleme_api_v1_aktarim_gider_dagitim_son_yukleme_get: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    gider_dagitim_geri_al_api_v1_aktarim_gider_dagitim_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    recete_son_yukleme_api_v1_aktarim_recete_son_yukleme_get: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    recete_geri_al_api_v1_aktarim_recete_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
                 };
             };
             /** @description Not Found */
@@ -13438,11 +15231,142 @@ export interface operations {
             };
         };
     };
+    onizle_api_v1_liste_fiyatlari_onizle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_onizle_api_v1_liste_fiyatlari_onizle_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListeOnizleme"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    liste_fiyatlari_son_yukleme_api_v1_liste_fiyatlari_son_yukleme_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    liste_fiyatlari_geri_al_api_v1_liste_fiyatlari_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
     yukle_api_v1_liste_fiyatlari_yukle_post: {
         parameters: {
             query?: {
                 /** @description Satırlara bu senaryonun bugünkü geçerli bölenleri yazılır (yoksa varsayılan) */
                 senaryo?: number | null;
+                /** @description Satır kaybı onayı (bu yükleme kayıt silmez; diğer yüklemelerle aynı imza) */
+                onay?: boolean;
             };
             header?: {
                 "x-kullanici"?: string | null;
@@ -13915,6 +15839,57 @@ export interface operations {
             };
         };
     };
+    yukle_onizle_api_v1_smm_donemler_yukle_onizle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_yukle_onizle_api_v1_smm_donemler_yukle_onizle_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmDonemExcelOnizleme"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
     yukle_api_v1_smm_donemler_yukle_post: {
         parameters: {
             query?: never;
@@ -13937,6 +15912,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SmmDonemCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    donem_son_yukleme_api_v1_smm_donemler__donem_id__son_yukleme_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                donem_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    donem_geri_al_api_v1_smm_donemler__donem_id__son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path: {
+                donem_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
                 };
             };
             /** @description Not Found */
@@ -14521,6 +16587,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SmmAnaReceteOnizleme"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    recete_son_yukleme_api_v1_smm_receteler_son_yukleme_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+        };
+    };
+    recete_geri_al_api_v1_smm_receteler_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
                 };
             };
             /** @description Not Found */
@@ -15248,6 +17383,60 @@ export interface operations {
             };
         };
     };
+    veri_onizle_api_v1_smm_donemler__donem_id__veri__kaynak__onizle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                donem_id: number;
+                kaynak: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_veri_onizle_api_v1_smm_donemler__donem_id__veri__kaynak__onizle_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmKaynakOnizleme"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
     veri_yukle_api_v1_smm_donemler__donem_id__veri__kaynak__post: {
         parameters: {
             query?: never;
@@ -15273,6 +17462,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SmmVeriDurumu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    veri_son_yukleme_api_v1_smm_donemler__donem_id__veri__kaynak__son_yukleme_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                donem_id: number;
+                kaynak: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    veri_geri_al_api_v1_smm_donemler__donem_id__veri__kaynak__son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path: {
+                donem_id: number;
+                kaynak: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
                 };
             };
             /** @description Not Found */
@@ -16163,6 +18445,97 @@ export interface operations {
             };
         };
     };
+    stok_devri_son_yukleme_api_v1_aktarim_stok_devri_son_yukleme_get: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SonYuklemeYaniti"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    stok_devri_geri_al_api_v1_aktarim_stok_devri_son_yuklemeyi_geri_al_post: {
+        parameters: {
+            query: {
+                senaryo: number;
+            };
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeriAlSonucu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
     fiyat_egilimi_api_v1_analiz_fiyat_egilimi_get: {
         parameters: {
             query: {
@@ -16590,6 +18963,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    sorunlu_satirlar_api_v1_sablonlar_sorunlu_satirlar_xlsx_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SorunluSatirlarGirdi"];
+            };
+        };
+        responses: {
+            /** @description Excel dosyası (.xlsx) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sablon_indir_api_v1_sablonlar__kimlik__xlsx_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kimlik: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excel dosyası (.xlsx) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

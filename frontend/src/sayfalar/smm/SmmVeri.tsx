@@ -2,10 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CircleCheck, CircleDashed, Lock, TriangleAlert, Upload } from "lucide-react";
 import { hataMetniVarsa } from "@/api/istemci";
-import { useSmmAyarlar, useSmmVeriDurumu, useSmmVeriYukle } from "@/api/sorgular/smm";
+import { useSmmAyarlar, useSmmVeriDurumu, useSmmVeriOnizle, useSmmVeriYukle } from "@/api/sorgular/smm";
 import type { SmmVeriDurumu } from "@/api/tipler";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
+import { satirKaybi, useSatirKaybiOnayi } from "@/bilesenler/SatirKaybiOnayi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
+import { SonYuklemeSeridi } from "@/bilesenler/SonYuklemeSeridi";
+import { YuklemeOzetiKutusu, type YuklemeOzetiT } from "@/bilesenler/YuklemeOzetiKutusu";
 import { Button } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { cn } from "@/lib/utils";
@@ -15,33 +18,45 @@ import { DonemSecici, DonemYok, useSmmDonemSecimi } from "./ortak";
 import { DevirBolumu, KapanisBolumu, kilitTarihi } from "./SmmDevirKilit";
 import { SmmMizanBolumu } from "./SmmMizanDuzenle";
 import { SmmDuzenlemeKilidi, useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
+import { KAYNAK_SABLONU, SmmOnizlemeKutusu, SmmYuklemeYardimi } from "./SmmYukleme";
 
 type Kaynak = SmmVeriDurumu["kaynaklar"][number];
 const kutu = (x: string) => D(x).toFixed().replace(".", ",");
 
-/** Bir veri kaynağı satırı: durum, son yükleme ve dosya yükleme. */
+/** Bir veri kaynağı satırı: durum, son yükleme, dosya seçimi → önizleme → uygula; son yüklemeyi geri al. */
 function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kilitli: boolean }) {
   const yukle = useSmmVeriYukle(donemId);
+  const onizle = useSmmVeriOnizle(donemId);
+  const kayip = useSatirKaybiOnayi();
   const [dosya, setDosya] = useState<File | null>(null);
   const [anahtar, setAnahtar] = useState(0);
   const [mizanAcik, setMizanAcik] = useState(false);
   const [yuklemeOnayi, setYuklemeOnayi] = useState(false);
+  const [sonuc, setSonuc] = useState<YuklemeOzetiT | null>(null);
   const { kilitli: yazmaKilitli, neden: kilitNedeni } = useSmmYazmaKilidi(kilitli);
   const son = k.son;
   const mizanTur = k.kaynak === "gider_mizan" ? "gider" : k.kaynak === "stok_mizan" ? "stok" : null;
   const elle = k.elle ?? 0;
-  const gonder = () =>
+  const on = onizle.data;
+  const gonder = (onay = false) =>
     dosya &&
     yukle.mutate(
-      { kaynak: k.kaynak, dosya },
+      { kaynak: k.kaynak, dosya, onay },
       {
-        onSuccess: () => {
+        onSuccess: (v) => {
+          setSonuc(v.yukleme ?? null);
           setDosya(null);
           setAnahtar((x) => x + 1);
           setYuklemeOnayi(false);
+          onizle.reset();
+        },
+        onError: (e) => {
+          setYuklemeOnayi(false);
+          kayip.yakala(e, () => gonder(true));
         },
       },
     );
+  const uygula = () => ((on?.elle_silinecek ?? elle) > 0 ? setYuklemeOnayi(true) : gonder());
   return (
     <li className="flex flex-wrap items-center gap-3 py-3">
       {k.yuklendi ? (
@@ -79,24 +94,69 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
             onChange={(e) => {
               setDosya(e.target.files?.[0] ?? null);
               yukle.reset();
+              onizle.reset();
+              setSonuc(null);
             }}
           />
           <Button
             type="button"
             size="sm"
             variant={k.yuklendi ? "outline" : "default"}
-            disabled={yazmaKilitli || !dosya || yukle.isPending}
+            aria-label={`Önizle — ${k.ad}`}
+            disabled={yazmaKilitli || !dosya || onizle.isPending}
             title={kilitNedeni}
-            onClick={() => (elle > 0 ? setYuklemeOnayi(true) : gonder())}
+            onClick={() => dosya && onizle.mutate({ kaynak: k.kaynak, dosya })}
           >
-            <Upload className="size-3.5" /> {yukle.isPending ? "Yükleniyor…" : k.yuklendi ? "Yeniden yükle" : "Yükle"}
+            <Upload className="size-3.5" /> {onizle.isPending ? "Okunuyor…" : k.yuklendi ? "Yeniden yükle: önizle" : "Önizle"}
           </Button>
         </span>
       )}
-      {hataMetniVarsa(yukle.error) && (
+      {!kilitli && (
+        <span className="w-full pl-8">
+          <SmmYuklemeYardimi kimlik={KAYNAK_SABLONU[k.kaynak]} />
+        </span>
+      )}
+      {(hataMetniVarsa(onizle.error) || (hataMetniVarsa(yukle.error) && !satirKaybi(yukle.error))) && (
         <p role="alert" className="w-full pl-8 text-sm text-destructive">
-          {hataMetniVarsa(yukle.error)}
+          {hataMetniVarsa(onizle.error) ?? hataMetniVarsa(yukle.error)}
         </p>
+      )}
+      {on && dosya && !kilitli && (
+        <div className="w-full pl-8">
+          <SmmOnizlemeKutusu
+            ozet={on}
+            baslik={`${k.ad} — sorunlu satırlar`}
+            uygulaMetni={k.yuklendi ? "Uygula (eskisinin yerine geçer)" : "Uygula"}
+            uygulanamaz={yazmaKilitli || on.dosyadaki === 0}
+            bekliyor={yukle.isPending}
+            kilitNedeni={kilitNedeni}
+            onUygula={uygula}
+            onVazgec={() => onizle.reset()}
+          >
+            <p className="text-xs text-muted-foreground">
+              Dosyada {on.dosyadaki} {mizanTur ? "hesap" : "kalem"}; dönemde şu an {on.mevcut}.
+            </p>
+          </SmmOnizlemeKutusu>
+        </div>
+      )}
+      {sonuc && sonuc.sorunlu.length > 0 && (
+        <div className="w-full pl-8">
+          <p role="status" className="mb-2 text-sm">
+            Yüklendi; <b>{sonuc.sorunlu.length} sorunlu satır yazılmadı.</b> Dosyayı düzeltip yeniden yükleyebilirsiniz.
+          </p>
+          <YuklemeOzetiKutusu ozet={sonuc} baslik={`${k.ad} — yazılmayan satırlar`} />
+        </div>
+      )}
+      {!kilitli && (
+        <div className="w-full pl-8">
+          <SonYuklemeSeridi
+            yol={`/api/v1/smm/donemler/${donemId}/veri/${k.kaynak}`}
+            sorgu={{}}
+            kilitli={yazmaKilitli}
+            kilitNedeni={kilitNedeni}
+            gecersiz={["smm"]}
+          />
+        </div>
       )}
       {mizanTur && mizanAcik && <SmmMizanBolumu donemId={donemId} tur={mizanTur} kilitli={kilitli} />}
       {yuklemeOnayi && !yazmaKilitli && (
@@ -104,16 +164,17 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
           baslik={`${k.ad} yeniden yüklensin mi?`}
           onayMetni="Yükle ve elle satırları sil"
           bekliyor={yukle.isPending}
-          hata={hataMetniVarsa(yukle.error)}
-          onOnayla={gonder}
+          hata={satirKaybi(yukle.error) ? null : hataMetniVarsa(yukle.error)}
+          onOnayla={() => gonder()}
           onVazgec={() => setYuklemeOnayi(false)}
         >
           <p>
-            <b>{k.elle_uyari ?? `${elle} elle satır var, yükleme bunları siler`}.</b> Yükleme bu mizanı dosyadakilerle baştan yazar; elle
-            girdiğiniz ya da düzelttiğiniz satırlar kaybolur (eski değerler günlükte kalır).
+            <b>{k.elle_uyari ?? `${on?.elle_silinecek ?? elle} elle satır var, yükleme bunları siler`}.</b> Yükleme bu mizanı dosyadakilerle
+            baştan yazar; elle girdiğiniz ya da düzelttiğiniz satırlar kaybolur (eski değerler günlükte kalır).
           </p>
         </OnayDiyalogu>
       )}
+      {kayip.diyalog}
     </li>
   );
 }
@@ -264,9 +325,10 @@ export default function SmmVeri() {
             </ul>
           </section>
           <p className="-mt-2 text-xs text-muted-foreground">
-            Dosya, bugünkü SMM Excel'inin ilgili sayfası (HM-YM ALIŞ SATIŞ, İADELER, ÜRETİM, DSS, ŞAHİT, GİDER MİZAN, STOK MİZAN) ya da aynı
-            düzende tek sayfalık bir rapor olabilir. Yeniden yükleme o kaynağın eski verisinin yerine geçer. Gider ve stok mizanı satırları
-            "Satırları gör / düzenle" ile elle de girilebilir.
+            Dosya, bugünkü SMM Excel'inin ilgili sayfası (HM-YM ALIŞ SATIŞ, İADELER, ÜRETİM, DSS, ŞAHİT, GİDER MİZAN, STOK MİZAN), şablon ya
+            da tek sayfalık bir Canias raporu olabilir. Önce önizleme gösterilir; "Uygula" o kaynağın eski verisinin yerine geçer, boş ya da
+            yanlış dosya veriyi değiştirmez. Son yükleme "Geri al" ile geri alınabilir. Gider ve stok mizanı satırları "Satırları gör /
+            düzenle" ile elle de girilebilir.
           </p>
 
           <AyarKarti

@@ -385,6 +385,82 @@ HATA_404_422 = {404: {"model": HataGovdesi}, 422: {"model": HataGovdesi}}
 HATA_404_409_422 = {404: {"model": HataGovdesi}, 409: {"model": HataGovdesi}, 422: {"model": HataGovdesi}}
 
 
+# ---------------------------------------------------------------- Yükleme güvenliği (ortak: şablonlar, sorunlu satırlar, son yükleme)
+class SorunluSatir(BaseModel):
+    """Okunamayan / yazılmayacak dosya satırı. satir: Excel satır numarası (yoksa null)."""
+    satir: int | None = None
+    kod: str | None = None
+    alan: str | None = None
+    deger: str | None = None
+    neden: str
+
+
+class SorunluSatirlarGirdi(BaseModel):
+    baslik: str = Field(default="Sorunlu satırlar", max_length=200)
+    satirlar: list[SorunluSatir] = Field(max_length=50000)
+
+
+class YuklemeOzeti(BaseModel):
+    """Her önizlemenin standart özeti (mevcut alanlara ek). silinecek: yüklenirse kaybolacak mevcut kayıt sayısı."""
+    okunan: int = 0
+    yeni: int = 0
+    degisen: int = 0
+    ayni: int = 0
+    silinecek: int = 0
+    atlanan: int = 0
+    sorunlu: list[SorunluSatir] = []
+    uyarilar: list[str] = []
+
+
+class SonYukleme(BaseModel):
+    id: int
+    zaman: str | None
+    olusturan: str
+    ozet: str
+    kaynak_dosya: str | None
+
+
+class SonYuklemeYaniti(BaseModel):
+    """`son`: geri alınabilecek son yükleme; yoksa null."""
+    son: SonYukleme | None
+
+
+class GeriAlSonucu(BaseModel):
+    geri_alinan: SonYukleme
+    mesaj: str
+
+
+# ---------------------------------------------------------------- SMM yükleme güvenliği (önizleme yanıtları)
+class SmmKaynakYuklemeSonucu(YuklemeOzeti):
+    """Aylık kaynak yüklemesinin özeti; `sorunlu` satırlar yazılmadı."""
+    kaynak: str
+    ad: str
+
+
+class SmmKaynakOnizleme(SmmKaynakYuklemeSonucu):
+    """Aylık kaynak önizlemesi (yazmaz). Kalem kaynaklarında sayılar kalem, mizanlarda hesap bazındadır. `silinecek`: değeri sıfırlanacak
+    (mizanda: silinecek) mevcut kayıt. `mevcut` / `dosyadaki`: satır kaybı denetiminin karşılaştırdığı sayılar (yarıdan azsa onay istenir)."""
+    donem: "SmmDonemCikis"
+    mevcut: int
+    dosyadaki: int
+    elle_silinecek: int = 0   # mizanda elle girilmiş satır (yükleme siler)
+    yeni_kalem: int = 0       # dönemde olmayan, yeni kart açılacak kalem
+
+
+class SmmDonemExcelOnizleme(YuklemeOzeti):
+    """SMM dönem Excel'i önizlemesi (yazmaz). `mevcut_donem_id` doluysa dönem zaten var: yükleme 'üzerine yaz' onayı ister."""
+    yil: int
+    ay: int
+    donem_ad: str
+    mevcut_donem_id: int | None = None
+    kilitli: bool = False
+    kalem: int
+    mevcut_kalem: int = 0
+    recete_satiri: int
+    iscilik: int
+    sayfalar: list[str]       # okunan sayfalar
+
+
 class DashboardSatiri(BaseModel):
     id: int
     kod: str
@@ -975,17 +1051,36 @@ class FiyatListesiRevize(BaseModel):
     revize: str
 
 
+class FiyatListesiElle(BaseModel):
+    kod: str
+    eski: str
+    yeni: str
+    olusturan: str | None = None
+
+
+class FiyatBuyukDegisim(BaseModel):
+    kod: str
+    eski: str
+    yeni: str
+    para: str | None = None
+    oran: str                                 # yeni/eski - 1 (0.2 = %20)
+
+
 class FiyatListesiOnizleme(BaseModel):
     yeni: list[FiyatYeni]
     degisen: list[FiyatDegisen]
     ayni: int
     hatali: list[str]
     revize: list[FiyatListesiRevize] = []    # I sütunu (revize) F'den farklı olan satırlar; geçerli olacak fiyat I'dır
+    elle: list[FiyatListesiElle] = []         # geçerli fiyatı elle girilmiş ve dosyada farklı olan kalemler (varsayılan: korunur)
+    buyuk_degisim: list[FiyatBuyukDegisim] = []   # eşikten (TL %15, döviz %10) fazla değişen fiyatlar
+    ozet: YuklemeOzeti = YuklemeOzeti()
 
 
 class FiyatListesiUygulama(BaseModel):
     yazilan: int
     kodlar: list[str]
+    korunan_elle: int = 0                     # elle girilmiş olduğu için yazılmayan fiyat sayısı
 
 
 class KodDegistirCikis(UrunCikis):
@@ -1094,6 +1189,16 @@ class SatisYuklemeHatasi(BaseModel):
 class SatisYuklemeOzeti(BaseModel):
     eklenen: int
     hatalar: list[SatisYuklemeHatasi]
+    atlanan_kayitli: int = 0                  # sistemde zaten kayıtlı olduğu için eklenmeyen satır
+
+
+class SatisOnizleme(BaseModel):
+    """Satış geçmişi dosyası önizlemesi: hiçbir şey yazmaz. kayitli: sistemde aynısı (ürün, müşteri, tarih, fiyat, adet) olan satır."""
+    okunan: int
+    eklenecek: int
+    kayitli: int
+    hatalar: list[SatisYuklemeHatasi]
+    ozet: YuklemeOzeti
 
 
 # ---------------------------------------------------------------- Karşılaştırma (Faz 5 T3)
@@ -1211,6 +1316,7 @@ class AktarimOnizleUretim(BaseModel):
     degisen: list[AktarimUretimDegisen]
     ayni: int
     uyarilar: list[str]
+    ozet: YuklemeOzeti = YuklemeOzeti()
 
 
 class AktarimUygulaUretim(BaseModel):
@@ -1263,6 +1369,7 @@ class AktarimOnizleSatinAlma(BaseModel):
     hatali: list[str]
     revize: list[RevizeFiyat]                # bilgi amaçlı: I sütunu F'den farklı olan satırlar
     revize_sayisi: int
+    ozet: YuklemeOzeti = YuklemeOzeti()
 
 
 class AktarimUygulaSatinAlma(BaseModel):
@@ -1303,6 +1410,7 @@ class AktarimAmbalaj(BaseModel):
 class AktarimOnizleGider(BaseModel):
     havuz: list[AktarimHavuz]
     ambalaj: AktarimAmbalaj
+    ozet: YuklemeOzeti = YuklemeOzeti()
 
 
 class AktarimUygulaGider(BaseModel):
@@ -1340,6 +1448,7 @@ class ReceteAktarimHatasi(BaseModel):
 class AktarimOnizleRecete(BaseModel):
     sayfalar: list[ReceteAktarimSayfasi]
     hatali: list[ReceteAktarimHatasi]
+    ozet: YuklemeOzeti = YuklemeOzeti()
 
 
 class ReceteUygulanan(BaseModel):
@@ -1445,6 +1554,16 @@ class ListeCalismasi(BaseModel):
 class ListeYuklemeOzeti(BaseModel):
     yazilan: int
     hatalar: list[SatisYuklemeHatasi]
+
+
+class ListeOnizleme(BaseModel):
+    """Liste fiyatı dosyası önizlemesi: hiçbir şey yazmaz."""
+    okunan: int
+    yeni: int
+    degisen: int
+    ayni: int
+    hatalar: list[SatisYuklemeHatasi]
+    ozet: YuklemeOzeti
 
 
 class ListeOrnekOzeti(BaseModel):
@@ -1587,6 +1706,7 @@ class SmmVeriDurumu(BaseModel):
     turler: list[str]
     grupsuz: SmmGrupsuzKalemler | None = None
     devir: "SmmVeriDevir | None" = None
+    yukleme: "SmmKaynakYuklemeSonucu | None" = None   # yalnız yükleme yanıtında: okunan / sorunlu satırlar (yazılmayanlar)
 
 
 class SmmVeriDevir(BaseModel):
@@ -1686,6 +1806,15 @@ class SmmAnaReceteOnizleme(BaseModel):
     degisecek_urun: int
     korunan: list["SmmKorunanRecete"] = []
     ornek: list[dict[str, str | None]]
+    # standart yükleme özeti (YuklemeOzeti alanları; ürün bazında: yeni / değişen / aynı / silinecek ürün)
+    okunan: int = 0
+    yeni: int = 0
+    degisen: int = 0
+    ayni: int = 0
+    silinecek: int = 0
+    atlanan: int = 0
+    sorunlu: list["SorunluSatir"] = []
+    uyarilar: list[str] = []
 
 
 class SmmKorunanRecete(BaseModel):
@@ -2254,6 +2383,7 @@ class StokDevriOnizle(BaseModel):
     yeni: int
     degisen: int
     ayni: int
+    ozet: YuklemeOzeti = YuklemeOzeti()
 
 
 class StokDevriUygula(BaseModel):

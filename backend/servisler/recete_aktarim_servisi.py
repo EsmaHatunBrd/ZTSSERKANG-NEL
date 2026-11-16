@@ -27,10 +27,51 @@ ALAN_ADI = {"miktar": "miktar", "fire_override": "fire", "brut_miktar_elle": "el
 
 
 def _kitaplar(dosya_yolu: Path):
+    from .excel_ortak import sablon_denetle
+    from .import_servisi import DESTEKLENMEYEN_DOSYA
     try:
-        return openpyxl.load_workbook(dosya_yolu, data_only=False), openpyxl.load_workbook(dosya_yolu, data_only=True)
+        wb_f, wb_v = openpyxl.load_workbook(dosya_yolu, data_only=False), openpyxl.load_workbook(dosya_yolu, data_only=True)
     except Exception as e:   # bozuk/xlsx olmayan dosya: 422
-        raise DogrulamaHatasi(f"dosya okunamadı: {type(e).__name__}") from e
+        raise DogrulamaHatasi(DESTEKLENMEYEN_DOSYA, kod="desteklenmeyen_dosya") from e
+    sablon_denetle(wb_v, "urun_recetesi")
+    return wb_f, wb_v
+
+
+def _recete_satir_numaralari(ws_v) -> list[int]:
+    """urun_oku ile aynı satırlar: 6. satırdan toplam etiketine kadar, D'si dolu olanlar."""
+    r100 = eo._etiket_satiri(ws_v, "HAMMADE - YARDIMCI MALZEME MALİYETİ TOPLAMI")
+    return [r for r in range(6, r100) if ws_v[f"D{r}"].value]
+
+
+def _recete_sayilarini_cevir(ws_f, ws_v, ad: str) -> list[dict]:
+    """I, J, K, M hücrelerindeki metin sayıları bellekte sayıya çevirir (iki kitapta da); çevrilemeyenler sorunlu."""
+    from .excel_ortak import sayi_cevir
+    from .yukleme_guvenligi import sorunlu as sorunlu_satir
+    sorunlu = []
+    for r in _recete_satir_numaralari(ws_v):
+        for sutun, alan in (("I", "miktar"), ("J", "fire"), ("K", "brüt miktar"), ("M", "birim fiyat")):
+            v = ws_v[f"{sutun}{r}"].value
+            if not isinstance(v, str) or (isinstance(ws_f[f"{sutun}{r}"].value, str) and ws_f[f"{sutun}{r}"].value.startswith("=")):
+                continue
+            if not v.strip():
+                ws_v[f"{sutun}{r}"].value = ws_f[f"{sutun}{r}"].value = None
+                continue
+            d, hata = sayi_cevir(v, alan)
+            if hata:
+                sorunlu.append(sorunlu_satir(r, str(ws_v[f"D{r}"].value).strip(), f"{ad}!{sutun}{r} ({alan})", v, hata))
+            else:
+                ws_v[f"{sutun}{r}"].value = ws_f[f"{sutun}{r}"].value = d
+    return sorunlu
+
+
+def _bos_hucre_elle_sayilmasin(ws_f, ws_v, satirlar: list[dict]) -> None:
+    """Bilinen hata düzeltmesi: boş M (birim fiyat) 'elle fiyat 0', boş K (brüt) 'elle brüt 0' sayılmasın. Boş = değer yok:
+    fiyat malzeme fiyatlarından, brüt miktar fire kuralından gelir."""
+    for r, x in zip(_recete_satir_numaralari(ws_v), satirlar):
+        if ws_f[f"M{r}"].value in (None, "") and ws_v[f"M{r}"].value in (None, ""):
+            x["birim_fiyat_elle"] = None
+        if ws_f[f"K{r}"].value in (None, "") and ws_v[f"K{r}"].value in (None, ""):
+            x["brut_miktar_elle"] = None
 
 
 def _urun_sayfalari(wb_v) -> list[str]:
@@ -85,9 +126,14 @@ def recete_onizle(s: Session, senaryo_id: int, dosya_yolu: Path) -> dict:
     if not sayfalar:
         raise DogrulamaHatasi("dosyada ürün sayfası bulunamadı ('001' gibi adlı sayfa ya da tek sayfalık ürün sayfası olmalı)")
     malzemeler = eo.malzemeleri_oku(wb_v) if SATIN_ALMA in wb_v.sheetnames else None
-    sonuc, hatali, okunan = [], [], {}
+    sonuc, hatali, okunan, sorunlu = [], [], {}, []
     for ad in sayfalar:
         try:
+            sayfa_sorunlu = _recete_sayilarini_cevir(wb_f[ad], wb_v[ad], ad)
+            if sayfa_sorunlu:
+                sorunlu += sayfa_sorunlu
+                hatali.append({"sayfa": ad, "mesaj": f"{len(sayfa_sorunlu)} hücre sayıya çevrilemedi (sorunlu satırlara bakın)"})
+                continue
             girdi, _, _ = eo.urun_oku(wb_f[ad], wb_v[ad], malzemeler)
             seviyeler = recete_seviyeleri_oku(wb_v[ad])
         except OKUMA_HATALARI as e:
@@ -109,7 +155,8 @@ def recete_onizle(s: Session, senaryo_id: int, dosya_yolu: Path) -> dict:
             uyarilar.append("seviye sütunu satırlarla eşleşmedi; seviye yazılmayacak")
             seviyeler = [None] * len(girdi.recete)
         satirlar = _satir_sozlukleri(girdi, seviyeler)
-        urun = s.scalar(select(m.Urun).where(m.Urun.kod == kod))
+        _bos_hucre_elle_sayilmasin(wb_f[ad], wb_v[ad], satirlar)
+        urun =s.scalar(select(m.Urun).where(m.Urun.kod == kod))
         mevcut = _mevcut_satirlar(recete_servisi.aktif_recete_veya_none(s, urun.id, senaryo_id)) if urun else None
         fark = _fark(mevcut, satirlar) if mevcut is not None else {"eklenen": [], "cikan": [], "degisen": []}
         if urun is None:
@@ -130,10 +177,17 @@ def recete_onizle(s: Session, senaryo_id: int, dosya_yolu: Path) -> dict:
                       "elle_fiyat": elle_fiyat, "elle_brut": sum(1 for x in satirlar if x["brut_miktar_elle"] is not None),
                       **fark, "uyarilar": uyarilar, "secili": durum != "ayni" and not varyant})
         okunan[ad] = (girdi, satirlar, kod)
-    return {"sayfalar": sonuc, "hatali": hatali, "_okunan": okunan}
+    from .yukleme_guvenligi import ozet
+    sayac = lambda *d: sum(1 for x in sonuc if x["durum"] in d)
+    oz = ozet(okunan=len(sayfalar), yeni=sayac("yeni_urun", "yeni_recete"), degisen=sayac("degisti"), ayni=sayac("ayni"),
+              atlanan=len(hatali), sorunlu_satirlar=sorunlu + [{"satir": None, "kod": None, "alan": f"sayfa {h['sayfa']}", "deger": None,
+                                                                  "neden": h["mesaj"]} for h in hatali if not h["mesaj"].endswith("(sorunlu satırlara bakın)")],
+              uyarilar=[f"{x['sayfa']}: {u}" for x in sonuc for u in x["uyarilar"]])
+    return {"sayfalar": sonuc, "hatali": hatali, "_okunan": okunan, "ozet": oz}
 
 
-def recete_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, sayfalar: list[str], neden: str, kullanici: str = "sistem") -> dict:
+def recete_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, sayfalar: list[str], neden: str, kullanici: str = "sistem",
+                  onay: bool = False, kaynak_dosya: str | None = None) -> dict:
     """Seçilen sayfalar için yeni reçete versiyonu açar (tek işlem; biri hatalıysa hiçbiri yazılmaz). Neden değişiklik günlüğüne düşer."""
     neden = (neden or "").strip()
     if not neden:
@@ -150,10 +204,15 @@ def recete_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, sayfalar: list[
     tekrar = sorted({k for k in kodlar if kodlar.count(k) > 1})
     if tekrar:
         raise DogrulamaHatasi("aynı ürün için birden çok sayfa seçildi; birini seçin", {"kodlar": tekrar})
+    from .yukleme_guvenligi import yedek_guncelle, yedekle
+    y = yedekle(s, "recete", senaryo_id, {"senaryo_id": senaryo_id, "urunler": []}, f"{len(secilen)} ürün reçetesi", kaynak_dosya, kullanici)
+    yedek_urunler = []
     uygulanan, yeni_urun = [], 0
     for ad in secilen:
         girdi, satirlar, kod = okunan[ad]
         u = s.scalar(select(m.Urun).where(m.Urun.kod == kod))
+        urun_yeni = u is None
+        onceki = recete_servisi.aktif_recete_veya_none(s, u.id, senaryo_id) if u is not None else None
         if u is None:
             ub = girdi.uretim
             u = hesap_servisi.urun_kaydet(s, kod, girdi.ad, ub.ambalaj_hacmi, ub.hat, ub.taze_tursu_sinifi, ub.suzme_kg, ub.pazar,
@@ -170,5 +229,8 @@ def recete_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, sayfalar: list[
         s.add(m.DegisiklikKaydi(tablo="recete", kayit_id=r.id, islem="dosyadan_aktar", eski=None,
                                 yeni={"_neden": neden, "sayfa": ad, "versiyon": r.versiyon, "satir": len(satirlar)}, kullanici=kullanici))
         uygulanan.append({"sayfa": ad, "kod": kod, "versiyon": r.versiyon})
+        yedek_urunler.append({"urun_id": u.id, "yeni_recete_id": r.id, "onceki_aktif_id": onceki.id if onceki is not None else None,
+                              "yeni_urun": urun_yeni})
+    yedek_guncelle(y, urunler=yedek_urunler)
     s.flush()
     return {"uygulanan": uygulanan, "yeni_urun": yeni_urun}

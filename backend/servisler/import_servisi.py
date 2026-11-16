@@ -5,7 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 import re
 import openpyxl
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from fiyat_motoru import excel_okuyucu as eo
 from fiyat_motoru.para import SIFIR
@@ -100,6 +100,91 @@ def revize_fiyatlarini_oku_dosyadan(dosya_yolu: Path) -> dict[str, Decimal]:
         return revize_fiyatlarini_oku(ws)[0]
     finally:
         wb.close()
+
+
+# ---------------------------------------------------------------- esnek S.ALMA BF okuyucu (fiyat listesi + Veri Aktar satın alma)
+SALMA_KOD = ("Malzeme", "Malzeme Kodu", "Stok Kodu", "Malzeme (Sınıf) Kodu", "Malzeme Sınıf Kodu", "Stok Kartı Kodu", "Kod")
+SALMA_FIYAT = ("Bütçe Birim Fiyatları", "Bütçe Birim Fiyatı", "Bütçe Fiyatı", "Bütçe Fiyat", "Birim Fiyat", "Birim Fiyatı", "Fiyat")
+SALMA_REVIZE = ("Revize Bütçe Birim Fiyatı", "Revize Bütçe Birim Fiyatları", "Revize Birim Fiyat", "Revize Fiyat", "Revize")
+
+
+def salma_alanlari(tam: bool):
+    """tam=True: Veri Aktar satın alma (kart bilgileri zorunlu); False: fiyat listesi (yalnız kod ve fiyat zorunlu)."""
+    from .excel_ortak import Alan
+    return [Alan("kod", SALMA_KOD), Alan("fiyat", SALMA_FIYAT),
+            Alan("ad", ("Açıklama", "Malzeme Adı", "Malzeme Açıklaması", "Stok Adı", "Stok Kartı Adı", "Ad"), zorunlu=tam),
+            Alan("para", ("Para Birimi", "Döviz", "Döviz Cinsi", "PB", "Para", "Döviz Kodu"), zorunlu=tam),
+            Alan("tip", ("Malzeme Tipi", "Tip", "Stok Tipi"), zorunlu=False),
+            Alan("birim", ("Stok Birimi", "Birim", "Ölçü Birimi"), zorunlu=False),
+            Alan("zs", ("Z/S", "Zirai/Sanayi", "Zirai Sanayi"), zorunlu=False),
+            Alan("revize", SALMA_REVIZE, zorunlu=False)]
+
+
+def _revize_sutunu(baslik: list, e) -> int | None:
+    """Revize fiyat sütunu: adıyla bulunduysa o; yoksa fiyat sütunundan sonra ikinci bir fiyat başlığı (S.ALMA BF'de I aynı başlıkla
+    durur); o da yoksa klasik düzende (A kod, F fiyat) I sütunu başlığı boşsa I."""
+    if "revize" in e.sutun:
+        return e.sutun["revize"]
+    from .excel_ortak import baslik_anahtari
+    fiyat_anahtarlari = {baslik_anahtari(x) for x in SALMA_FIYAT}
+    for i in range(e.sutun["fiyat"] + 1, len(baslik)):
+        k = baslik_anahtari(baslik[i])
+        if k in fiyat_anahtarlari or (k and "fiyat" in k and i == SUTUN_REVIZE_FIYAT):
+            return i
+    if e.sutun.get("kod") == 0 and e.sutun["fiyat"] == SUTUN_ILK_FIYAT and len(baslik) > SUTUN_REVIZE_FIYAT \
+            and not baslik_anahtari(baslik[SUTUN_REVIZE_FIYAT]):
+        return SUTUN_REVIZE_FIYAT
+    if e.sutun.get("kod") == 0 and e.sutun["fiyat"] == SUTUN_ILK_FIYAT and len(baslik) <= SUTUN_REVIZE_FIYAT:
+        return SUTUN_REVIZE_FIYAT   # başlıksız I: değer varsa okunur (hücre yoksa boş sayılır)
+    return None
+
+
+def _fiyat_hucresi(v, alan: str, satir: int, kod: str, sorunlu: list) -> tuple[Decimal | None, bool]:
+    """(değer, hatalı mı). Boş → (None, False). Metin sayı çevrilir; çevrilemeyen / negatif / bool → sorunlu."""
+    from .excel_ortak import sayi_cevir
+    from .yukleme_guvenligi import sorunlu as sorunlu_satir
+    if isinstance(v, bool):
+        sorunlu.append(sorunlu_satir(satir, kod, alan, v, f"{alan}: sayı değil")); return None, True
+    d, hata = sayi_cevir(v, alan)
+    if hata:
+        sorunlu.append(sorunlu_satir(satir, kod, alan, v, hata)); return None, True
+    if d is not None and (not d.is_finite() or d < 0):
+        sorunlu.append(sorunlu_satir(satir, kod, alan, v, f"{alan}: negatif olamaz")); return None, True
+    return d, False
+
+
+def salma_oku(ws, tam: bool, ne: str) -> dict:
+    """S.ALMA BF düzenindeki (ya da kullanıcının kendi) tabloyu başlık adlarıyla okur.
+    Dönüş: {"satirlar": [{satir, kod, ad, tip, birim, para, fiyat, revize, zs}], "sorunlu": [...], "okunan": n, "baslik_satiri": r}.
+    Fiyatı (F ya da revize) sayı olmayan satır `sorunlu`dur ve `satirlar`a girmez."""
+    from .excel_ortak import baslik_satirini_bul
+    from .yukleme_guvenligi import sorunlu as sorunlu_satir
+    hepsi = list(ws.iter_rows(values_only=True))
+    e = baslik_satirini_bul(iter(hepsi), salma_alanlari(tam), ne=ne)
+    baslik = list(hepsi[e.satir - 1])
+    revize_i = _revize_sutunu(baslik, e)
+    hucre = lambda r, i: (r[i] if i is not None and i < len(r) else None)
+    metin = lambda v: (v.strip() if isinstance(v, str) else v) or None
+    satirlar, sorunlu, okunan = [], [], 0
+    for no, r in enumerate(hepsi[e.satir:], start=e.satir + 1):
+        r = list(r or ())
+        kod = hucre(r, e.sutun["kod"])
+        if kod is None or not str(kod).strip():
+            continue
+        kod = str(kod).strip()
+        okunan += 1
+        f, f_hata = _fiyat_hucresi(hucre(r, e.sutun["fiyat"]), "fiyat", no, kod, sorunlu)
+        rv, r_hata = _fiyat_hucresi(hucre(r, revize_i), "revize fiyat", no, kod, sorunlu) if revize_i is not None else (None, False)
+        if f_hata or r_hata:
+            continue
+        para = metin(hucre(r, e.sutun.get("para")))
+        zs = metin(hucre(r, e.sutun.get("zs")))
+        satirlar.append({"satir": no, "kod": kod, "ad": str(metin(hucre(r, e.sutun.get("ad"))) or ""),
+                         "tip": metin(hucre(r, e.sutun.get("tip"))), "birim": metin(hucre(r, e.sutun.get("birim"))),
+                         "para": str(para).upper() if para else None, "fiyat": f, "revize": rv if rv is not None and rv != f else None,
+                         "zs": str(zs).upper() if zs else None})
+    # Aynı kod iki kez: son satır geçerli (eski davranış); önizlemede uyarı olarak görünür.
+    return {"satirlar": satirlar, "sorunlu": sorunlu, "okunan": okunan, "baslik_satiri": e.satir}
 
 
 def _ayni_fiyat_kaydi_var_mi(s: Session, senaryo_id: int, kod: str, fiyat: Decimal) -> bool:
@@ -207,7 +292,18 @@ def excel_tam_yukle(s: Session, excel_yolu: Path, sezon_ad: str, senaryo_ad: str
     kartlari_guncelle=False: var olan Urun/Malzeme kartlarına dokunulmaz (yalnız yeniler açılır); iki modda da farklar ozet['kart_farklari']'nda.
     revize_uygula=False: S.ALMA BF I sütunu (revize fiyat) yok sayılır, yalnız F yazılır (Excel paritesi testleri; Excel ürün sayfaları F'ye bakar)."""
     try:
+        from .yukleme_guvenligi import TAMAMLA_TABLOLARI, yedek_guncelle, yedekle
+        y = once = None
+        if senaryo_id is not None:   # tamamla: mevcut senaryoya yazar → geri alınabilir (eklenen kayıtlar silinir)
+            once = {t.__tablename__: s.scalar(select(func.max(t.id))) or 0 for t in TAMAMLA_TABLOLARI}
+            y = yedekle(s, "excel_tam", senaryo_id, {"senaryo_id": senaryo_id, "eklenen": {}}, "tüm çalışma kitabı (tamamla)", kaynak_dosya,
+                        kullanici)
         ozet = _excel_tam_yukle(s, excel_yolu, sezon_ad, senaryo_ad, tur, kullanici, kartlari_guncelle, senaryo_id, revize_uygula)
+        if y is not None:
+            eklenen = {t.__tablename__: list(s.scalars(select(t.id).where(t.id > once[t.__tablename__]))) for t in TAMAMLA_TABLOLARI}
+            yedek_guncelle(y, eklenen={k: v for k, v in eklenen.items() if v})
+            y.ozet = (f"tamamla: {ozet['urun']} ürün, {ozet['fiyat']} fiyat, {ozet['havuz']} havuz, {ozet['kapasite']} kapasite")[:300]
+            s.flush()
         if kaynak_dosya:
             s.get(m.Senaryo, ozet["senaryo_id"]).kaynak_dosya = kaynak_dosya
             s.flush()
@@ -216,9 +312,47 @@ def excel_tam_yukle(s: Session, excel_yolu: Path, sezon_ad: str, senaryo_ad: str
         raise DogrulamaHatasi(f"çalışma kitabı beklenen yapıda değil: {e!r}")
 
 
+TAM_KITAP_SAYFALARI = {"S.ALMA BF": ("SALMA BF", "Satın Alma"), "Gider Dağıtım": ("Gider Dagitim", "Gider Dağıtımı")}
+TAM_KITAP_ISTEGE_BAGLI = {eo.URETIM_ADETLERI_SAYFA: ("Uretim Adetleri",)}
+
+
+def tam_kitap_ac(yol: Path):
+    """Tüm çalışma kitabı: sayfa adları esnek eşlenir (büyük/küçük, Türkçe harf, boşluk) ve bellekte beklenen ada çevrilir. Beklenen
+    sayfalar (S.ALMA BF, Gider Dağıtım, en az bir '001' gibi ürün sayfası) yoksa hangilerinin eksik olduğu söylenir. Başka ekranın
+    şablonu yüklenirse 422 `yanlis_sablon`."""
+    from .excel_ortak import SABLONLAR, sablon_kimligi_oku
+    from .yukleme_guvenligi import sayfa_bul
+    try:
+        wb_f, wb_v = eo.excel_ac(yol)
+    except Exception:
+        raise DogrulamaHatasi(DESTEKLENMEYEN_DOSYA, kod="desteklenmeyen_dosya")
+    k = sablon_kimligi_oku(wb_v)
+    if k is not None:
+        raise DogrulamaHatasi(f"Bu dosya {SABLONLAR.get(k[0], k[0])} şablonu; burası tüm çalışma kitabı aktarımı. Bu dosyayı Veri Aktar'daki "
+                              "ilgili sekmeden yükleyin.", {"gelen_sablon": k[0]}, kod="yanlis_sablon")
+    eksik = []
+    for ad, esler in {**TAM_KITAP_SAYFALARI, **TAM_KITAP_ISTEGE_BAGLI}.items():
+        if ad in wb_v.sheetnames:
+            continue
+        ws = sayfa_bul(wb_v, ad, esler)
+        if ws is None:
+            if ad in TAM_KITAP_SAYFALARI:
+                eksik.append(ad)
+            continue
+        eski = ws.title
+        wb_v[eski].title = ad
+        wb_f[eski].title = ad
+    if not eo.urun_sayfalarini_listele(wb_v):
+        eksik.append("ürün sayfası ('001' gibi üç haneli adla)")
+    if eksik:
+        raise DogrulamaHatasi(f"Çalışma kitabı beklenen yapıda değil: şu sayfalar bulunamadı: {', '.join(eksik)}. "
+                              f"Dosyadaki sayfalar: {', '.join(wb_v.sheetnames[:15])}.", {"eksik_sayfalar": eksik}, kod="eksik_sayfa")
+    return wb_f, wb_v
+
+
 def _excel_tam_yukle(s: Session, excel_yolu: Path, sezon_ad: str, senaryo_ad: str, tur: str, kullanici: str, kartlari_guncelle: bool, senaryo_id: int | None = None,
                      revize_uygula: bool = True) -> dict:
-    wb_f, wb_v = eo.excel_ac(Path(excel_yolu))
+    wb_f, wb_v = tam_kitap_ac(Path(excel_yolu))
     tamamla = senaryo_id is not None
     if tamamla:
         sen = hesap_servisi.senaryo_getir(s, senaryo_id); sz = sen.sezon
@@ -350,51 +484,123 @@ def _excel_tam_yukle(s: Session, excel_yolu: Path, sezon_ad: str, senaryo_ad: st
     return ozet
 
 
-def _fiyat_satirlari(dosya_yolu: Path):
-    wb = openpyxl.load_workbook(dosya_yolu, data_only=True, read_only=True)
+FIYAT_LISTESI_KIMLIKLERI = ("malzeme_fiyat_listesi", "satin_alma_fiyat_listesi")   # ikisi aynı düzende: ikisi de kabul
+DESTEKLENMEYEN_DOSYA = "Yalnız .xlsx (ya da .xlsm) dosyası yüklenebilir; .xls ve .csv desteklenmez. Excel'de 'Farklı kaydet → Excel Çalışma Kitabı (.xlsx)' ile kaydedin."
+
+
+def kitap_ac(dosya_yolu: Path, **secenek):
+    """Yüklenen dosyayı açar; xlsx değilse anlaşılır 422."""
+    import zipfile
+    from openpyxl.utils.exceptions import InvalidFileException
     try:
-        ws = wb.worksheets[0]
-        for satir in ws.iter_rows(min_row=2, values_only=True):
-            if satir and satir[0]:
-                yield (str(satir[0]).strip(), satir[SUTUN_ILK_FIYAT] if len(satir) > SUTUN_ILK_FIYAT else None,
-                       satir[SUTUN_REVIZE_FIYAT] if len(satir) > SUTUN_REVIZE_FIYAT else None)
-    finally:
-        wb.close()
+        return openpyxl.load_workbook(dosya_yolu, **secenek)
+    except (zipfile.BadZipFile, InvalidFileException, KeyError, OSError):
+        raise DogrulamaHatasi(DESTEKLENMEYEN_DOSYA, kod="desteklenmeyen_dosya")
 
 
-def fiyat_listesi_onizle(s: Session, senaryo_id: int, dosya_yolu: Path, gecerlilik_basi: date | None = None) -> dict:
+def fiyat_esikleri(s: Session, senaryo_id: int, tarih: date) -> tuple[Decimal, Decimal]:
+    """Büyük fiyat değişikliği eşikleri (TL, döviz): elle fiyat girişindeki onay eşikleriyle aynı (analiz_servisi.fiyat_sapmasi)."""
+    from . import analiz_servisi as an
+    d = parametre_servisi.gecerli_degerler(s, senaryo_id, tarih)
+    return d.get(an.FIYAT_ESIK_TL, an.VARSAYILAN_FIYAT_ESIK_TL), d.get(an.FIYAT_ESIK_DOVIZ, an.VARSAYILAN_FIYAT_ESIK_DOVIZ)
+
+
+def buyuk_degisim(eski: Decimal, yeni: Decimal, para: str | None, esikler: tuple[Decimal, Decimal]) -> Decimal | None:
+    """Oran (yeni/eski - 1) eşiği aşıyorsa oran; değilse None."""
+    if not eski:
+        return None
+    oran = Decimal(yeni) / Decimal(eski) - 1
+    esik = esikler[0] if (para or "TL").upper() == "TL" else esikler[1]
+    return oran if abs(oran) > esik else None
+
+
+def _yuzde(oran: Decimal) -> str:
+    return f"%{(oran * 100).quantize(Decimal('0.1'))}".replace(".", ",")
+
+
+def fiyat_listesi_onizle(s: Session, senaryo_id: int, dosya_yolu: Path, gecerlilik_basi: date | None = None,
+                         elle_ustune_yaz: bool = False) -> dict:
     """Mevcut fiyatlar `gecerlilik_basi` tarihindeki geçerli fiyatlardır (uygulama ile aynı karşılaştırma).
-    F ilk bütçe, I revize: karşılaştırma geçerli olacak fiyatla (varsa I) yapılır; `revize` listesi bilgi amaçlıdır."""
-    mevcut = fiyat_servisi.gecerli_fiyatlar(s, senaryo_id, gecerlilik_basi or date.today())
-    out = {"yeni": [], "degisen": [], "ayni": 0, "hatali": [], "revize": [], "_yazilacak": {}}
-    for kod, fiyat, revize_ham in _fiyat_satirlari(dosya_yolu):
-        try:
-            f = _ondalik(fiyat); r = _ondalik(revize_ham)
-        except ValueError:
-            out["hatali"].append(kod); continue
-        if r is not None and r == f:
-            r = None
+    F ilk bütçe, I revize: karşılaştırma geçerli olacak fiyatla (varsa I) yapılır; `revize` listesi bilgi amaçlıdır.
+    Elle girilmiş (kaynak 'elle') geçerli fiyat varsayılan olarak korunur (`elle` listesi); `elle_ustune_yaz=True` ile yazılır.
+    Başlıklar adla bulunur (esnek); fiyatı sayı olmayan satır `sorunlu`/`hatali` olur ve yazılmaz."""
+    from .excel_ortak import sablon_denetle
+    from .yukleme_guvenligi import ozet, sayfa_sec
+    tarih = gecerlilik_basi or date.today()
+    wb = kitap_ac(dosya_yolu, data_only=True)
+    sablon_denetle(wb, FIYAT_LISTESI_KIMLIKLERI)
+    ws = sayfa_sec(wb, "S.ALMA BF", ("SALMA BF", "Fiyat Listesi", "Malzeme Fiyat Listesi"), ilk_sayfaya_dus=True, kanonik_ad=False)
+    okunan = salma_oku(ws, tam=False, ne="fiyat listesi")
+    mevcut = fiyat_servisi.gecerli_fiyatlar(s, senaryo_id, tarih)
+    kayitlar = fiyat_servisi.gecerli_kayitlar_kodla(s, senaryo_id, tarih)
+    esikler = fiyat_esikleri(s, senaryo_id, tarih)
+    out = {"yeni": [], "degisen": [], "ayni": 0, "hatali": [], "revize": [], "elle": [], "buyuk_degisim": [], "_yazilacak": {}}
+    out["hatali"] = list(dict.fromkeys(x["kod"] for x in okunan["sorunlu"]))
+    uyarilar = []
+    gorulen: dict[str, int] = {}
+    for x in okunan["satirlar"]:
+        kod, f, r = x["kod"], x["fiyat"], x["revize"]
+        if kod in gorulen:
+            uyarilar.append(f"{kod} dosyada birden çok satırda (satır {gorulen[kod]} ve {x['satir']}); son satır geçerli.")
+        gorulen[kod] = x["satir"]
+    son = {x["kod"]: x for x in okunan["satirlar"]}
+    atlanan = 0
+    for kod, x in son.items():
+        f, r = x["fiyat"], x["revize"]
         etkin = r if r is not None else f
         if etkin is None:
+            atlanan += 1
             continue
         if r is not None:
             out["revize"].append({"kod": kod, "ilk": str(f) if f is not None else None, "revize": str(r)})
         if kod not in mevcut:
             out["yeni"].append({"kod": kod, "yeni": str(etkin)})
         elif mevcut[kod].fiyat != etkin:
-            out["degisen"].append({"kod": kod, "eski": str(mevcut[kod].fiyat), "yeni": str(etkin)})
+            eski_k = kayitlar.get(kod)
+            d = {"kod": kod, "eski": str(mevcut[kod].fiyat), "yeni": str(etkin)}
+            oran = buyuk_degisim(mevcut[kod].fiyat, etkin, mevcut[kod].para_birimi, esikler)
+            if oran is not None:
+                out["buyuk_degisim"].append({**d, "para": mevcut[kod].para_birimi, "oran": str(oran)})
+            if eski_k is not None and eski_k.kaynak == "elle":
+                out["elle"].append({**d, "olusturan": eski_k.olusturan})
+                if not elle_ustune_yaz:
+                    continue
+            out["degisen"].append(d)
             out["_yazilacak"][kod] = (f, r)
         else:
             out["ayni"] += 1
+    if out["yeni"]:
+        uyarilar.append(f"{len(out['yeni'])} kodun sistemde fiyatı yok; bu ekrandan yazılmaz (Veri Aktar › Satın alma fiyat listesi ile açın).")
+    if out["elle"]:
+        uyarilar.append(f"Elle girilmiş {len(out['elle'])} fiyat " + ("üzerine yazılacak." if elle_ustune_yaz else "korunacak (üzerine yazılmaz)."))
+    for b in out["buyuk_degisim"]:
+        uyarilar.append(f"{b['kod']}: fiyat {_yuzde(Decimal(b['oran']))} değişiyor ({b['eski']} → {b['yeni']} {b['para'] or 'TL'}).")
+    korunan = 0 if elle_ustune_yaz else len(out["elle"])
+    out["ozet"] = ozet(okunan=okunan["okunan"], yeni=len(out["yeni"]), degisen=len(out["degisen"]), ayni=out["ayni"],
+                       atlanan=len(out["yeni"]) + korunan + atlanan, sorunlu_satirlar=okunan["sorunlu"], uyarilar=uyarilar)
+    if okunan["okunan"] == 0:
+        from .excel_ortak import satir_kaybi_denetle
+        satir_kaybi_denetle(0, 0, False, "fiyat satırı")
     return out
 
 
-def fiyat_listesi_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, gecerlilik_basi: date, neden: str, kullanici: str = "sistem") -> dict:
+def fiyat_listesi_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, gecerlilik_basi: date, neden: str, kullanici: str = "sistem",
+                         elle_ustune_yaz: bool = False, kaynak_dosya: str | None = None) -> dict:
     """Yalnız önizlemenin 'degisen' listesini (aynı tarih, aynı fonksiyon) yazar; revize varsa F + I iki kayıt. Kartı olmayan ('yeni') kodlar
-    bu yoldan yazılmaz (kart açmak için Veri Aktar → Satın alma). Yazılan kodları döner."""
-    on = fiyat_listesi_onizle(s, senaryo_id, dosya_yolu, gecerlilik_basi)
+    bu yoldan yazılmaz (kart açmak için Veri Aktar → Satın alma). Elle girilmiş fiyatlar `elle_ustune_yaz` olmadan korunur.
+    Yazmadan önce yedek bırakılır (geri al: eklenen fiyat kayıtları silinir). Yazılan kodları döner."""
+    from .yukleme_guvenligi import yedek_guncelle, yedekle
+    if not (neden or "").strip():
+        raise DogrulamaHatasi("neden zorunlu")
+    on = fiyat_listesi_onizle(s, senaryo_id, dosya_yolu, gecerlilik_basi, elle_ustune_yaz)
     kodlar = []
+    y = yedekle(s, "fiyat_listesi", senaryo_id, {"fiyat_idleri": []}, f"{len(on['degisen'])} fiyat", kaynak_dosya, kullanici) if on["degisen"] else None
+    once = s.scalar(select(func.max(m.MalzemeFiyati.id))) or 0
     for d in on["degisen"]:
         ilk, revize = on["_yazilacak"][d["kod"]]
         revize_ile_fiyat_ekle(s, senaryo_id, d["kod"], ilk, revize, gecerlilik_basi, neden, kullanici); kodlar.append(d["kod"])
-    return {"yazilan": len(kodlar), "kodlar": kodlar}
+    if y is not None:
+        yedek_guncelle(y, fiyat_idleri=list(s.scalars(select(m.MalzemeFiyati.id).where(m.MalzemeFiyati.id > once,
+                                                                                       m.MalzemeFiyati.senaryo_id == senaryo_id))))
+    s.flush()
+    return {"yazilan": len(kodlar), "kodlar": kodlar, "korunan_elle": 0 if elle_ustune_yaz else len(on["elle"])}

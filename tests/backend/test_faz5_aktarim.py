@@ -257,7 +257,9 @@ def _yanlis_sayfa() -> bytes:
 
 def test_yanlis_tek_sayfa_satin_alma_ve_gider_422_hicbir_sey_yazilmaz(istemci, oturum):
     c = istemci; sid = _senaryo(c)
-    for yol, ek in (("satin-alma", {"gecerlilik_basi": "2026-06-01"}), ("gider-dagitim", {})):
+    # 16.11.2026: başlıklar artık adla ve eş anlamlılarla bulunur; bu sayfa (Kod/Ad/Para/Fiyat) geçerli bir satın alma listesidir.
+    # Satın almada yanlış dosya: başka şablon kimliği ya da eksik zorunlu sütun (test_yukleme_guvenligi_fiyat.py).
+    for yol, ek in (("gider-dagitim", {}),):
         for asama in ("onizle", "uygula"):
             r = _post(c, f"{yol}/{asama}", _yanlis_sayfa(), sid, neden="x", **ek)
             assert r.status_code == 422 and "beklenen düzen değil" in r.json()["mesaj"], (yol, asama, r.text)

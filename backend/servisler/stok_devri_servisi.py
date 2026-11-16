@@ -228,6 +228,11 @@ def sil(s: Session, sen: m.Senaryo, urun: m.Urun, neden: str | None, kullanici: 
 # ---------------------------------------------------------------- toplu aktarım (Excel)
 SUTUNLAR = ("urun_kodu", "stok_adet", "stok_birim_maliyet", "enflasyon", "uretim_adedi")
 ZORUNLU_SUTUNLAR = ("urun_kodu", "stok_adet", "stok_birim_maliyet")
+ESANLAMLAR = {"urun_kodu": ("Ürün Kodu", "Stok Kodu", "Malzeme Kodu", "Mamul Kodu", "Kod"),
+              "stok_adet": ("Stok Adedi", "Stok Adet", "Stok Miktarı", "Stokta Kalan", "Stokta Kalan Adet", "Adet", "Miktar"),
+              "stok_birim_maliyet": ("Stok Birim Maliyeti", "Stok Birim Maliyet", "Birim Maliyet", "Birim Maliyeti", "Maliyet"),
+              "enflasyon": ("Enflasyon Oranı", "Enflasyon (%)"),
+              "uretim_adedi": ("Üretim Adedi", "Üretilecek Adet", "Bu Yıl Üretim Adedi", "Üretim")}
 _SUTUN_ALANI = {"stok_adet": "adet", "stok_birim_maliyet": "birim_maliyet", "enflasyon": "enflasyon", "uretim_adedi": "uretim_adedi"}
 _TR = str.maketrans("İIışğüöçŞĞÜÖÇ", "iiisguocsguoc")
 SABLON_ACIKLAMA = [
@@ -263,27 +268,22 @@ def _hucre_sayi(v, oran: bool = False) -> Decimal | None:
 def aktarim_oku(dosya_yolu) -> tuple[dict[str, str | None], list[dict], list[dict]]:
     """xlsx ilk sayfası -> (sütun eşlemesi, satırlar, hatalar). Satır: {satir_no, urun_kodu, adet, birim_maliyet, enflasyon, uretim_adedi}.
     Boş satırlar atlanır; hatalı satırlar atlanmaz, `hatalar`a {satir_no, mesaj} olarak yazılır."""
-    import openpyxl
-    try:
-        wb = openpyxl.load_workbook(dosya_yolu, data_only=True, read_only=True)
-    except (KeyError, ValueError, TypeError, OSError) as e:
-        raise DogrulamaHatasi(f"dosya okunamadı: {type(e).__name__}")
-    try:
-        ws = wb.worksheets[0]
-        satirlar_ham = list(ws.iter_rows(values_only=True))
-    finally:
-        wb.close()
+    from .excel_ortak import Alan, baslik_satirini_bul, sablon_denetle
+    from .import_servisi import kitap_ac
+    from .yukleme_guvenligi import sayfa_sec
+    wb = kitap_ac(dosya_yolu, data_only=True)
+    sablon_denetle(wb, "stokta_kalan")
+    ws = sayfa_sec(wb, "Stokta Kalan", ("Stok Devri", "Stokta Kalanlar"), ilk_sayfaya_dus=True, kanonik_ad=False)
+    satirlar_ham = [list(r) for r in ws.iter_rows(values_only=True)]
     if not satirlar_ham:
-        raise DogrulamaHatasi("dosya boş")
-    basliklar = [_baslik(v) for v in satirlar_ham[0]]
-    ham_baslik = {_baslik(v): (None if v is None else str(v)) for v in satirlar_ham[0]}
-    sutunlar = {a: (ham_baslik.get(a) if a in basliklar else None) for a in SUTUNLAR}
-    eksik = [a for a in ZORUNLU_SUTUNLAR if sutunlar[a] is None]
-    if eksik:
-        raise DogrulamaHatasi("zorunlu sütun bulunamadı: " + ", ".join(eksik), {"eksik": eksik, "beklenen": list(SUTUNLAR)})
-    yer = {a: basliklar.index(a) for a in SUTUNLAR if sutunlar[a] is not None}
+        raise DogrulamaHatasi("dosya boş; mevcut veri değiştirilmedi", kod="bos_dosya")
+    alanlar = [Alan(a, (a,) + ESANLAMLAR.get(a, ()), zorunlu=a in ZORUNLU_SUTUNLAR) for a in SUTUNLAR]
+    e = baslik_satirini_bul(iter(satirlar_ham), alanlar, ne="stokta kalan dosyası")
+    baslik = satirlar_ham[e.satir - 1]
+    sutunlar = {a: (None if a not in e.sutun else str(baslik[e.sutun[a]])) for a in SUTUNLAR}
+    yer = dict(e.sutun)
     satirlar, hatalar = [], []
-    for no, satir in enumerate(satirlar_ham[1:], start=2):
+    for no, satir in enumerate(satirlar_ham[e.satir:], start=e.satir + 1):
         hucre = lambda a: (satir[yer[a]] if a in yer and yer[a] < len(satir) else None)
         if all(v is None or (isinstance(v, str) and not v.strip()) for v in satir):
             continue
@@ -326,18 +326,35 @@ def aktarim_onizle(s: Session, sen: m.Senaryo, dosya_yolu) -> dict:
         out.append({"satir_no": r["satir_no"], "urun_kodu": kod, "ad": u.ad, **decimal_str(yeni), "durum": durum,
                     "eski": decimal_str(eski) if durum == "degisen" else None, "_urun": u, "_degerler": yeni})
     hatalar.sort(key=lambda h: h["satir_no"])
-    return {"sutunlar": sutunlar, "satirlar": out, "hatalar": hatalar,
-            **{d: sum(1 for r in out if r["durum"] == d) for d in ("yeni", "degisen", "ayni")}}
+    from .yukleme_guvenligi import ozet
+    sayac = {d: sum(1 for r in out if r["durum"] == d) for d in ("yeni", "degisen", "ayni")}
+    if not out and not hatalar:
+        raise DogrulamaHatasi("Dosyada okunabilen stok satırı yok; mevcut veri değiştirilmedi.", kod="bos_dosya")
+    oz = ozet(okunan=len(out) + len(hatalar), yeni=sayac["yeni"], degisen=sayac["degisen"], ayni=sayac["ayni"], atlanan=len(hatalar),
+              sorunlu_satirlar=[{"satir": h["satir_no"], "kod": h["mesaj"].split(":", 1)[0] if ":" in h["mesaj"] else None, "alan": None,
+                                 "deger": None, "neden": h["mesaj"]} for h in hatalar],
+              uyarilar=["Hatalı satırlar düzeltilmeden hiçbir satır yazılmaz."] if hatalar else [])
+    return {"sutunlar": sutunlar, "satirlar": out, "hatalar": hatalar, **sayac, "ozet": oz}
 
 
-def aktarim_uygula(s: Session, sen: m.Senaryo, dosya_yolu, neden: str, kullanici: str = "sistem") -> dict:
-    """Önizlemeyi yeniden yapar; hatalı satır varsa 422 (alanlar.hatalar) ve hiçbir şey yazılmaz. Yeni ve değişen satırlar yazılır."""
+def aktarim_uygula(s: Session, sen: m.Senaryo, dosya_yolu, neden: str, kullanici: str = "sistem", onay: bool = False,
+                   kaynak_dosya: str | None = None) -> dict:
+    """Önizlemeyi yeniden yapar; hatalı satır varsa 422 (alanlar.hatalar) ve hiçbir şey yazılmaz. Yeni ve değişen satırlar yazılır
+    (upsert: dosyada olmayan kayıt silinmez). Yazmadan önce değişecek kayıtların yedeği alınır."""
     from .hesap_servisi import kilit_denetle
+    from .yukleme_guvenligi import stok_icerik, yedekle
     kilit_denetle(sen)
     neden = _neden(neden)
     on = aktarim_onizle(s, sen, dosya_yolu)
     if on["hatalar"]:
         raise DogrulamaHatasi("dosyada hatalı satırlar var; hiçbir satır yazılmadı", {"hatalar": on["hatalar"]})
+    yazilacak = [r for r in on["satirlar"] if r["durum"] != "ayni"]
+    if yazilacak:
+        mevcut = kayitlar(s, sen.id)
+        yedekle(s, "stok_devri", sen.id,
+                {"senaryo_id": sen.id, "eski": {str(r["_urun"].id): (stok_icerik(mevcut[r["_urun"].id]) if r["_urun"].id in mevcut else None)
+                                                for r in yazilacak}},
+                f"{on['yeni']} yeni, {on['degisen']} değişen stok", kaynak_dosya, kullanici)
     for r in on["satirlar"]:
         if r["durum"] != "ayni":
             kaydet(s, sen, r["_urun"], neden=neden, kullanici=kullanici, **r["_degerler"])

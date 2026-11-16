@@ -9,6 +9,7 @@ export function GiderDagitimAktar() {
   return (
     <AktarimFormu
       tip="gider-dagitim"
+      sablon="gider_dagitim"
       ad="Gider dağıtımını içe aktar"
       aciklama="Gider Dağıtım sayfası (tam çalışma kitabı veya tek sayfalık dosya). Havuz toplamları, dağıtım bazları, anahtarlar ve ambalaj sınıfları mevcut değerlerle karşılaştırılır; yalnız değişenler yazılır ve geçmişe kaydedilir. Gider oranları değişeceği için hesaplar yeniden hesaplanır."
       onizlemeGoster={(o) => {

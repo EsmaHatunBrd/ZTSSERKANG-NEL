@@ -82,7 +82,8 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
   it("listeyi, şablon bağlantısını ve para birimli fiyatı gösterir", async () => {
     kur();
     expect(await screen.findByRole("heading", { name: "Satış Geçmişi" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Şablonu indir/ })).toHaveAttribute("href", "/api/v1/satis-gecmisi/sablon.xlsx");
+    // 16.11.2026: ortak şablon ucu (sablonlar/ altındaki satış geçmişi şablonu)
+    expect(screen.getByRole("link", { name: /Şablonu indir/ })).toHaveAttribute("href", "/api/v1/sablonlar/satis_gecmisi.xlsx");
     const satir = (await screen.findByText("ORNEK-001")).closest("tr") as HTMLElement;
     expect(within(satir).getByText("Örnek Ürün")).toBeInTheDocument();
     expect(within(satir).getByText("01.03.2025")).toBeInTheDocument();

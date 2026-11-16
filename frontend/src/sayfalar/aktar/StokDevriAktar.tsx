@@ -1,13 +1,8 @@
 import type { ReactNode } from "react";
-import { Download } from "lucide-react";
 import type { StokDevriAktarimSatiri } from "@/api/tipler";
-import { buttonVariants } from "@/bilesenler/ui/button";
-import { cn } from "@/lib/utils";
 import { paraBicimle, yuzdeBicimle } from "@/yardimcilar/para";
 import { AktarimFormu } from "./AktarimFormu";
 import { FarkTablosu, Sayac } from "./FarkTablosu";
-
-const SABLON_ADRESI = "/api/v1/aktarim/stok-devri/sablon.xlsx";
 
 type Alan = "adet" | "birim_maliyet" | "enflasyon" | "uretim_adedi";
 const BOS: Record<Alan, string> = { adet: "—", birim_maliyet: "—", enflasyon: "parametre", uretim_adedi: "geçen yıl satışı" };
@@ -45,14 +40,9 @@ const satirHucreleri = (s: StokDevriAktarimSatiri): ReactNode[] => [
 export function StokDevriAktar() {
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <a href={SABLON_ADRESI} download className={cn(buttonVariants({ variant: "outline" }))}>
-          <Download aria-hidden />
-          Şablonu indir
-        </a>
-      </div>
       <AktarimFormu
         tip="stok-devri"
+        sablon="stokta_kalan"
         ad="Stokta kalanı içe aktar"
         aciklama="Şablon sütunları: ürün kodu, stok adedi, stok birim maliyeti; isteğe bağlı enflasyon (boşsa parametre) ve bu yıl üretim adedi (boşsa geçen yıl satışı). Seçili çalışmadaki kayıtlarla karşılaştırılır; yalnız yeni ve değişen ürünler yazılır, her değişiklik geçmişe kaydedilir."
         onizlemeGoster={(o) => {

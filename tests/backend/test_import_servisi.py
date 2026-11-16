@@ -66,10 +66,12 @@ def test_fiyat_listesi_onizle_ve_uygula(oturum, tmp_path):
     ws.append(["A1", "a", None, "AD", "TL", "abc"])    # hatalı
     ws.append(["B1", "b", None, "AD", "TL", -1])       # hatalı (negatif)
     dosya = tmp_path / "liste.xlsx"; wb.save(dosya)
-    on = ims.fiyat_listesi_onizle(oturum, sen.id, dosya, date(2026, 9, 1))
+    # 16.11.2026: fiyat_ekle varsayılan kaynağı 'elle'; elle fiyatlar varsayılan olarak korunur. Bu test üzerine yazma yolunu sınar.
+    on = ims.fiyat_listesi_onizle(oturum, sen.id, dosya, date(2026, 9, 1), elle_ustune_yaz=True)
     assert {d["kod"] for d in on["degisen"]} == {"A1", "C1"} and on["ayni"] == 1
     assert [d["kod"] for d in on["yeni"]] == ["YENI"] and on["hatali"] == ["A1", "B1"]
-    sonuc = ims.fiyat_listesi_uygula(oturum, sen.id, dosya, date(2026, 9, 1), "liste", "esma")
+    assert [d["kod"] for d in ims.fiyat_listesi_onizle(oturum, sen.id, dosya, date(2026, 9, 1))["degisen"]] == ["C1"]   # A1 elle: korunur
+    sonuc = ims.fiyat_listesi_uygula(oturum, sen.id, dosya, date(2026, 9, 1), "liste", "esma", elle_ustune_yaz=True)
     assert sonuc["yazilan"] == 2 and sorted(sonuc["kodlar"]) == ["A1", "C1"]
     g = fs.gecerli_fiyatlar(oturum, sen.id, date(2026, 10, 1))
     assert g["A1"].fiyat == D_("6") and g["C1"].fiyat == D_("3") and g["B1"].fiyat == D_("7") and "YENI" not in g
@@ -87,10 +89,12 @@ def test_fiyat_listesi_gecerlilik_tarihinde_karsilastirir(oturum, tmp_path):
     ws.append(["Malzeme", "Açıklama", "Tip", "Birim", "Para", "Fiyat"]); ws.append(["A1", "a", None, "AD", "TL", 6])
     dosya = tmp_path / "l.xlsx"; wb.save(dosya)
     # 15 Ağustos'ta fiyat 5 -> 6 değişiklik; 1 Ekim'de fiyat zaten 6 -> aynı
-    assert [d["kod"] for d in ims.fiyat_listesi_onizle(oturum, sen.id, dosya, date(2026, 8, 15))["degisen"]] == ["A1"]
+    # 16.11.2026: fiyatlar elle (fiyat_ekle varsayılanı); üzerine yazma yolu sınanır
+    assert [d["kod"] for d in ims.fiyat_listesi_onizle(oturum, sen.id, dosya, date(2026, 8, 15), True)["degisen"]] == ["A1"]
     assert ims.fiyat_listesi_onizle(oturum, sen.id, dosya, date(2026, 10, 1))["ayni"] == 1
-    assert ims.fiyat_listesi_uygula(oturum, sen.id, dosya, date(2026, 10, 1), "x") == {"yazilan": 0, "kodlar": []}
-    assert ims.fiyat_listesi_uygula(oturum, sen.id, dosya, date(2026, 8, 15), "x") == {"yazilan": 1, "kodlar": ["A1"]}
+    assert ims.fiyat_listesi_uygula(oturum, sen.id, dosya, date(2026, 10, 1), "x") == {"yazilan": 0, "kodlar": [], "korunan_elle": 0}
+    assert ims.fiyat_listesi_uygula(oturum, sen.id, dosya, date(2026, 8, 15), "x", elle_ustune_yaz=True) == \
+        {"yazilan": 1, "kodlar": ["A1"], "korunan_elle": 0}
 
 
 def test_kart_farklari_ve_yeniden_adlandirma(excel_yolu):

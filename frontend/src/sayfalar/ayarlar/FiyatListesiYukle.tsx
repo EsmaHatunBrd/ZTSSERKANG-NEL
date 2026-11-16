@@ -11,6 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/bilesenler/ui/tabs";
 import { paraBicimle } from "@/yardimcilar/para";
 import { bugunIso } from "@/yardimcilar/tarih";
 import { hataMetniVarsa } from "@/api/istemci";
+import { SablonIndir, YuklemeYardimi } from "@/bilesenler/SablonIndir";
+import { SonYuklemeSeridi } from "@/bilesenler/SonYuklemeSeridi";
+import { YuklemeOzetiKutusu } from "@/bilesenler/YuklemeOzetiKutusu";
+import { useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
+
+/** Fiyat listesi okuyucusunun gerçekten desteklediği uzantılar (.xls / .csv okunamaz). */
+const DESTEKLENEN = [".xlsx", ".xlsm"];
 
 const sema = z.object({
   tarih: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Geçerlilik tarihi zorunlu"),
@@ -29,8 +36,12 @@ export function FiyatListesiYukle({ senaryo, onKapat, onBasari }: Props) {
   const bugun = useMemo(() => bugunIso(), []);
   const [dosya, setDosya] = useState<File | null>(null);
   const [onizleme, setOnizleme] = useState<FiyatOnizleme | null>(null);
+  const [dosyaHata, setDosyaHata] = useState<string | null>(null);
+  /** Elle girilmiş fiyatlar: varsayılan korunur; kullanıcı "üzerine yaz" seçerse önizleme yenilenir. */
+  const [elleUstuneYaz, setElleUstuneYaz] = useState(false);
   const onizle = useImportFiyatOnizle();
   const uygula = useImportFiyatUygula();
+  const { kilitli, neden: kilitNedeni } = useYazmaKilidi();
   const {
     register,
     handleSubmit,
@@ -38,21 +49,19 @@ export function FiyatListesiYukle({ senaryo, onKapat, onBasari }: Props) {
     formState: { errors },
   } = useForm<z.infer<typeof sema>>({ resolver: zodResolver(sema), defaultValues: { tarih: bugun, neden: "" } });
 
-  function onizleBaslat() {
+  function onizleBaslat(elle = elleUstuneYaz) {
     if (!dosya) return;
-    onizle.mutate(
-      { dosya, senaryo, gecerlilik_basi: getValues("tarih") },
-      { onSuccess: (v) => setOnizleme(v) },
-    );
+    onizle.mutate({ dosya, senaryo, gecerlilik_basi: getValues("tarih"), elle_ustune_yaz: elle }, { onSuccess: (v) => setOnizleme(v) });
   }
 
   function uygulaBaslat(v: z.infer<typeof sema>) {
     if (!dosya) return;
     uygula.mutate(
-      { dosya, senaryo, gecerlilik_basi: v.tarih, neden: v.neden.trim() },
+      { dosya, senaryo, gecerlilik_basi: v.tarih, neden: v.neden.trim(), elle_ustune_yaz: elleUstuneYaz },
       {
         onSuccess: (s) => {
-          onBasari(`${s.yazilan} fiyat yazıldı.`);
+          const korunan = s.korunan_elle ? ` Elle girilmiş ${s.korunan_elle} fiyat korundu.` : "";
+          onBasari(`${s.yazilan} fiyat yazıldı.${korunan}`);
           onKapat();
         },
       },
@@ -69,6 +78,17 @@ export function FiyatListesiYukle({ senaryo, onKapat, onBasari }: Props) {
           <DialogDescription>Excel dosyasını seçin, değişiklikleri önizleyin, sonra uygulayın.</DialogDescription>
         </DialogHeader>
         <form className="flex flex-col gap-3" noValidate onSubmit={handleSubmit(uygulaBaslat)}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <YuklemeYardimi />
+            <SablonIndir kimlik="malzeme_fiyat_listesi" />
+          </div>
+          <SonYuklemeSeridi
+            yol="/api/v1/import/fiyat-listesi"
+            sorgu={{ senaryo }}
+            kilitli={kilitli}
+            kilitNedeni={kilitNedeni}
+            gecersiz={["malzemeler", "fiyat-gecmisi", "urunler", "uyarilar"]}
+          />
           <div className="flex flex-col gap-1">
             <label htmlFor={`${id}-dosya`} className="text-sm font-medium">
               Fiyat listesi dosyası
@@ -76,12 +96,23 @@ export function FiyatListesiYukle({ senaryo, onKapat, onBasari }: Props) {
             <Girdi
               id={`${id}-dosya`}
               type="file"
-              accept=".xlsx,.xlsm,.xls,.csv"
+              accept={DESTEKLENEN.join(",")}
+              aria-invalid={!!dosyaHata}
               onChange={(e) => {
-                setDosya(e.target.files?.[0] ?? null);
+                const f = e.target.files?.[0] ?? null;
+                const uygun = !f || DESTEKLENEN.some((u) => f.name.toLowerCase().endsWith(u));
+                setDosyaHata(
+                  uygun ? null : "Yalnız .xlsx dosyası yüklenebilir (.xls ve .csv desteklenmez; Excel'de .xlsx olarak kaydedin).",
+                );
+                setDosya(uygun ? f : null);
                 setOnizleme(null);
               }}
             />
+            {dosyaHata && (
+              <p role="alert" className="text-sm text-destructive">
+                {dosyaHata}
+              </p>
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <label htmlFor={`${id}-tarih`} className="text-sm font-medium">
@@ -102,13 +133,54 @@ export function FiyatListesiYukle({ senaryo, onKapat, onBasari }: Props) {
             )}
           </div>
           <div>
-            <Button type="button" variant="outline" disabled={!dosya || onizle.isPending} onClick={onizleBaslat}>
+            <Button type="button" variant="outline" disabled={!dosya || onizle.isPending} onClick={() => onizleBaslat()}>
               {onizle.isPending ? "Önizleniyor…" : "Önizle"}
             </Button>
           </div>
 
           {onizleme && (
             <>
+              {onizleme.ozet && <YuklemeOzetiKutusu ozet={onizleme.ozet} baslik="Fiyat listesi — sorunlu satırlar" />}
+              {(onizleme.elle?.length ?? 0) > 0 && (
+                <fieldset className="flex flex-col gap-1 rounded-md border p-2 text-sm" aria-label="Elle girilmiş fiyatlar">
+                  <legend className="px-1 font-medium">
+                    Elle girilmiş {onizleme.elle?.length} fiyat — korunsun mu, üzerine yazılsın mı?
+                  </legend>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`${id}-elle`}
+                      className="size-4"
+                      checked={!elleUstuneYaz}
+                      onChange={() => {
+                        setElleUstuneYaz(false);
+                        onizleBaslat(false);
+                      }}
+                    />
+                    Korunsun (önerilen)
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`${id}-elle`}
+                      className="size-4"
+                      checked={elleUstuneYaz}
+                      onChange={() => {
+                        setElleUstuneYaz(true);
+                        onizleBaslat(true);
+                      }}
+                    />
+                    Üzerine yazılsın
+                  </label>
+                  <ul className="max-h-32 overflow-auto pl-1 text-xs text-muted-foreground tabular-nums">
+                    {onizleme.elle?.map((x) => (
+                      <li key={x.kod}>
+                        {x.kod}: {paraBicimle(x.eski, "", 4)} (elle) → {paraBicimle(x.yeni, "", 4)}
+                      </li>
+                    ))}
+                  </ul>
+                </fieldset>
+              )}
               <Tabs defaultValue="degisen">
                 <TabsList>
                   <TabsTrigger value="degisen">Değişen ({onizleme.degisen.length})</TabsTrigger>
@@ -186,10 +258,10 @@ export function FiyatListesiYukle({ senaryo, onKapat, onBasari }: Props) {
                   <h3 id={`${id}-revize-baslik`} className="font-medium">
                     Revize fiyatlar
                   </h3>
-                  <p className="text-muted-foreground">
-                    Revize fiyat (S.ALMA BF I): {onizleme.revize.length}
+                  <p className="text-muted-foreground">Revize fiyat (S.ALMA BF I): {onizleme.revize.length}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Bu kalemlerde I sütunundaki revize fiyat geçerli olacak (ilk bütçe → revize).
                   </p>
-                  <p className="text-xs text-muted-foreground">Bu kalemlerde I sütunundaki revize fiyat geçerli olacak (ilk bütçe → revize).</p>
                   <ul className="mt-1 max-h-40 list-none overflow-auto pl-0 tabular-nums">
                     {onizleme.revize.map((r, i) => (
                       <li key={`${r.kod}-${i}`}>
@@ -211,7 +283,9 @@ export function FiyatListesiYukle({ senaryo, onKapat, onBasari }: Props) {
                 )}
               </div>
               <p aria-live="polite" className="rounded-md bg-muted p-2 text-sm">
-                Özet: {onizleme.degisen.length} değişen ve {onizleme.yeni.length} yeni fiyat yazılacak.
+                Özet: {onizleme.degisen.length} değişen fiyat yazılacak.
+                {onizleme.yeni.length > 0 &&
+                  ` Sistemde fiyatı olmayan ${onizleme.yeni.length} kod yazılmaz (Veri Aktar › Satın alma fiyat listesi).`}
               </p>
             </>
           )}
@@ -226,7 +300,7 @@ export function FiyatListesiYukle({ senaryo, onKapat, onBasari }: Props) {
               Vazgeç
             </Button>
             {onizleme && (
-              <Button type="submit" disabled={uygula.isPending}>
+              <Button type="submit" disabled={uygula.isPending || kilitli} title={kilitNedeni}>
                 {uygula.isPending ? "Uygulanıyor…" : "Uygula"}
               </Button>
             )}

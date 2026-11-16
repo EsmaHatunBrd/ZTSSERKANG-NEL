@@ -7,6 +7,7 @@ from ..servisler import smm_servisi as ss
 from .bagimliliklar import OturumDep, kullanici_ver
 from .semalar import (HATA_404_409_422, HATA_404_422, SmmDagitim, SmmDagitimGiris, SmmDonemCikis, SmmDonemListesi, SmmOzeti, SmmSarfFarki,
                       SmmStokTablosu, SmmUretimMaliyeti, SmmUrunRecetesi)
+from .semalar import GeriAlSonucu, SmmDonemExcelOnizleme, SonYuklemeYaniti
 
 router = APIRouter(tags=["smm"])
 
@@ -16,12 +17,32 @@ def donemler(s: OturumDep):
     return {"kayitlar": ss.donemler(s)}
 
 
+@router.post("/smm/donemler/yukle/onizle", response_model=SmmDonemExcelOnizleme, responses=HATA_404_409_422)
+def yukle_onizle(s: OturumDep, dosya: UploadFile = File(...), yil: int | None = Form(None), ay: int | None = Form(None)):
+    """SMM Excel'i önizlemesi (yazmaz): dönem, kalem sayıları, dönem varsa yeni / değişen / silinecek kalem, metin sayı hücreleri, uyarılar."""
+    return ss.yukle_onizle(s, dosya.file.read(ss.MAKS_BAYT + 1), dosya.filename or "", yil, ay)
+
+
 @router.post("/smm/donemler/yukle", response_model=SmmDonemCikis, responses=HATA_404_409_422)
 def yukle(s: OturumDep, dosya: UploadFile = File(...), yil: int | None = Form(None), ay: int | None = Form(None),
-          uzerine_yaz: bool = Form(False), k: str = Depends(kullanici_ver)):
-    """SMM Excel'i (.xlsx). Dönem verilmezse dosya adından çıkarılır (ör. '09-2026 SMM.xlsx'). Dönem yüklüyse 409; `uzerine_yaz=true` ile baştan yazılır."""
+          uzerine_yaz: bool = Form(False), onay: bool = Form(False), k: str = Depends(kullanici_ver)):
+    """SMM Excel'i (.xlsx). Dönem verilmezse dosya adından çıkarılır (ör. '09-2026 SMM.xlsx'). Dönem yüklüyse 409; `uzerine_yaz=true` ile baştan yazılır.
+    Üzerine yazarken dosyadaki kalem dönemdekinin yarısından azsa 409 `satir_kaybi_onayi`; `onay=true` ile yazılır. Kalem yoksa 422 `bos_dosya`."""
     icerik = dosya.file.read(ss.MAKS_BAYT + 1)
-    return ss.yukle(s, icerik, dosya.filename or "", yil, ay, uzerine_yaz, k)
+    return ss.yukle(s, icerik, dosya.filename or "", yil, ay, uzerine_yaz, k, onay=onay)
+
+
+@router.get("/smm/donemler/{donem_id}/son-yukleme", response_model=SonYuklemeYaniti, responses=HATA_404_422)
+def donem_son_yukleme(s: OturumDep, donem_id: int):
+    """Dönemin geri alınabilecek son SMM Excel'i yüklemesi; yoksa `son: null`."""
+    return ss.son_yukleme(s, donem_id)
+
+
+@router.post("/smm/donemler/{donem_id}/son-yuklemeyi-geri-al", response_model=GeriAlSonucu, responses=HATA_404_409_422)
+def donem_geri_al(s: OturumDep, donem_id: int, k: str = Depends(kullanici_ver)):
+    """Son SMM Excel'i yüklemesini geri alır: üzerine yazıldıysa dönem önceki hâline döner, yeni dönem açtıysa dönem silinir.
+    Dönem kapalıysa 409 `donem_kilitli`; açılışını bu dönemden devralan dönem varsa 409 `devralan_donem_var`; yükleme yoksa 404 `yedek_yok`."""
+    return ss.son_yuklemeyi_geri_al(s, donem_id, k)
 
 
 @router.delete("/smm/donemler/{donem_id}", status_code=204, response_class=Response, responses=HATA_404_422)
@@ -94,10 +115,23 @@ def recete_onizle(s: OturumDep, dosya: UploadFile = File(...)):
     return sr.onizle(s, dosya.file.read(ss.MAKS_BAYT + 1))
 
 
-@router.post("/smm/receteler/yukle", response_model=SmmAnaReceteOnizleme, responses=HATA_404_422)
-def recete_yukle(s: OturumDep, dosya: UploadFile = File(...), k: str = Depends(kullanici_ver)):
-    """Tüm kalıcı reçeteleri dosyadakilerle değiştirir; ürün başına alternatif seçimleri korunur."""
-    return sr.yukle(s, dosya.file.read(ss.MAKS_BAYT + 1), dosya.filename or "", k)
+@router.post("/smm/receteler/yukle", response_model=SmmAnaReceteOnizleme, responses=HATA_404_409_422)
+def recete_yukle(s: OturumDep, dosya: UploadFile = File(...), onay: bool = Form(False), k: str = Depends(kullanici_ver)):
+    """Tüm kalıcı reçeteleri dosyadakilerle değiştirir; ürün başına alternatif seçimleri korunur. Okunabilen satır yoksa 422 `bos_dosya`;
+    dosyadaki ürün mevcut ürünlerin yarısından azsa 409 `satir_kaybi_onayi` (`onay=true` ile yazılır)."""
+    return sr.yukle(s, dosya.file.read(ss.MAKS_BAYT + 1), dosya.filename or "", k, onay=onay)
+
+
+@router.get("/smm/receteler/son-yukleme", response_model=SonYuklemeYaniti)
+def recete_son_yukleme(s: OturumDep):
+    """Geri alınabilecek son Canias dökümü yüklemesi; yoksa `son: null`."""
+    return sr.son_yukleme_yedegi(s)
+
+
+@router.post("/smm/receteler/son-yuklemeyi-geri-al", response_model=GeriAlSonucu, responses=HATA_404_422)
+def recete_geri_al(s: OturumDep, k: str = Depends(kullanici_ver)):
+    """Kalıcı reçeteleri son yüklemeden önceki hâline döndürür (elle değiştirilmiş ürünlere dokunulmaz). Yükleme yoksa 404 `yedek_yok`."""
+    return sr.son_yuklemeyi_geri_al(s, k)
 
 
 @router.get("/smm/receteler/kiyas", response_model=SmmReceteKiyas, responses=HATA_404_422)
@@ -203,6 +237,7 @@ from ..servisler.kimlik_servisi import YONETICI_ROL  # noqa: E402
 from .bagimliliklar import GirisKullanicisiDep  # noqa: E402
 from .semalar import (SmmAyarGiris, SmmDevirDurumu, SmmDevirYenileCikis, SmmDevirYenileGiris, SmmKilitCikis, SmmKilitGiris,  # noqa: E402
                       SmmVeriDurumu)
+from .semalar import SmmKaynakOnizleme  # noqa: E402
 
 
 @router.get("/smm/donemler/{donem_id}/veri", response_model=SmmVeriDurumu, responses=HATA_404_422)
@@ -211,10 +246,32 @@ def veri_durumu(s: OturumDep, donem_id: int):
     return sv.veri_durumu(s, donem_id)
 
 
+@router.post("/smm/donemler/{donem_id}/veri/{kaynak}/onizle", response_model=SmmKaynakOnizleme, responses=HATA_404_409_422)
+def veri_onizle(s: OturumDep, donem_id: int, kaynak: str, dosya: UploadFile = File(...)):
+    """Yüklemeden önce: yeni / değişen / aynı / sıfırlanacak kalem, sorunlu satırlar (yazılmayacak), uyarılar. Hiçbir şey yazılmaz."""
+    return sv.kaynak_onizle(s, donem_id, kaynak, dosya.file.read(ss.MAKS_BAYT + 1))
+
+
 @router.post("/smm/donemler/{donem_id}/veri/{kaynak}", response_model=SmmVeriDurumu, responses=HATA_404_409_422)
-def veri_yukle(s: OturumDep, donem_id: int, kaynak: str, dosya: UploadFile = File(...), k: str = Depends(kullanici_ver)):
-    """Tek bir veri kaynağını (alim, iade, uretim, sayim, sahit, gider_mizan, stok_mizan) dosyadan yükler; o kaynağın eski verisi yerine geçer."""
-    return sv.kaynak_yukle(s, donem_id, kaynak, dosya.file.read(ss.MAKS_BAYT + 1), dosya.filename or "", k)
+def veri_yukle(s: OturumDep, donem_id: int, kaynak: str, dosya: UploadFile = File(...), onay: bool = Form(False),
+               k: str = Depends(kullanici_ver)):
+    """Tek bir veri kaynağını (alim, iade, uretim, sayim, sahit, gider_mizan, stok_mizan) dosyadan yükler; o kaynağın eski verisi yerine geçer.
+
+    Okunabilen satır yoksa 422 `bos_dosya` (veri değişmez). Dosyadaki kayıt mevcut verinin yarısından azsa 409 `satir_kaybi_onayi`
+    (`alanlar`: mevcut, yeni, silinecek); `onay=true` ile yazılır. Başka kaynağın / şablonun dosyası 422 `yanlis_kaynak` / `yanlis_sablon`."""
+    return sv.kaynak_yukle(s, donem_id, kaynak, dosya.file.read(ss.MAKS_BAYT + 1), dosya.filename or "", k, onay=onay)
+
+
+@router.get("/smm/donemler/{donem_id}/veri/{kaynak}/son-yukleme", response_model=SonYuklemeYaniti, responses=HATA_404_422)
+def veri_son_yukleme(s: OturumDep, donem_id: int, kaynak: str):
+    """Geri alınabilecek son yükleme (tarih, kişi, özet); yoksa `son: null`."""
+    return sv.son_yukleme(s, donem_id, kaynak)
+
+
+@router.post("/smm/donemler/{donem_id}/veri/{kaynak}/son-yuklemeyi-geri-al", response_model=GeriAlSonucu, responses=HATA_404_409_422)
+def veri_geri_al(s: OturumDep, donem_id: int, kaynak: str, k: str = Depends(kullanici_ver)):
+    """Kaynağın son yüklemesinden önceki hâlini geri yazar. Dönem kapalıysa 409 `donem_kilitli`; geri alınacak yükleme yoksa 404 `yedek_yok`."""
+    return sv.son_yuklemeyi_geri_al(s, donem_id, kaynak, k)
 
 
 @router.put("/smm/donemler/{donem_id}/ayarlar", response_model=SmmVeriDurumu, responses=HATA_404_409_422)

@@ -47,6 +47,8 @@ export interface AktarimUygulaDegiskenleri extends AktarimOnizleDegiskenleri {
   kartlari_guncelle?: boolean;
   /** Yalnız reçetede: uygulanacak ürün sayfaları. */
   sayfalar?: string[];
+  /** Satır kaybı onayı (409 `satir_kaybi_onayi` sonrası true ile yeniden gönderilir). */
+  onay?: boolean;
 }
 
 // Uç adresi tipe göre değişir; openapi-fetch yolu sabit ister, bu yüzden ilk uca daraltılır (gövde bodySerializer ile kurulur).
@@ -75,6 +77,6 @@ export function useAktarimUygula<T extends AktarimTipi>(tip: T) {
           bodySerializer: () => formVerisi({ ...d }),
         }),
       ) as unknown as Promise<TipHaritasi[T]["uygula"]>,
-    onSuccess: () => Promise.all(GECERSIZ[tip].map((k) => qc.invalidateQueries({ queryKey: [k] }))),
+    onSuccess: () => Promise.all([...GECERSIZ[tip], "son-yukleme"].map((k) => qc.invalidateQueries({ queryKey: [k] }))),
   });
 }
