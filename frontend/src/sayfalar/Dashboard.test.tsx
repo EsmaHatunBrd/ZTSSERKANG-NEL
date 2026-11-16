@@ -1,9 +1,9 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw";
 import { sunucu } from "@/test/msw/sunucu";
 import { SenaryoSaglayici } from "@/bilesenler/SenaryoSecici";
 import { dashboardSatirlari, senaryolar } from "@/test/fikstur/urunler";
@@ -77,68 +77,13 @@ describe("Dashboard", () => {
     expect(within(satir).getAllByText("—").length).toBeGreaterThanOrEqual(10);
   });
 
-  it("Excel'e aktar bağlantısı doğru href ve download taşır", async () => {
+  it("tek İndir düğmesi diyaloğu açar; eski Excel düğmeleri yok", async () => {
     kur();
     await yuklendi();
-    const a = screen.getByRole("link", { name: /Excel'e aktar/ });
-    expect(a).toHaveAttribute("href", "/api/v1/disa-aktar/urunler.xlsx?senaryo=1");
-    expect(a).toHaveAttribute("download");
-  });
-
-  it("Tüm maliyet kartları düğmesi doğru adresi çağırır, hazırlanırken 'Hazırlanıyor…' gösterir ve dosyayı indirir", async () => {
-    const istekler: string[] = [];
-    sunucu.use(
-      http.get("*/api/v1/disa-aktar/maliyet-kartlari", async ({ request }) => {
-        const u = new URL(request.url);
-        istekler.push(u.pathname + u.search);
-        await delay(60);
-        return new HttpResponse(new Uint8Array([80, 75, 3, 4]), {
-          headers: {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": 'attachment; filename="maliyet-kartlari-2026-2027-11-13-2026.xlsx"',
-          },
-        });
-      }),
-    );
-    const adresler = URL as unknown as { createObjectURL?: unknown; revokeObjectURL?: unknown };
-    const eski = { c: adresler.createObjectURL, r: adresler.revokeObjectURL };
-    adresler.createObjectURL = vi.fn(() => "blob:deneme");
-    adresler.revokeObjectURL = vi.fn();
-    const indirilen: string[] = [];
-    const tikla = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
-      indirilen.push(`${this.download}|${this.getAttribute("href")}`);
-    });
-    try {
-      kur();
-      await yuklendi();
-      const dugme = screen.getByRole("button", { name: "Tüm maliyet kartları (ürün başına sayfa)" });
-      await userEvent.click(dugme);
-      const bekleyen = await screen.findByRole("button", { name: "Hazırlanıyor…" });
-      expect(bekleyen).toBeDisabled();
-      expect(await screen.findByRole("button", { name: "Tüm maliyet kartları (ürün başına sayfa)" })).toBeEnabled();
-      expect(istekler).toEqual(["/api/v1/disa-aktar/maliyet-kartlari?senaryo=1"]);
-      expect(indirilen).toEqual(["maliyet-kartlari-2026-2027-11-13-2026.xlsx|blob:deneme"]);
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-      // mevcut "Bu tablo" bağlantısı yerinde
-      expect(screen.getByRole("link", { name: /Excel'e aktar/ })).toHaveAttribute("title", "Bu tablo");
-    } finally {
-      tikla.mockRestore();
-      adresler.createObjectURL = eski.c;
-      adresler.revokeObjectURL = eski.r;
-    }
-  });
-
-  it("Tüm maliyet kartları: sunucu hata verirse mesaj gösterilir, düğme yeniden kullanılabilir", async () => {
-    sunucu.use(
-      http.get("*/api/v1/disa-aktar/maliyet-kartlari", () =>
-        HttpResponse.json({ hata: "bulunamadi", mesaj: "senaryo yok", alanlar: {} }, { status: 404 }),
-      ),
-    );
-    kur();
-    await yuklendi();
-    await userEvent.click(screen.getByRole("button", { name: "Tüm maliyet kartları (ürün başına sayfa)" }));
-    expect(await screen.findByText("senaryo yok")).toHaveAttribute("role", "alert");
-    expect(screen.getByRole("button", { name: "Tüm maliyet kartları (ürün başına sayfa)" })).toBeEnabled();
+    expect(screen.queryByRole("link", { name: /Excel'e aktar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Tüm maliyet kartları/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "İndir" }));
+    expect(await screen.findByRole("dialog", { name: "İndir" })).toBeInTheDocument();
   });
 
   it("metin arama kod ve ada göre süzer", async () => {

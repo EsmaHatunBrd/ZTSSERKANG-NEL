@@ -66,14 +66,19 @@ function indirmeyiYakala() {
 }
 
 describe("OnayCiktisiDiyalogu", () => {
-  it("türler: Excel (rakamlar) seçili, PDF seçilebilir, formüllü Excel devre dışı ve 'Yakında'", async () => {
+  it("Fiyat'ta varsayılan Genel Bakış tablosu; Rapor seçilince türler ve ekler görünür", async () => {
     render(<OnayCiktisiDiyalogu kapsam={FIYAT} onKapat={() => {}} />);
-    expect(screen.getByRole("radio", { name: "Excel (rakamlar)" })).toBeChecked();
+    expect(screen.getByRole("dialog", { name: "İndir" })).toBeInTheDocument();
+    expect(screen.queryByText(/müşavir/)).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Genel Bakış tablosu/ })).toBeChecked();
+    expect(screen.queryByRole("radio", { name: "Excel" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: /^Rapor/ }));
+    expect(screen.getByRole("radio", { name: "Excel" })).toBeChecked();
     const formullu = screen.getByRole("radio", { name: /Excel \(formüllü\)/ });
     expect(formullu).toBeDisabled();
     expect(screen.getByText("Yakında")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("radio", { name: "PDF (yazdırmaya ve imzaya hazır)" }));
-    expect(screen.getByRole("radio", { name: "PDF (yazdırmaya ve imzaya hazır)" })).toBeChecked();
+    await userEvent.click(screen.getByRole("radio", { name: "PDF" }));
+    expect(screen.getByRole("radio", { name: "PDF" })).toBeChecked();
     // ekler varsayılan açık; Fiyat'ta mutabakat yok
     for (const ad of ["Kapak sayfası", "Elle yapılan değişiklikler", "Değişiklik günlüğü özeti (son 90 gün)"]) {
       expect(screen.getByRole("checkbox", { name: ad })).toBeChecked();
@@ -94,6 +99,7 @@ describe("OnayCiktisiDiyalogu", () => {
     const ind = indirmeyiYakala();
     try {
       render(<OnayCiktisiDiyalogu kapsam={FIYAT} onKapat={() => {}} />);
+      await userEvent.click(screen.getByRole("radio", { name: /^Rapor/ }));
       expect(screen.getByTestId("onay-durumu")).toHaveTextContent("Bu çalışma kapatılmadığı için çıktı TASLAK damgalı olur.");
       await userEvent.click(screen.getByRole("radio", { name: /Yalnız seçtiğim ürünler/ }));
       // seçim yokken indirilemez
@@ -104,7 +110,7 @@ describe("OnayCiktisiDiyalogu", () => {
       await userEvent.click(screen.getByRole("checkbox", { name: /U-2/ }));
       await userEvent.click(screen.getByRole("checkbox", { name: "Elle yapılan değişiklikler" }));
       await userEvent.type(screen.getByRole("textbox", { name: "Hazırlayan" }), "  Ayşe Deneme ");
-      await userEvent.click(screen.getByRole("radio", { name: "PDF (yazdırmaya ve imzaya hazır)" }));
+      await userEvent.click(screen.getByRole("radio", { name: "PDF" }));
       await userEvent.click(screen.getByRole("button", { name: "İndir" }));
       expect(await screen.findByRole("button", { name: "Hazırlanıyor…" })).toBeDisabled();
       await waitFor(() => expect(screen.getByRole("button", { name: "İndir" })).toBeEnabled());
@@ -119,6 +125,31 @@ describe("OnayCiktisiDiyalogu", () => {
       ]);
       expect(ind.indirilen).toEqual(["onay-ciktisi-smm-2026-10.pdf"]);
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    } finally {
+      ind.geriAl();
+    }
+  });
+
+  it("Fiyat: Tüm maliyet kartları seçilince ilgili Excel indirilir", async () => {
+    const istekler: string[] = [];
+    sunucu.use(
+      http.get("*/api/v1/disa-aktar/maliyet-kartlari", ({ request }) => {
+        const u = new URL(request.url);
+        istekler.push(u.pathname + u.search);
+        return new HttpResponse(new Uint8Array([80, 75, 3, 4]), {
+          headers: { "Content-Disposition": 'attachment; filename="maliyet-kartlari-deneme.xl' + 'sx"' },
+        });
+      }),
+    );
+    const ind = indirmeyiYakala();
+    const kapat = vi.fn();
+    try {
+      render(<OnayCiktisiDiyalogu kapsam={FIYAT} onKapat={kapat} />);
+      await userEvent.click(screen.getByRole("radio", { name: /Tüm maliyet kartları/ }));
+      await userEvent.click(screen.getByRole("button", { name: "İndir" }));
+      await waitFor(() => expect(kapat).toHaveBeenCalled());
+      expect(istekler).toEqual(["/api/v1/disa-aktar/maliyet-kartlari?senaryo=7"]);
+      expect(ind.indirilen).toEqual(["maliyet-kartlari-deneme.xl" + "sx"]);
     } finally {
       ind.geriAl();
     }

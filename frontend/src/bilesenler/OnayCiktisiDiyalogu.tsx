@@ -1,10 +1,11 @@
 import { useId, useMemo, useState } from "react";
-import { FileCheck2, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import type { OnayCiktisiEkleri, OnayCiktisiFiyatGiris, OnayCiktisiImzalari, OnayCiktisiSmmGiris } from "@/api/tipler";
 import { Button } from "@/bilesenler/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/bilesenler/ui/dialog";
 import { Girdi } from "@/bilesenler/Girdi";
 import { cn } from "@/lib/utils";
+import { maliyetKartlariXlsxAdresi } from "@/api/sorgular/onemliMalzemeler";
 import { dosyaIndir } from "@/yardimcilar/indir";
 import * as kullanici from "@/yardimcilar/kullanici";
 
@@ -24,8 +25,8 @@ export type OnayKapsami =
 export type OnayTuru = "excel" | "pdf";
 
 const TURLER: { deger: OnayTuru | "formullu"; etiket: string; ipucu?: string }[] = [
-  { deger: "excel", etiket: "Excel (rakamlar)" },
-  { deger: "pdf", etiket: "PDF (yazdırmaya ve imzaya hazır)" },
+  { deger: "excel", etiket: "Excel" },
+  { deger: "pdf", etiket: "PDF" },
   { deger: "formullu", etiket: "Excel (formüllü)", ipucu: "Yakında" },
 ];
 
@@ -36,6 +37,18 @@ const IMZALAR: { alan: keyof OnayCiktisiImzalari; etiket: string }[] = [
 ];
 
 type Ekler = Required<OnayCiktisiEkleri>;
+
+/** Fiyat Çalışması'nda ne indirileceği: Genel Bakış tablosu, tüm maliyet kartları ya da kapaklı/ekli tam rapor. */
+type Icerik = "tablo" | "kartlar" | "rapor";
+const ICERIKLER: { deger: Icerik; etiket: string; aciklama: string }[] = [
+  { deger: "tablo", etiket: "Genel Bakış tablosu", aciklama: "Ekrandaki ürün listesi, tek sayfa Excel" },
+  { deger: "kartlar", etiket: "Tüm maliyet kartları", aciklama: "Her ürün ayrı sayfada, tek Excel" },
+  {
+    deger: "rapor",
+    etiket: "Rapor",
+    aciklama: "Kapak, teklif kapak, ürün kartları, fiyatlar, parametreler, imza alanları; Excel ya da PDF",
+  },
+];
 
 /** Diyalogun gönderdiği gövde (test ve çağıranlar için dışa açık). */
 export function onayGovdesi(
@@ -66,6 +79,8 @@ const SECIM_SINIFI = "h-8 rounded-lg border bg-background px-2 text-sm";
 export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; onKapat: () => void }) {
   const id = useId();
   const [tur, setTur] = useState<OnayTuru>("excel");
+  const [icerik, setIcerik] = useState<Icerik>(kapsam.modul === "fiyat" ? "tablo" : "rapor");
+  const rapor = icerik === "rapor";
   const [tumUrunler, setTumUrunler] = useState(true);
   const [secili, setSecili] = useState<string[]>([]);
   const [arama, setArama] = useState("");
@@ -82,7 +97,7 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
     const q = arama.trim().toLocaleLowerCase("tr");
     return q ? kapsam.urunler.filter((u) => `${u.kod} ${u.ad}`.toLocaleLowerCase("tr").includes(q)) : kapsam.urunler;
   }, [kapsam, arama]);
-  const secimEksik = kapsam.modul === "fiyat" && !tumUrunler && secili.length === 0;
+  const secimEksik = rapor && kapsam.modul === "fiyat" && !tumUrunler && secili.length === 0;
 
   const ekListesi: { alan: keyof Ekler; etiket: string }[] = [
     { alan: "kapak", etiket: "Kapak sayfası" },
@@ -107,11 +122,25 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
     const ad = kullanici.al();
     if (kullanici.adGecerli(ad)) basliklar["X-Kullanici"] = encodeURIComponent(ad);
     try {
-      await dosyaIndir(`/api/v1/onay-ciktisi/${kapsam.modul}`, `onay-ciktisi.${tur === "pdf" ? "pdf" : "xlsx"}`, {
-        method: "POST",
-        headers: basliklar,
-        body: JSON.stringify(govde),
-      });
+      if (kapsam.modul === "fiyat" && icerik === "tablo") {
+        await dosyaIndir(`/api/v1/disa-aktar/urunler.xl` + `sx?senaryo=${kapsam.senaryoId}`, "genel-bakis.xl" + "sx");
+        onKapat();
+        return;
+      }
+      if (kapsam.modul === "fiyat" && icerik === "kartlar") {
+        await dosyaIndir(maliyetKartlariXlsxAdresi(kapsam.senaryoId), "maliyet-kartlari.xl" + "sx");
+        onKapat();
+        return;
+      }
+      await dosyaIndir(
+        `/api/v1/onay-ciktisi/${kapsam.modul}`,
+        `${kapsam.modul === "fiyat" ? "fiyat-calismasi" : "maliyet-muhasebesi"}-rapor.${tur === "pdf" ? "pdf" : "xl" + "sx"}`,
+        {
+          method: "POST",
+          headers: basliklar,
+          body: JSON.stringify(govde),
+        },
+      );
     } catch (e) {
       setHata(e instanceof Error ? e.message : "Dosya hazırlanamadı");
     } finally {
@@ -123,117 +152,160 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
     <Dialog open onOpenChange={(a) => !a && !hazirlaniyor && onKapat()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Onay çıktısı</DialogTitle>
+          <DialogTitle>İndir</DialogTitle>
           <DialogDescription>
-            {kapsam.modul === "fiyat" ? `Fiyat Çalışması · ${kapsam.senaryoAdi}` : "Maliyet muhasebesi"} — yeminli mali müşavir için yalnız
-            rakamlar (formül yok).
+            {kapsam.modul === "fiyat" ? `Fiyat Çalışması · ${kapsam.senaryoAdi}` : "Maliyet muhasebesi"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 text-sm">
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 font-medium">Kapsam</legend>
-            {kapsam.modul === "fiyat" ? (
-              <>
-                <label className="flex items-center gap-2">
-                  <input type="radio" name={`${id}-kapsam`} checked={tumUrunler} onChange={() => setTumUrunler(true)} />
-                  Seçili çalışmanın tüm ürünleri
+          {kapsam.modul === "fiyat" && (
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="mb-1 font-medium">Ne indirilsin?</legend>
+              {ICERIKLER.map((c) => (
+                <label key={c.deger} className="flex items-start gap-2">
+                  <input
+                    type="radio"
+                    className="mt-1"
+                    name={`${id}-icerik`}
+                    checked={icerik === c.deger}
+                    onChange={() => setIcerik(c.deger)}
+                  />
+                  <span>
+                    {c.etiket}
+                    <span className="block text-xs text-muted-foreground">{c.aciklama}</span>
+                  </span>
                 </label>
-                <label className="flex items-center gap-2">
-                  <input type="radio" name={`${id}-kapsam`} checked={!tumUrunler} onChange={() => setTumUrunler(false)} />
-                  Yalnız seçtiğim ürünler{!tumUrunler && ` (${secili.length} seçili)`}
-                </label>
-                {!tumUrunler && (
-                  <div className="flex flex-col gap-2 rounded-lg border p-2">
-                    <Girdi aria-label="Ürün ara" placeholder="Kod ya da ad ara" value={arama} onChange={(e) => setArama(e.target.value)} />
-                    {kapsam.urunlerYukleniyor ? (
-                      <p className="text-muted-foreground">Ürünler yükleniyor…</p>
-                    ) : (
-                      <ul aria-label="Ürünler" className="max-h-48 overflow-y-auto">
-                        {gorunenUrunler.map((u) => (
-                          <li key={u.kod}>
-                            <label className="flex items-center gap-2 py-0.5">
-                              <input
-                                type="checkbox"
-                                checked={secili.includes(u.kod)}
-                                onChange={(e) => urunDegistir(u.kod, e.target.checked)}
-                              />
-                              <span className="font-mono text-xs">{u.kod}</span>
-                              <span className="truncate">{u.ad}</span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
+              ))}
+            </fieldset>
+          )}
+
+          {rapor && (
+            <>
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-1 font-medium">Kapsam</legend>
+                {kapsam.modul === "fiyat" ? (
+                  <>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name={`${id}-kapsam`} checked={tumUrunler} onChange={() => setTumUrunler(true)} />
+                      Seçili çalışmanın tüm ürünleri
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name={`${id}-kapsam`} checked={!tumUrunler} onChange={() => setTumUrunler(false)} />
+                      Yalnız seçtiğim ürünler{!tumUrunler && ` (${secili.length} seçili)`}
+                    </label>
+                    {!tumUrunler && (
+                      <div className="flex flex-col gap-2 rounded-lg border p-2">
+                        <Girdi
+                          aria-label="Ürün ara"
+                          placeholder="Kod ya da ad ara"
+                          value={arama}
+                          onChange={(e) => setArama(e.target.value)}
+                        />
+                        {kapsam.urunlerYukleniyor ? (
+                          <p className="text-muted-foreground">Ürünler yükleniyor…</p>
+                        ) : (
+                          <ul aria-label="Ürünler" className="max-h-48 overflow-y-auto">
+                            {gorunenUrunler.map((u) => (
+                              <li key={u.kod}>
+                                <label className="flex items-center gap-2 py-0.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={secili.includes(u.kod)}
+                                    onChange={(e) => urunDegistir(u.kod, e.target.checked)}
+                                  />
+                                  <span className="font-mono text-xs">{u.kod}</span>
+                                  <span className="truncate">{u.ad}</span>
+                                </label>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {secimEksik && <p className="text-xs text-destructive">En az bir ürün seçin.</p>}
+                      </div>
                     )}
-                    {secimEksik && <p className="text-xs text-destructive">En az bir ürün seçin.</p>}
-                  </div>
+                  </>
+                ) : (
+                  <label className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Dönem</span>
+                    <select
+                      aria-label="Dönem"
+                      className={SECIM_SINIFI}
+                      value={donemId}
+                      onChange={(e) => setDonemId(Number(e.target.value))}
+                    >
+                      {kapsam.donemler.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.ad}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 )}
-              </>
-            ) : (
-              <label className="flex items-center gap-2">
-                <span className="text-muted-foreground">Dönem</span>
-                <select aria-label="Dönem" className={SECIM_SINIFI} value={donemId} onChange={(e) => setDonemId(Number(e.target.value))}>
-                  {kapsam.donemler.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.ad}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </fieldset>
+              </fieldset>
 
-          <p
-            data-testid="onay-durumu"
-            className={cn("rounded-lg px-3 py-2", kesin ? "bg-muted" : "border border-destructive/40 bg-destructive/5 text-destructive")}
-          >
-            {kesin ? `Bu ${nesne} kapatıldı: çıktı KESİN olarak işaretlenir.` : `Bu ${nesne} kapatılmadığı için çıktı TASLAK damgalı olur.`}
-          </p>
+              <p
+                data-testid="onay-durumu"
+                className={cn(
+                  "rounded-lg px-3 py-2",
+                  kesin ? "bg-muted" : "border border-destructive/40 bg-destructive/5 text-destructive",
+                )}
+              >
+                {kesin
+                  ? `Bu ${nesne} kapatıldı: çıktı KESİN olarak işaretlenir.`
+                  : `Bu ${nesne} kapatılmadığı için çıktı TASLAK damgalı olur.`}
+              </p>
 
-          <fieldset className="flex flex-col gap-1.5">
-            <legend className="mb-1 font-medium">Tür</legend>
-            {TURLER.map((t) => (
-              <label key={t.deger} className={cn("flex items-center gap-2", t.ipucu && "text-muted-foreground")} title={t.ipucu}>
-                <input
-                  type="radio"
-                  name={`${id}-tur`}
-                  value={t.deger}
-                  disabled={t.deger === "formullu"}
-                  checked={tur === t.deger}
-                  onChange={() => t.deger !== "formullu" && setTur(t.deger)}
-                />
-                {t.etiket}
-                {t.ipucu && <span className="rounded bg-muted px-1.5 text-xs">{t.ipucu}</span>}
-              </label>
-            ))}
-          </fieldset>
+              <fieldset className="flex flex-col gap-1.5">
+                <legend className="mb-1 font-medium">Tür</legend>
+                {TURLER.map((t) => (
+                  <label key={t.deger} className={cn("flex items-center gap-2", t.ipucu && "text-muted-foreground")} title={t.ipucu}>
+                    <input
+                      type="radio"
+                      name={`${id}-tur`}
+                      value={t.deger}
+                      disabled={t.deger === "formullu"}
+                      checked={tur === t.deger}
+                      onChange={() => t.deger !== "formullu" && setTur(t.deger)}
+                    />
+                    {t.etiket}
+                    {t.ipucu && <span className="rounded bg-muted px-1.5 text-xs">{t.ipucu}</span>}
+                  </label>
+                ))}
+              </fieldset>
 
-          <fieldset className="flex flex-col gap-1.5">
-            <legend className="mb-1 font-medium">Ekler</legend>
-            {ekListesi.map((e) => (
-              <label key={e.alan} className="flex items-center gap-2">
-                <input type="checkbox" checked={ekler[e.alan]} onChange={(x) => setEkler((o) => ({ ...o, [e.alan]: x.target.checked }))} />
-                {e.etiket}
-              </label>
-            ))}
-          </fieldset>
+              <fieldset className="flex flex-col gap-1.5">
+                <legend className="mb-1 font-medium">Ekler</legend>
+                {ekListesi.map((e) => (
+                  <label key={e.alan} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={ekler[e.alan]}
+                      onChange={(x) => setEkler((o) => ({ ...o, [e.alan]: x.target.checked }))}
+                    />
+                    {e.etiket}
+                  </label>
+                ))}
+              </fieldset>
 
-          <fieldset className="grid gap-2 sm:grid-cols-3">
-            <legend className="mb-1 font-medium">
-              İmza alanları <span className="font-normal text-muted-foreground">(isteğe bağlı; boşsa çizgi boş kalır)</span>
-            </legend>
-            {IMZALAR.map((i) => (
-              <label key={i.alan} className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">{i.etiket}</span>
-                <Girdi
-                  aria-label={i.etiket}
-                  maxLength={120}
-                  value={imzalar[i.alan] ?? ""}
-                  onChange={(e) => setImzalar((o) => ({ ...o, [i.alan]: e.target.value }))}
-                />
-              </label>
-            ))}
-          </fieldset>
+              <fieldset className="grid gap-2 sm:grid-cols-3">
+                <legend className="mb-1 font-medium">
+                  İmza alanları <span className="font-normal text-muted-foreground">(isteğe bağlı; boşsa çizgi boş kalır)</span>
+                </legend>
+                {IMZALAR.map((i) => (
+                  <label key={i.alan} className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">{i.etiket}</span>
+                    <Girdi
+                      aria-label={i.etiket}
+                      maxLength={120}
+                      value={imzalar[i.alan] ?? ""}
+                      onChange={(e) => setImzalar((o) => ({ ...o, [i.alan]: e.target.value }))}
+                    />
+                  </label>
+                ))}
+              </fieldset>
+            </>
+          )}
 
           {hata && (
             <p role="alert" className="text-destructive">
@@ -247,7 +319,7 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
             Kapat
           </Button>
           <Button type="button" onClick={indir} disabled={hazirlaniyor || secimEksik} aria-busy={hazirlaniyor}>
-            {hazirlaniyor ? <Loader2 className="animate-spin" aria-hidden /> : <FileCheck2 aria-hidden />}
+            {hazirlaniyor ? <Loader2 className="animate-spin" aria-hidden /> : <Download aria-hidden />}
             {hazirlaniyor ? "Hazırlanıyor…" : "İndir"}
           </Button>
         </DialogFooter>
@@ -256,7 +328,7 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
   );
 }
 
-/** "Onay çıktısı" düğmesi: tıklanınca diyalogu açar. `kapsam` diyalog açıkken hesaplanır (ürün listesi gibi yükler için). */
+/** "İndir" düğmesi: tıklanınca diyalogu açar. `kapsam` diyalog açıkken hesaplanır (ürün listesi gibi yükler için). */
 export function OnayCiktisiDugmesi({ kapsam, onAc }: { kapsam: OnayKapsami | null; onAc?: (acik: boolean) => void }) {
   const [acik, setAcik] = useState(false);
   function degistir(a: boolean) {
@@ -265,9 +337,9 @@ export function OnayCiktisiDugmesi({ kapsam, onAc }: { kapsam: OnayKapsami | nul
   }
   return (
     <>
-      <Button type="button" variant="outline" onClick={() => degistir(true)} title="Yeminli mali müşavir için Excel ya da PDF">
-        <FileCheck2 aria-hidden />
-        Onay çıktısı
+      <Button type="button" variant="outline" onClick={() => degistir(true)} title="Excel ya da PDF olarak indir">
+        <Download aria-hidden />
+        İndir
       </Button>
       {acik && kapsam && <OnayCiktisiDiyalogu kapsam={kapsam} onKapat={() => degistir(false)} />}
     </>

@@ -209,5 +209,5 @@ describe("HavuzDiyalogu (Faz 5b G1)", () => {
       await screen.findByText("Sayı olmalı", {}, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(onGonder).not.toHaveBeenCalled();
-  });
+  }, 20_000); // çok adımlı form; tam süit yükünde 5 sn varsayılanı aşabiliyor
 });

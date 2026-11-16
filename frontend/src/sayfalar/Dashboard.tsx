@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Columns3, Copy, Download, PackagePlus, Upload, X } from "lucide-react";
+import { ChevronDown, Columns3, Copy, PackagePlus, Upload, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import type Decimal from "decimal.js";
 import { useTutarlilik } from "@/api/sorgular/tutarlilik";
@@ -22,7 +22,6 @@ import { AmbalajOzeti } from "./dashboard/AmbalajOzeti";
 import { GerceklesenSeridi } from "./dashboard/GerceklesenSeridi";
 import { VeriKontroluSeridi } from "./dashboard/VeriKontroluSeridi";
 import { GenelGrafikler } from "./dashboard/GenelGrafikler";
-import { MaliyetKartlariDugmesi } from "./dashboard/MaliyetKartlariDugmesi";
 import { OnayCiktisiFiyatDugmesi } from "./dashboard/OnayCiktisiFiyatDugmesi";
 import { OneCikanlar } from "./dashboard/OneCikanlar";
 import { UstKartlar } from "./dashboard/UstKartlar";
@@ -417,21 +416,7 @@ export default function Dashboard() {
         bant
         baslik="Genel Bakış"
         altBaslik={senaryo ? `${senaryo.sezon_ad} · ${senaryo.ad} — ürünlerin maliyet ve satış özeti` : "Ürünlerin maliyet ve satış özeti"}
-        eylemler={
-          <>
-            <a
-              href={`/api/v1/disa-aktar/urunler.xlsx?senaryo=${senaryoId}`}
-              download
-              title="Bu tablo"
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
-              <Download aria-hidden />
-              Excel&apos;e aktar
-            </a>
-            {senaryoId !== null && <MaliyetKartlariDugmesi senaryoId={senaryoId} />}
-            {senaryo && <OnayCiktisiFiyatDugmesi senaryo={senaryo} />}
-          </>
-        }
+        eylemler={<>{senaryo && <OnayCiktisiFiyatDugmesi senaryo={senaryo} />}</>}
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
