@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { D, paraBicimle, yuzdeBicimle } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
 import { DonemSecici, DonemYok, Miktar, milyon, useGecikmeli, useSmmDonemSecimi } from "./ortak";
+import { SmmDuzenlemeKilidi, useSmmYazmaKilidi, type SmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 const GiderDagitimGrafigi = lazy(() => import("./GiderDagitimGrafigi").then((m) => ({ default: m.GiderDagitimGrafigi })));
 
@@ -49,12 +50,14 @@ function ElleDeger({
   deger,
   elle,
   bekliyor,
+  yazma,
   onKaydet,
 }: {
   alan: string;
   deger: string;
   elle: boolean;
   bekliyor: boolean;
+  yazma: SmmYazmaKilidi;
   onKaydet: (v: string | null) => void;
 }) {
   const [duzenle, setDuzenle] = useState(false);
@@ -76,7 +79,13 @@ function ElleDeger({
               value={metin}
               onChange={(e) => setMetin(e.target.value)}
             />
-            <Button type="button" size="sm" disabled={api === null || bekliyor} onClick={() => (onKaydet(api), setDuzenle(false))}>
+            <Button
+              type="button"
+              size="sm"
+              disabled={yazma.kilitli || api === null || bekliyor}
+              title={yazma.neden}
+              onClick={() => (onKaydet(api), setDuzenle(false))}
+            >
               Kaydet
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setDuzenle(false)}>
@@ -91,6 +100,8 @@ function ElleDeger({
               size="icon-sm"
               variant="ghost"
               aria-label={`${ELLE_ALAN_ADI[alan]} elle gir`}
+              disabled={yazma.kilitli}
+              title={yazma.neden}
               onClick={() => {
                 setMetin(kutu(deger));
                 setDuzenle(true);
@@ -99,7 +110,14 @@ function ElleDeger({
               <Pencil className="size-3.5" />
             </Button>
             {elle && (
-              <Button type="button" size="sm" variant="ghost" disabled={bekliyor} onClick={() => onKaydet(null)}>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={yazma.kilitli || bekliyor}
+                title={yazma.neden}
+                onClick={() => onKaydet(null)}
+              >
                 Formüle dön
               </Button>
             )}
@@ -292,7 +310,7 @@ function GiderDagitimTablosu({ donemId }: { donemId: number }) {
 }
 
 /** Dağıtılan işçilik ve genel üretim gideri havuzları (Excel aşama sayfalarının 1. satırı); değiştirilebilir. */
-function DagitimKarti({ donemId, dagitim }: { donemId: number; dagitim: SmmDagitim }) {
+function DagitimKarti({ donemId, dagitim, yazma }: { donemId: number; dagitim: SmmDagitim; yazma: SmmYazmaKilidi }) {
   const kaydet = useSmmDagitim(donemId);
   const [acik, setAcik] = useState(false);
   const [taslak, setTaslak] = useState<Record<string, string>>({});
@@ -330,6 +348,8 @@ function DagitimKarti({ donemId, dagitim }: { donemId: number; dagitim: SmmDagit
               <Input
                 inputMode="decimal"
                 aria-label={h.ad}
+                disabled={yazma.kilitli}
+                title={yazma.neden}
                 value={taslak[h.anahtar] ?? kutu(h.tutar)}
                 onChange={(e) => setTaslak((t) => ({ ...t, [h.anahtar]: e.target.value }))}
               />
@@ -353,7 +373,8 @@ function DagitimKarti({ donemId, dagitim }: { donemId: number; dagitim: SmmDagit
                   aria-label={`Dağıtım anahtarı — ${a.ad}`}
                   className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
                   value={a.alan}
-                  disabled={kaydet.isPending}
+                  disabled={yazma.kilitli || kaydet.isPending}
+                  title={yazma.neden}
                   onChange={(e) => kaydet.mutate({ anahtarlar: { [a.anahtar]: e.target.value } })}
                 >
                   {Object.entries(ANAHTAR_SECENEK_ADI).map(([k, ad]) => (
@@ -387,7 +408,8 @@ function DagitimKarti({ donemId, dagitim }: { donemId: number; dagitim: SmmDagit
           <Button
             type="button"
             size="sm"
-            disabled={degisen.length === 0 || gecersiz || kaydet.isPending}
+            disabled={yazma.kilitli || degisen.length === 0 || gecersiz || kaydet.isPending}
+            title={yazma.neden}
             onClick={() =>
               kaydet.mutate(
                 { havuzlar: Object.fromEntries(degisen.map(([k, v]) => [k, sayiApi(v) as string])) },
@@ -408,11 +430,13 @@ function ReceteCekmecesi({
   donemId,
   asama,
   urun,
+  yazma,
   onKapat,
 }: {
   donemId: number;
   asama: number;
   urun: SmmAsamaUrunu | null;
+  yazma: SmmYazmaKilidi;
   onKapat: () => void;
 }) {
   const q = useSmmUrunRecetesi(donemId, asama, urun?.kod ?? null);
@@ -447,6 +471,7 @@ function ReceteCekmecesi({
                     deger={u?.[alan] ?? "0"}
                     elle={(u?.elle_alanlar ?? []).includes(alan)}
                     bekliyor={elleKaydet.isPending}
+                    yazma={yazma}
                     onKaydet={(v) => elleKaydet.mutate({ asama, kod: urun.kod, alanlar: { [alan]: v } })}
                   />
                 ))}
@@ -527,6 +552,8 @@ export default function SmmUretim() {
   // Reçetesi olup bu dönem hiç üretilmeyen ürünler varsayılan listede gösterilmez (50'de ~500 ürün).
   const [yalnizUretilen, setYalnizUretilen] = useState(true);
   const [secili, setSecili] = useState<SmmAsamaUrunu | null>(null);
+  const donemKilitli = Boolean(secim.secili?.kilitli);
+  const yazma = useSmmYazmaKilidi(donemKilitli);
   const q = useSmmUretim(secim.donemId, { asama, arama: gecikmeli, yalniz_farkli: yalnizFarkli });
   const v = q.data;
   const ozet = v?.ozetler.find((o) => o.asama === asama);
@@ -633,6 +660,7 @@ export default function SmmUretim() {
         altBaslik="20 sebze kabul → 40 üretim hattı → 50 etiketleme: malzeme, işçilik, genel gider ve fire ile ürün birim maliyeti."
         eylemler={<DonemSecici secim={secim} />}
       />
+      <SmmDuzenlemeKilidi donemKilitli={donemKilitli} />
 
       {v && (
         <div role="group" aria-label="Aşama" className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr] lg:items-stretch">
@@ -715,7 +743,7 @@ export default function SmmUretim() {
         </ul>
       )}
 
-      {v && secim.donemId !== null && <DagitimKarti key={secim.donemId} donemId={secim.donemId} dagitim={v.dagitim} />}
+      {v && secim.donemId !== null && <DagitimKarti key={secim.donemId} donemId={secim.donemId} dagitim={v.dagitim} yazma={yazma} />}
 
       <div className="flex flex-wrap items-center gap-3">
         <Input
@@ -743,7 +771,9 @@ export default function SmmUretim() {
         bosMetin={yalnizFarkli ? "Excel'den farklı ürün yok" : "Ürün yok"}
         satirTikla={(u: SmmAsamaUrunu) => setSecili(u)}
       />
-      {secim.donemId !== null && <ReceteCekmecesi donemId={secim.donemId} asama={asama} urun={secili} onKapat={() => setSecili(null)} />}
+      {secim.donemId !== null && (
+        <ReceteCekmecesi donemId={secim.donemId} asama={asama} urun={secili} yazma={yazma} onKapat={() => setSecili(null)} />
+      )}
     </section>
   );
 }

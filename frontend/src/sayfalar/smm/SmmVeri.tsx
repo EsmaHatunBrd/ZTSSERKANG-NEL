@@ -14,6 +14,7 @@ import { sayiApi } from "@/yardimcilar/sayi";
 import { DonemSecici, DonemYok, useSmmDonemSecimi } from "./ortak";
 import { DevirBolumu, KapanisBolumu, kilitTarihi } from "./SmmDevirKilit";
 import { SmmMizanBolumu } from "./SmmMizanDuzenle";
+import { SmmDuzenlemeKilidi, useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 type Kaynak = SmmVeriDurumu["kaynaklar"][number];
 const kutu = (x: string) => D(x).toFixed().replace(".", ",");
@@ -25,6 +26,7 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
   const [anahtar, setAnahtar] = useState(0);
   const [mizanAcik, setMizanAcik] = useState(false);
   const [yuklemeOnayi, setYuklemeOnayi] = useState(false);
+  const { kilitli: yazmaKilitli, neden: kilitNedeni } = useSmmYazmaKilidi(kilitli);
   const son = k.son;
   const mizanTur = k.kaynak === "gider_mizan" ? "gider" : k.kaynak === "stok_mizan" ? "stok" : null;
   const elle = k.elle ?? 0;
@@ -72,6 +74,8 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
             accept=".xlsx"
             aria-label={`${k.ad} dosyası`}
             className="w-64"
+            disabled={yazmaKilitli}
+            title={kilitNedeni}
             onChange={(e) => {
               setDosya(e.target.files?.[0] ?? null);
               yukle.reset();
@@ -81,7 +85,8 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
             type="button"
             size="sm"
             variant={k.yuklendi ? "outline" : "default"}
-            disabled={!dosya || yukle.isPending}
+            disabled={yazmaKilitli || !dosya || yukle.isPending}
+            title={kilitNedeni}
             onClick={() => (elle > 0 ? setYuklemeOnayi(true) : gonder())}
           >
             <Upload className="size-3.5" /> {yukle.isPending ? "Yükleniyor…" : k.yuklendi ? "Yeniden yükle" : "Yükle"}
@@ -94,7 +99,7 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
         </p>
       )}
       {mizanTur && mizanAcik && <SmmMizanBolumu donemId={donemId} tur={mizanTur} kilitli={kilitli} />}
-      {yuklemeOnayi && (
+      {yuklemeOnayi && !yazmaKilitli && (
         <OnayDiyalogu
           baslik={`${k.ad} yeniden yüklensin mi?`}
           onayMetni="Yükle ve elle satırları sil"
@@ -116,6 +121,7 @@ function KaynakSatiri({ k, donemId, kilitli }: { k: Kaynak; donemId: number; kil
 /** Finansman (alımlara dağıtılır) ve 720 / 730 gider tutarları. */
 function AyarKarti({ v, donemId, kilitli }: { v: SmmVeriDurumu; donemId: number; kilitli: boolean }) {
   const kaydet = useSmmAyarlar(donemId);
+  const { kilitli: yazmaKilitli, neden: kilitNedeni } = useSmmYazmaKilidi(kilitli);
   const ilk = { finansman: kutu(v.ayarlar.finansman), gider_720: kutu(v.ayarlar.gider_720), gider_730: kutu(v.ayarlar.gider_730) };
   const [t, setT] = useState(ilk);
   const degisen = (Object.keys(t) as (keyof typeof t)[]).filter((a) => t[a] !== ilk[a]);
@@ -136,7 +142,8 @@ function AyarKarti({ v, donemId, kilitli }: { v: SmmVeriDurumu; donemId: number;
             <Input
               inputMode="decimal"
               aria-label={ADLAR[a]}
-              disabled={kilitli}
+              disabled={yazmaKilitli}
+              title={kilitNedeni}
               value={t[a]}
               onChange={(e) => setT({ ...t, [a]: e.target.value })}
             />
@@ -153,7 +160,8 @@ function AyarKarti({ v, donemId, kilitli }: { v: SmmVeriDurumu; donemId: number;
           <Button
             type="button"
             size="sm"
-            disabled={degisen.length === 0 || gecersiz || kaydet.isPending}
+            disabled={yazmaKilitli || degisen.length === 0 || gecersiz || kaydet.isPending}
+            title={kilitNedeni}
             onClick={() => kaydet.mutate(Object.fromEntries(degisen.map((a) => [a, sayiApi(t[a])])))}
           >
             Kaydet
@@ -189,6 +197,7 @@ export default function SmmVeri() {
         altBaslik="Dönemin aylık verileri: her kaynağı ayrı yükleyin; eksikler aşağıda işaretli. Kalemleri tek tek düzeltmek için Stok ve Envanter'de satıra tıklayın."
         eylemler={<DonemSecici secim={secim} />}
       />
+      <SmmDuzenlemeKilidi donemKilitli={kilitli} />
       {v && (
         <>
           {kilitli ? (

@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/bilesenler/ui/input";
 import { D, paraBicimle } from "@/yardimcilar/para";
 import { miktar } from "./ortak";
+import { useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 /** Kapanış anı: "13.11.2026". */
 export const kilitTarihi = (z: string | null | undefined) => (z ? new Date(z).toLocaleDateString("tr-TR") : null);
@@ -85,6 +86,7 @@ function DevirYenileDiyalogu({
   onVazgec: () => void;
 }) {
   const yenile = useSmmDevirYenile();
+  const yazma = useSmmYazmaKilidi(Boolean(v.donem.kilitli));
   const durum = useSmmDevirDurumu(v.donem.id);
   const [neden, setNeden] = useState("");
   const [elleEz, setElleEz] = useState(false);
@@ -127,7 +129,8 @@ function DevirYenileDiyalogu({
           </Button>
           <Button
             type="button"
-            disabled={!neden.trim() || yenile.isPending}
+            disabled={yazma.kilitli || !neden.trim() || yenile.isPending}
+            title={yazma.neden}
             onClick={() => yenile.mutate({ donemId: v.donem.id, neden: neden.trim(), elleEz }, { onSuccess: onBitti })}
           >
             Devri yenile
@@ -143,6 +146,7 @@ export function DevirBolumu({ v }: { v: SmmVeriDurumu }) {
   const [farklarAcik, setFarklarAcik] = useState(false);
   const [yenileAcik, setYenileAcik] = useState(false);
   const [sonuc, setSonuc] = useState<SmmDevirYenileSonucu | null>(null);
+  const yazma = useSmmYazmaKilidi(Boolean(v.donem.kilitli));
   const dv = v.devir;
   if (!dv) return null;
   return (
@@ -171,7 +175,7 @@ export function DevirBolumu({ v }: { v: SmmVeriDurumu }) {
               {farklarAcik ? "Farkları gizle" : "Farkları gör"}
             </Button>
             {!v.donem.kilitli && (
-              <Button type="button" size="sm" onClick={() => setYenileAcik(true)}>
+              <Button type="button" size="sm" disabled={yazma.kilitli} title={yazma.neden} onClick={() => setYenileAcik(true)}>
                 <RefreshCw className="size-3.5" /> Devri yenile
               </Button>
             )}

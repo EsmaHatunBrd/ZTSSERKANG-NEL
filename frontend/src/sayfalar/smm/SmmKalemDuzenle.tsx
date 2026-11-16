@@ -6,6 +6,7 @@ import { Button } from "@/bilesenler/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/bilesenler/ui/dialog";
 import { Input } from "@/bilesenler/ui/input";
 import { sayiApi } from "@/yardimcilar/sayi";
+import { useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 /** Düzenlenebilir sayısal alanlar (Excel TABLO/DBS/HM-YM/DSS/ŞAHİT sütunlarının karşılığı). */
 const SAYISAL: { anahtar: keyof SmmKalemAlanlari; etiket: string }[] = [
@@ -55,6 +56,7 @@ export function SmmKalemDuzenle({ donemId, kalem, onKapat, onKaydedildi }: Props
   const yeni = kalem === null;
   const guncelle = useSmmKalemGuncelle();
   const ekle = useSmmKalemEkle();
+  const yazma = useSmmYazmaKilidi();
   const [kod, setKod] = useState("");
   const [degerler, setDegerler] = useState<Degerler>(() => baslangic(kalem));
   const [neden, setNeden] = useState("");
@@ -68,7 +70,7 @@ export function SmmKalemDuzenle({ donemId, kalem, onKapat, onKaydedildi }: Props
     if (v.trim() !== "" && sayiApi(v) === null) hatalar.push(`${a.etiket} geçerli bir sayı olmalı`);
   }
   const degisenler = Object.keys(degerler).filter((k) => degerler[k] !== ilk[k]);
-  const kaydedilebilir = hatalar.length === 0 && neden.trim() !== "" && (yeni || degisenler.length > 0) && !gonderiliyor;
+  const kaydedilebilir = hatalar.length === 0 && neden.trim() !== "" && (yeni || degisenler.length > 0) && !gonderiliyor && !yazma.kilitli;
 
   function govde(): SmmKalemAlanlari {
     const out: Record<string, unknown> = {};
@@ -179,7 +181,7 @@ export function SmmKalemDuzenle({ donemId, kalem, onKapat, onKaydedildi }: Props
             <Button type="button" variant="outline" onClick={onKapat}>
               Vazgeç
             </Button>
-            <Button type="submit" disabled={!kaydedilebilir}>
+            <Button type="submit" disabled={!kaydedilebilir} title={yazma.neden}>
               {gonderiliyor ? "Kaydediliyor…" : "Kaydet"}
             </Button>
           </DialogFooter>

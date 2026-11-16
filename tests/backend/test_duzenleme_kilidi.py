@@ -32,6 +32,16 @@ def test_baska_senaryonun_gunlugunde_gorunmez_senaryosuz_her_yerde_gorunur(istem
     assert f"degisiklik:{a}" not in idler and f"degisiklik:{b}" in idler
 
 
+def test_smm_sayfasi_senaryosuz_acilir(istemci, oturum):
+    """Maliyet Muhasebesi senaryodan bağımsızdır: arayüz senaryo_id'yi açıkça null gönderir; kayıt SMM sayfa yolunu taşır."""
+    r = istemci.post(f"{A}/duzenleme-kilidi/ac", json={"senaryo_id": None, "sayfa": "/smm/veri"}, headers={"X-Kullanici": "esma"})
+    assert r.status_code == 201, r.text
+    assert r.json()["senaryo_id"] is None and r.json()["sayfa"] == "/smm/veri"
+    k = oturum.get(m.DegisiklikKaydi, r.json()["kayit_id"])
+    assert (k.tablo, k.islem, k.kayit_id) == ("duzenleme_kilidi", "kilit_ac", 0)
+    assert k.yeni == {"sayfa": "/smm/veri", "senaryo_id": None}
+
+
 def test_dogrulama_ve_bilinmeyen_senaryo(istemci):
     assert istemci.post(f"{A}/duzenleme-kilidi/ac", json={"senaryo_id": 999999, "sayfa": "/fiyatlar"}).status_code == 404
     assert istemci.post(f"{A}/duzenleme-kilidi/ac", json={"sayfa": ""}).status_code == 422

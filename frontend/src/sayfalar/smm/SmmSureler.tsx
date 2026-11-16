@@ -9,6 +9,7 @@ import { Input } from "@/bilesenler/ui/input";
 import { D } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
 import { DonemSecici, DonemYok, useGecikmeli, useSmmDonemSecimi } from "./ortak";
+import { SmmDuzenlemeKilidi, useSmmYazmaKilidi, type SmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 const SAYI_ALANLARI = [
   ["vardiya_uretim", "Vardiya üretim"],
@@ -79,7 +80,7 @@ function Alanlar({ t, set, onek }: { t: Taslak; set: (t: Taslak) => void; onek: 
   );
 }
 
-function Satir({ s, donemId }: { s: SmmSure; donemId: number }) {
+function Satir({ s, donemId, yazma }: { s: SmmSure; donemId: number; yazma: SmmYazmaKilidi }) {
   const { guncelle, sil } = useSmmSureDuzenle(donemId);
   const [duzenle, setDuzenle] = useState(false);
   const [t, setT] = useState<Taslak>(() => taslakOlustur(s));
@@ -108,7 +109,8 @@ function Satir({ s, donemId }: { s: SmmSure; donemId: number }) {
               <Button
                 type="button"
                 size="sm"
-                disabled={g === null || guncelle.isPending}
+                disabled={yazma.kilitli || g === null || guncelle.isPending}
+                title={yazma.neden}
                 onClick={() => g && guncelle.mutate({ id: s.id, g }, { onSuccess: () => setDuzenle(false) })}
               >
                 Kaydet
@@ -119,7 +121,15 @@ function Satir({ s, donemId }: { s: SmmSure; donemId: number }) {
             </>
           ) : (
             <>
-              <Button type="button" size="icon-sm" variant="ghost" aria-label={`Düzenle — ${s.kod}`} onClick={() => setDuzenle(true)}>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={`Düzenle — ${s.kod}`}
+                disabled={yazma.kilitli}
+                title={yazma.neden}
+                onClick={() => setDuzenle(true)}
+              >
                 <Pencil className="size-3.5" />
               </Button>
               <Button
@@ -127,7 +137,8 @@ function Satir({ s, donemId }: { s: SmmSure; donemId: number }) {
                 size="icon-sm"
                 variant="ghost"
                 aria-label={`Sil — ${s.kod}`}
-                disabled={sil.isPending}
+                disabled={yazma.kilitli || sil.isPending}
+                title={yazma.neden}
                 onClick={() => sil.mutate(s.id)}
               >
                 <Trash2 className="size-3.5" />
@@ -155,6 +166,8 @@ export default function SmmSureler() {
   const q = useSmmSureler(secim.donemId, gecikmeli);
   const { ekle } = useSmmSureDuzenle(secim.donemId);
   const [yeni, setYeni] = useState<Taslak | null>(null);
+  const donemKilitli = Boolean(secim.secili?.kilitli);
+  const yazma = useSmmYazmaKilidi(donemKilitli);
   const yg = yeni ? govde(yeni) : null;
   if (secim.bos) {
     return (
@@ -172,6 +185,7 @@ export default function SmmSureler() {
         altBaslik="Ürün başına dolum ve etiket süreleri (Excel '51' sayfası). İşçilik ve genel gider, süre × üretim miktarı oranında dağıtılır."
         eylemler={<DonemSecici secim={secim} />}
       />
+      <SmmDuzenlemeKilidi donemKilitli={donemKilitli} />
       <div className="flex flex-wrap items-center gap-3">
         <Input
           aria-label="Süre ara"
@@ -187,7 +201,8 @@ export default function SmmSureler() {
           variant="outline"
           className="ml-auto"
           onClick={() => setYeni(taslakOlustur())}
-          disabled={yeni !== null}
+          disabled={yazma.kilitli || yeni !== null}
+          title={yazma.neden}
         >
           <Plus className="size-3.5" /> Satır ekle
         </Button>
@@ -220,7 +235,8 @@ export default function SmmSureler() {
                     <Button
                       type="button"
                       size="sm"
-                      disabled={yg === null || !(yeni.mamul_kod.trim() || yeni.yari_mamul_kod.trim()) || ekle.isPending}
+                      disabled={yazma.kilitli || yg === null || !(yeni.mamul_kod.trim() || yeni.yari_mamul_kod.trim()) || ekle.isPending}
+                      title={yazma.neden}
                       onClick={() => yg && ekle.mutate(yg, { onSuccess: () => setYeni(null) })}
                     >
                       Ekle
@@ -253,7 +269,7 @@ export default function SmmSureler() {
             )}
             {secim.donemId !== null &&
               kayitlar.map((s) => (
-                <Satir key={`${s.id}-${s.dolum_sn}-${s.etiket_adam_sn}-${s.ad}`} s={s} donemId={secim.donemId as number} />
+                <Satir key={`${s.id}-${s.dolum_sn}-${s.etiket_adam_sn}-${s.ad}`} s={s} donemId={secim.donemId as number} yazma={yazma} />
               ))}
           </tbody>
         </table>

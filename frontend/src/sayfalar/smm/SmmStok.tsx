@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Kart } from "@/sayfalar/dashboard/UstKartlar";
 import { D, paraBicimle } from "@/yardimcilar/para";
 import { SmmKalemDuzenle } from "./SmmKalemDuzenle";
+import { SmmDuzenlemeKilidi, useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 const SECIM_SINIFI = "h-8 rounded-lg border border-input bg-background px-2 text-sm";
 /** Büyük tutar kısaltılır: 723567044 -> "723,6 mn TL" (özet kutularında tek satıra sığsın). */
@@ -48,6 +49,8 @@ export default function SmmStok() {
   const donemler = useSmmDonemleri();
   const liste = donemler.data?.kayitlar ?? [];
   const donemId = params.get("donem") ? Number(params.get("donem")) : (liste[0]?.id ?? null);
+  const donemKilitli = Boolean(liste.find((d) => d.id === donemId)?.kilitli);
+  const { kilitli, neden: kilitNedeni } = useSmmYazmaKilidi(donemKilitli);
   const [tur, setTur] = useState("");
   const [arama, setArama] = useState("");
   const [gecikmeli, setGecikmeli] = useState("");
@@ -139,6 +142,8 @@ export default function SmmStok() {
             size="sm"
             variant="ghost"
             aria-label={`Düzenle ${c.row.original.kod}`}
+            disabled={kilitli}
+            title={kilitNedeni}
             onClick={() => setDuzenlenen(c.row.original)}
           >
             <Pencil className="size-4" aria-hidden />
@@ -146,7 +151,7 @@ export default function SmmStok() {
         ),
       },
     ],
-    [elle],
+    [elle, kilitli, kilitNedeni],
   );
 
   if (donemler.data && liste.length === 0) {
@@ -172,7 +177,14 @@ export default function SmmStok() {
         altBaslik="Dönem başı + alım = toplam; ortalama fiyatla sayım (dönem sonu stok) ve sarf. Excel'deki TABLO sayfasının karşılığı."
         eylemler={
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" size="sm" variant="outline" disabled={donemId === null} onClick={() => setDuzenlenen("yeni")}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={donemId === null || kilitli}
+              title={kilitNedeni}
+              onClick={() => setDuzenlenen("yeni")}
+            >
               <Plus className="size-4" aria-hidden />
               Kalem ekle
             </Button>
@@ -194,6 +206,7 @@ export default function SmmStok() {
           </div>
         }
       />
+      <SmmDuzenlemeKilidi donemKilitli={donemKilitli} />
       {mesaj && (
         <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm">
           {mesaj}

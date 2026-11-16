@@ -35,7 +35,8 @@ export function useSmmDonemSecimi() {
   const liste = donemler.data?.kayitlar ?? [];
   const donemId = params.get("donem") ? Number(params.get("donem")) : (liste[0]?.id ?? null);
   const sec = (id: string) => setParams((p) => (p.set("donem", id), p));
-  return { donemler, liste, donemId, sec, bos: Boolean(donemler.data) && liste.length === 0 };
+  const secili = liste.find((d) => d.id === donemId) ?? null;
+  return { donemler, liste, donemId, secili, sec, bos: Boolean(donemler.data) && liste.length === 0 };
 }
 
 export function DonemSecici({ secim }: { secim: ReturnType<typeof useSmmDonemSecimi> }) {

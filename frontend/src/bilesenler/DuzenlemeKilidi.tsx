@@ -207,16 +207,38 @@ function useKalanSn(acik: boolean): number {
 
 const SERIT = "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border px-3 py-2 text-sm";
 
+export interface DuzenlemeKilidiOzellikleri {
+  className?: string;
+  /** Senaryodan bağımsız modül (Maliyet Muhasebesi): senaryo kilidine bakılmaz, günlüğe senaryo_id null yazılır. */
+  senaryosuz?: boolean;
+  /** Rolün bu modülde yazma izni (verilmezse oturumdaki genel izin). false ise düğme görünmez, şerit hep kilitli görünür. */
+  yazabilir?: boolean;
+  /** `yazabilir` false iken gösterilecek metin (verilmezse izleyici metni). */
+  yazamazMetni?: string;
+  /** Düzenleme açık olsa da yazmayı engelleyen ek durum (ör. kapatılmış dönem); şeritte ikinci satırda gösterilir. */
+  engelMetni?: string | null;
+}
+
 /**
  * Düzenleme kilidi şeridi (sayfa başlığının altında tek satır). Kilitliyken sayfadaki yazma alanları devre dışıdır;
  * "Düzenlemeyi aç" bilinçli bir adımdır ve Değişiklik Günlüğü'ne yazılır. Senaryo kilitliyse açılamaz; izleyici rolünde düğme yoktur.
  */
-export function DuzenlemeKilidi({ className }: { className?: string }) {
-  const senaryo = useSenaryoVarsa();
+export function DuzenlemeKilidi({
+  className,
+  senaryosuz = false,
+  yazabilir: yazabilirDis,
+  yazamazMetni,
+  engelMetni,
+}: DuzenlemeKilidiOzellikleri) {
+  const senaryoBaglami = useSenaryoVarsa();
+  const senaryo = senaryosuz ? null : senaryoBaglami;
   const senaryoId = senaryo?.senaryoId ?? null;
   const senaryoKilitli = senaryo?.kilitli ?? false;
-  const { yazabilir } = useOturum();
-  const { acik, sureDoldu: doldu, ac: kilidiAc, kilitle } = useDuzenlemeKilidi();
+  const oturum = useOturum();
+  const yazabilir = oturum.yazabilir && (yazabilirDis ?? true);
+  const kilit = useDuzenlemeKilidi();
+  const acik = kilit.acik && yazabilir;
+  const { sureDoldu: doldu, ac: kilidiAc, kilitle } = kilit;
   const { pathname } = useLocation();
   const [uyari, setUyari] = useState<string | null>(null);
   // Kilit açılırken bir kez sorulur; açık kaldığı sürece (15 dk) her değişiklikte yeniden sorulmaz.
@@ -238,6 +260,11 @@ export function DuzenlemeKilidi({ className }: { className?: string }) {
             Düzenleme açık
           </span>
           {kalan * 1000 <= EN_UZUN_ZAMANLAYICI_MS && <span className="tabular-nums text-muted-foreground"> · {kalanMetni(kalan)}</span>}
+          {engelMetni && (
+            <span data-testid="duzenleme-engel" className="block font-medium">
+              {engelMetni}
+            </span>
+          )}
           {uyari && (
             <span role="alert" className="block text-xs text-destructive">
               {uyari}
@@ -260,7 +287,7 @@ export function DuzenlemeKilidi({ className }: { className?: string }) {
   }
 
   const metin = !yazabilir
-    ? "Düzenleme kilitli. İzleyici rolüyle değişiklik yapılamaz."
+    ? (oturum.yazabilir && yazamazMetni) || "Düzenleme kilitli. İzleyici rolüyle değişiklik yapılamaz."
     : senaryoKilitli
       ? "Düzenleme kilitli. Bu senaryo kilitli olduğu için düzenleme açılamaz."
       : doldu
@@ -277,6 +304,11 @@ export function DuzenlemeKilidi({ className }: { className?: string }) {
       <Lock className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       <span aria-live="polite" className="min-w-0 flex-1">
         {metin}
+        {engelMetni && (
+          <span data-testid="duzenleme-engel" className="block font-medium">
+            {engelMetni}
+          </span>
+        )}
       </span>
       {yazabilir && (
         <Button

@@ -64,7 +64,7 @@ test("duman: dashboard -> ürün -> birim fiyat değişimi -> Kaydet -> yenile -
   await expect.poll(async () => (await fireliSatir.innerText()).trim(), { timeout: 20_000 }).not.toBe(oncekiFireli);
 
   // Kaydet -> özet diyaloğu -> neden -> gönder -> "Kaydedildi · Hesap #N".
-  await page.getByRole("button", { name: "Kaydet" }).click();
+  await page.getByRole("button", { name: "Kaydet", exact: true }).click();
   const diyalog = page.getByRole("dialog");
   await expect(diyalog.getByRole("table", { name: "Değişiklik listesi" })).toContainText(/elle birim fiyat/);
   await diyalog.getByLabel("Neden").fill("E2E birim fiyat güncellemesi");

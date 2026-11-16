@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/bilesenler/ui/input";
 import { D, paraBicimle } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
+import { useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 const ORNEK = { gider: "720", stok: "150.01.001" } as const;
 const kutu = (x: string) => D(x).toFixed().replace(".", ",");
@@ -31,6 +32,7 @@ function MizanSatirFormu({ donemId, tur, satir, onKapat, onKaydedildi }: FormPro
   const yeni = satir === null;
   const ekle = useSmmMizanEkle(donemId, tur);
   const guncelle = useSmmMizanGuncelle(donemId, tur);
+  const yazma = useSmmYazmaKilidi();
   const ilk = { ad: satir?.ad ?? "", bakiye: satir ? kutu(satir.bakiye) : "" };
   const [hesap, setHesap] = useState("");
   const [ad, setAd] = useState(ilk.ad);
@@ -43,7 +45,7 @@ function MizanSatirFormu({ donemId, tur, satir, onKapat, onKaydedildi }: FormPro
   if (bakiye.trim() === "") hatalar.push("Bakiye zorunlu");
   else if (bakiyeApi === null) hatalar.push("Bakiye geçerli bir sayı olmalı");
   const degisti = ad !== ilk.ad || bakiye !== ilk.bakiye;
-  const kaydedilebilir = hatalar.length === 0 && neden.trim() !== "" && (yeni || degisti) && !gonderiliyor;
+  const kaydedilebilir = hatalar.length === 0 && neden.trim() !== "" && (yeni || degisti) && !gonderiliyor && !yazma.kilitli;
   const hata = hataMetniVarsa(ekle.error) ?? hataMetniVarsa(guncelle.error);
 
   function kaydet() {
@@ -140,7 +142,7 @@ function MizanSatirFormu({ donemId, tur, satir, onKapat, onKaydedildi }: FormPro
             <Button type="button" variant="outline" onClick={onKapat}>
               Vazgeç
             </Button>
-            <Button type="submit" disabled={!kaydedilebilir}>
+            <Button type="submit" disabled={!kaydedilebilir} title={yazma.neden}>
               {gonderiliyor ? "Kaydediliyor…" : "Kaydet"}
             </Button>
           </DialogFooter>
@@ -163,6 +165,8 @@ interface Props {
 export function SmmMizanBolumu({ donemId, tur, kilitli }: Props) {
   const q = useSmmMizan(donemId, tur);
   const sil = useSmmMizanSil(donemId, tur);
+  // `kilitli`: dönem kapatıldı (işlem sütunu hiç görünmez). Düzenleme kilidi kapalıyken düğmeler görünür ama devre dışıdır.
+  const { kilitli: yazmaKilitli, neden: kilitNedeni } = useSmmYazmaKilidi(kilitli);
   const [duzenlenen, setDuzenlenen] = useState<SmmMizanSatiri | "yeni" | null>(null);
   const [silinen, setSilinen] = useState<SmmMizanSatiri | null>(null);
   const [silNedeni, setSilNedeni] = useState("");
@@ -209,6 +213,8 @@ export function SmmMizanBolumu({ donemId, tur, kilitli }: Props) {
                     size="sm"
                     variant="ghost"
                     aria-label={`${c.row.original.hesap} satırını düzenle`}
+                    disabled={yazmaKilitli}
+                    title={kilitNedeni}
                     onClick={() => setDuzenlenen(c.row.original)}
                   >
                     <Pencil className="size-3.5" />
@@ -218,6 +224,8 @@ export function SmmMizanBolumu({ donemId, tur, kilitli }: Props) {
                     size="sm"
                     variant="ghost"
                     aria-label={`${c.row.original.hesap} satırını sil`}
+                    disabled={yazmaKilitli}
+                    title={kilitNedeni}
                     onClick={() => {
                       sil.reset();
                       setSilNedeni("");
@@ -231,7 +239,7 @@ export function SmmMizanBolumu({ donemId, tur, kilitli }: Props) {
             },
           ] satisfies SutunTanimi<SmmMizanSatiri>[])),
     ],
-    [kilitli, sil],
+    [kilitli, sil, yazmaKilitli, kilitNedeni],
   );
 
   return (
@@ -240,7 +248,15 @@ export function SmmMizanBolumu({ donemId, tur, kilitli }: Props) {
         <h3 className="text-sm font-semibold">{v?.ad ?? "Mizan"} satırları</h3>
         {v && v.elle > 0 && <span className="text-xs text-muted-foreground">{v.elle} elle satır</span>}
         {!kilitli && (
-          <Button type="button" size="sm" variant="outline" className="ml-auto" onClick={() => setDuzenlenen("yeni")}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            disabled={yazmaKilitli}
+            title={kilitNedeni}
+            onClick={() => setDuzenlenen("yeni")}
+          >
             <Plus className="size-3.5" /> Satır ekle
           </Button>
         )}
@@ -275,7 +291,7 @@ export function SmmMizanBolumu({ donemId, tur, kilitli }: Props) {
         <OnayDiyalogu
           baslik={`${silinen.hesap} satırı silinsin mi?`}
           onayMetni="Satırı sil"
-          bekliyor={sil.isPending || silNedeni.trim() === ""}
+          bekliyor={sil.isPending || silNedeni.trim() === "" || yazmaKilitli}
           hata={hataMetniVarsa(sil.error)}
           onOnayla={() =>
             sil.mutate(

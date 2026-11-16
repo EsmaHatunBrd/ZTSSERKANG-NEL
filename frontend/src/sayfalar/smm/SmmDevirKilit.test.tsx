@@ -160,7 +160,9 @@ describe("SMM ay devri ve ay kilidi", () => {
     expect(within(eksikOnayi).queryByRole("alert")).not.toBeInTheDocument();
     await userEvent.click(within(eksikOnayi).getByRole("button", { name: "Yine de kapat" }));
     await waitFor(() => expect(govdeler).toEqual([{ kilitli: true }, { kilitli: true, zorla: true }]));
-    expect(await screen.findByText(/kapatıldı/)).toBeInTheDocument();
+    // Sayfadaki kapanış bandı ve düzenleme kilidi şeridindeki dönem uyarısı ikisi de "kapatıldı" der.
+    expect(await screen.findByText(/kapatıldı.*veriler değiştirilemez/)).toBeInTheDocument();
+    expect(screen.getByTestId("duzenleme-engel")).toHaveTextContent("Dönem kapatıldı; değişiklik için önce kilidi açın.");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 

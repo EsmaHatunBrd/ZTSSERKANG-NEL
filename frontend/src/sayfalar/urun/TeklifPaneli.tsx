@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { hataMetni, type ApiHatasi } from "@/api/istemci";
-import { useHesaplar, useTeklifEkle, useTeklifler } from "@/api/sorgular/hesaplar";
+import { useHesapKaydet, useHesaplar, useTeklifEkle, useTeklifler } from "@/api/sorgular/hesaplar";
 import { TeklifDurumSecici } from "@/bilesenler/TeklifDurumSecici";
 import { TeklifSilDugmesi } from "@/bilesenler/TeklifSilDugmesi";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
@@ -36,22 +36,38 @@ export function TeklifPaneli({ kod, senaryoId, sonKayitId }: Props) {
   const hesapId = secim ?? kayitlar[0]?.id ?? null;
   const teklifler = useTeklifler(hesapId);
   const ekle = useTeklifEkle();
-  const hata = (ekle.error ?? teklifler.error) as ApiHatasi | null;
+  const hesapKaydet = useHesapKaydet();
+  const hata = (ekle.error ?? hesapKaydet.error ?? teklifler.error) as ApiHatasi | null;
+  // "%17", "17", "17,5" kabul edilir: yüzde işareti ve boşluklar atılır.
+  const karSayi = kar.replace(/%/g, "").trim();
+  const karGecerli = sayiGecerli(karSayi);
+  const pasifNedeni =
+    hesapId === null
+      ? "Önce güncel hesabı kaydedin"
+      : !karSayi
+        ? "Kâr oranını yazın (ör. 17)"
+        : !karGecerli
+          ? "Kâr oranı sayı olmalı (ör. 17 ya da 17,5)"
+          : null;
+
+  function hesabiKaydet() {
+    if (senaryoId === null) return;
+    hesapKaydet.mutate({ kod, govde: { senaryo_id: senaryoId } }, { onSuccess: (y) => setSecim(y.id) });
+  }
 
   function turEkle() {
-    if (hesapId === null || !sayiGecerli(kar)) return;
+    if (hesapId === null || !karGecerli) return;
     ekle.mutate(
       {
         hesapId,
         govde: {
-          kar_orani: apiMetni(D(kar).div(100)),
+          kar_orani: apiMetni(D(karSayi.replace(",", ".")).div(100)),
           musteri: musteri.trim() || null,
           notu: not.trim() || null,
         },
       },
       {
         onSuccess: () => {
-          setKar("");
           setMusteri("");
           setNot("");
         },
@@ -96,7 +112,27 @@ export function TeklifPaneli({ kod, senaryoId, sonKayitId }: Props) {
         </Link>
       )}
 
-      {kayitlar.length === 0 && !hesaplar.isPending && <p className="text-sm text-muted-foreground">Teklif için önce hesabı kaydedin.</p>}
+      {!hesaplar.isPending && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {kayitlar.length === 0 && (
+            <span className="text-muted-foreground">Teklif, kaydedilmiş bir hesaba bağlanır. Önce güncel hesabı kaydedin.</span>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant={kayitlar.length === 0 ? "default" : "outline"}
+            onClick={hesabiKaydet}
+            disabled={senaryoId === null || hesapKaydet.isPending}
+            title="Ürünün şu anki maliyetini numaralı bir hesap olarak saklar; teklif turları bu hesaba bağlanır"
+          >
+            {hesapKaydet.isPending
+              ? "Kaydediliyor…"
+              : kayitlar.length === 0
+                ? "Güncel hesabı kaydet"
+                : "Güncel hesabı yeni kayıt olarak kaydet"}
+          </Button>
+        </div>
+      )}
 
       <form
         className="flex flex-wrap items-end gap-3 text-sm"
@@ -107,7 +143,14 @@ export function TeklifPaneli({ kod, senaryoId, sonKayitId }: Props) {
       >
         <label className="flex flex-col gap-1">
           <span className="text-muted-foreground">Kâr %</span>
-          <Input aria-label="Kâr %" inputMode="decimal" value={kar} onChange={(e) => setKar(e.target.value)} className="w-24" />
+          <Input
+            aria-label="Kâr %"
+            inputMode="decimal"
+            placeholder="ör. 17"
+            value={kar}
+            onChange={(e) => setKar(e.target.value)}
+            className="w-24"
+          />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-muted-foreground">Müşteri</span>
@@ -117,9 +160,10 @@ export function TeklifPaneli({ kod, senaryoId, sonKayitId }: Props) {
           <span className="text-muted-foreground">Not</span>
           <Input aria-label="Not" value={not} onChange={(e) => setNot(e.target.value)} className="w-56" />
         </label>
-        <Button type="submit" size="sm" disabled={hesapId === null || !sayiGecerli(kar) || ekle.isPending}>
+        <Button type="submit" size="sm" disabled={pasifNedeni !== null || ekle.isPending} title={pasifNedeni ?? undefined}>
           Yeni tur
         </Button>
+        {pasifNedeni && <span className="pb-1.5 text-xs text-muted-foreground">{pasifNedeni}</span>}
       </form>
 
       {hata && (

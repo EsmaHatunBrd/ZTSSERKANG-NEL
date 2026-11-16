@@ -10,6 +10,7 @@ import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
 import { cn } from "@/lib/utils";
 import { SECIM_SINIFI, useGecikmeli } from "./ortak";
 import { ASAMA_ADI, ReceteCekmecesi, YeniReceteDiyalogu } from "./ReceteDuzenleme";
+import { SmmDuzenlemeKilidi, useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 const DURUM_ADI: Record<string, string> = {
   ayni: "Aynı",
@@ -57,6 +58,7 @@ function YuklemeKarti() {
   const [dosya, setDosya] = useState<File | null>(null);
   const onizle = useSmmReceteOnizle();
   const yukle = useSmmReceteYukle();
+  const { kilitli, neden } = useSmmYazmaKilidi();
   const hata = onizle.error ?? yukle.error;
   return (
     <section aria-label="Canias reçete dökümü" className="flex flex-col gap-3 rounded-2xl border bg-card p-5 shadow-xs">
@@ -90,7 +92,8 @@ function YuklemeKarti() {
         </Button>
         <Button
           type="button"
-          disabled={!dosya || !onizle.data || yukle.isPending}
+          disabled={kilitli || !dosya || !onizle.data || yukle.isPending}
+          title={neden}
           onClick={() =>
             dosya &&
             yukle.mutate(dosya, {
@@ -218,6 +221,7 @@ export default function SmmReceteler() {
   const [asama, setAsama] = useState<number | null>(null);
   const [secili, setSecili] = useState<string | null>(null);
   const [yeniAcik, setYeniAcik] = useState(false);
+  const { kilitli, neden: kilitNedeni } = useSmmYazmaKilidi();
   const q = useSmmReceteler({ arama: gecikmeli, asama });
   const v = q.data;
 
@@ -270,6 +274,7 @@ export default function SmmReceteler() {
         baslik="Reçeteler"
         altBaslik="Kalıcı üretim reçeteleri (Canias ürün ağacı). Her ay yeniden yüklenmez; Canias'ta reçete değişince yeni döküm yüklenir."
       />
+      <SmmDuzenlemeKilidi />
       {son ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <FileSpreadsheet className="size-4" aria-hidden />
@@ -315,7 +320,7 @@ export default function SmmReceteler() {
           </span>
         )}
         <span className="ml-auto text-sm text-muted-foreground">{v ? `${v.kayitlar.length} ürün` : ""}</span>
-        <Button type="button" size="sm" variant="outline" onClick={() => setYeniAcik(true)}>
+        <Button type="button" size="sm" variant="outline" disabled={kilitli} title={kilitNedeni} onClick={() => setYeniAcik(true)}>
           <Plus className="size-3.5" /> Yeni reçete
         </Button>
       </div>
@@ -328,7 +333,7 @@ export default function SmmReceteler() {
         satirTikla={(u: SmmReceteUrunu) => setSecili(u.ana_kod)}
       />
       <ReceteCekmecesi kod={secili} onKapat={() => setSecili(null)} />
-      <YeniReceteDiyalogu acik={yeniAcik} onKapat={() => setYeniAcik(false)} onAcildi={setSecili} />
+      <YeniReceteDiyalogu acik={yeniAcik && !kilitli} onKapat={() => setYeniAcik(false)} onAcildi={setSecili} />
     </section>
   );
 }

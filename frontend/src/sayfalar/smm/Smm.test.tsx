@@ -698,7 +698,9 @@ describe("SMM", () => {
     expect(onay).toHaveTextContent("Eksik veri var: Alım ve satış");
     await userEvent.click(within(onay).getByRole("button", { name: "Kapat ve kilitle" }));
     await waitFor(() => expect(kilitGovdesi).toEqual({ kilitli: true }));
-    expect(await screen.findByText(/kapatıldı/)).toBeInTheDocument();
+    // Sayfadaki kapanış bandı ve düzenleme kilidi şeridindeki dönem uyarısı ikisi de "kapatıldı" der.
+    expect(await screen.findByText(/kapatıldı.*veriler değiştirilemez/)).toBeInTheDocument();
+    expect(screen.getByTestId("duzenleme-engel")).toHaveTextContent("Dönem kapatıldı; değişiklik için önce kilidi açın.");
   });
 
   it("Ana Sayfa'da iş seçilir: Maliyet Muhasebesi bölümleri görünür ve seçim hatırlanır", async () => {

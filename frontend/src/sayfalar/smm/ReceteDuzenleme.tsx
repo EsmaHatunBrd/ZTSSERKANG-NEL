@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { D } from "@/yardimcilar/para";
 import { sayiApi } from "@/yardimcilar/sayi";
 import { useGecikmeli } from "./ortak";
+import { useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 export const ASAMA_ADI: Record<string, string> = { "20": "20 · Sebze kabul", "40": "40 · Üretim hattı", "50": "50 · Etiketleme" };
 type Satir = SmmReceteDetayi["alternatifler"][number]["satirlar"][number];
@@ -85,6 +86,7 @@ function MalzemeSecici({ onSec }: { onSec: (m: { kod: string; ad: string | null;
 /** Reçeteye satır ekleme formu. */
 function SatirEkle({ kod, alternatif, onBitti }: { kod: string; alternatif: string; onBitti: () => void }) {
   const { ekle } = useSmmReceteDuzenle();
+  const yazma = useSmmYazmaKilidi();
   const [mal, setMal] = useState<{ kod: string; ad: string | null } | null>(null);
   const [miktar, setMiktar] = useState("");
   const [birim, setBirim] = useState("");
@@ -94,7 +96,7 @@ function SatirEkle({ kod, alternatif, onBitti }: { kod: string; alternatif: stri
   const gecerli = mal !== null && miktarApi !== null && D(miktarApi).gt(0) && birim.trim() !== "" && fireOran !== null;
   function gonder(e: FormEvent) {
     e.preventDefault();
-    if (!gecerli || !mal) return;
+    if (!gecerli || !mal || yazma.kilitli) return;
     ekle.mutate(
       {
         kod,
@@ -156,7 +158,7 @@ function SatirEkle({ kod, alternatif, onBitti }: { kod: string; alternatif: stri
             onChange={(e) => setFire(e.target.value)}
           />
         </label>
-        <Button type="submit" size="sm" disabled={!gecerli || ekle.isPending}>
+        <Button type="submit" size="sm" disabled={yazma.kilitli || !gecerli || ekle.isPending} title={yazma.neden}>
           {ekle.isPending ? "Ekleniyor…" : "Satırı ekle"}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onBitti}>
@@ -175,6 +177,7 @@ function SatirEkle({ kod, alternatif, onBitti }: { kod: string; alternatif: stri
 /** Tek reçete satırı: miktar, birim ve fire düzenlenir; değişince Kaydet görünür. */
 function SatirDuzenle({ s }: { s: Satir }) {
   const { guncelle, sil } = useSmmReceteDuzenle();
+  const yazma = useSmmYazmaKilidi();
   const [duzenle, setDuzenle] = useState(false);
   const [miktar, setMiktar] = useState(kutu(s.miktar));
   const [birim, setBirim] = useState(s.birim ?? "");
@@ -230,7 +233,8 @@ function SatirDuzenle({ s }: { s: Satir }) {
               <Button
                 type="button"
                 size="sm"
-                disabled={!gecerli || guncelle.isPending}
+                disabled={yazma.kilitli || !gecerli || guncelle.isPending}
+                title={yazma.neden}
                 onClick={() =>
                   guncelle.mutate(
                     { id: s.id, alanlar: { miktar: miktarApi as string, birim: birim.trim(), fire_orani: fireOran as string } },
@@ -259,6 +263,8 @@ function SatirDuzenle({ s }: { s: Satir }) {
                 size="icon-sm"
                 variant="ghost"
                 aria-label={`Düzenle — ${s.malzeme_kod}`}
+                disabled={yazma.kilitli}
+                title={yazma.neden}
                 onClick={() => setDuzenle(true)}
               >
                 <Pencil className="size-3.5" />
@@ -268,7 +274,8 @@ function SatirDuzenle({ s }: { s: Satir }) {
                 size="icon-sm"
                 variant="ghost"
                 aria-label={`Sil — ${s.malzeme_kod}`}
-                disabled={sil.isPending}
+                disabled={yazma.kilitli || sil.isPending}
+                title={yazma.neden}
                 onClick={() => sil.mutate(s.id)}
               >
                 <Trash2 className="size-3.5" />
@@ -286,6 +293,7 @@ export function ReceteCekmecesi({ kod, onKapat }: { kod: string | null; onKapat:
   const q = useSmmRecete(kod);
   const sec = useSmmAlternatif();
   const { kopyala, caniasaDon, asama: asamaDegistir } = useSmmReceteDuzenle();
+  const yazma = useSmmYazmaKilidi();
   const [ekleAlt, setEkleAlt] = useState<string | null>(null);
   const [donOnayi, setDonOnayi] = useState(false);
   const r = q.data;
@@ -321,7 +329,8 @@ export function ReceteCekmecesi({ kod, onKapat }: { kod: string | null; onKapat:
                 aria-label="Ürünün aşaması"
                 className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
                 value={r.asama}
-                disabled={asamaDegistir.isPending}
+                disabled={yazma.kilitli || asamaDegistir.isPending}
+                title={yazma.neden}
                 onChange={(e) => asamaDegistir.mutate({ kod: r.ana_kod, asama: Number(e.target.value) })}
               >
                 {Object.entries(ASAMA_ADI).map(([a, ad]) => (
@@ -342,7 +351,15 @@ export function ReceteCekmecesi({ kod, onKapat }: { kod: string | null; onKapat:
             <p className="flex flex-wrap items-center gap-2 rounded-lg bg-kart-sari px-3 py-2 text-sm">
               Bu reçete elle değiştirildi; Canias dökümü yeniden yüklenince korunur.
               {r.canias_var && (
-                <Button type="button" size="sm" variant="outline" className="ml-auto" onClick={() => setDonOnayi(true)}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="ml-auto"
+                  disabled={yazma.kilitli}
+                  title={yazma.neden}
+                  onClick={() => setDonOnayi(true)}
+                >
                   <RotateCcw className="size-3.5" /> Canias'a döndür
                 </Button>
               )}
@@ -364,21 +381,30 @@ export function ReceteCekmecesi({ kod, onKapat }: { kod: string | null; onKapat:
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={sec.isPending}
+                    disabled={yazma.kilitli || sec.isPending}
+                    title={yazma.neden}
                     onClick={() => sec.mutate({ kod: r.ana_kod, alternatif: a.alternatif })}
                   >
                     Bunu kullan
                   </Button>
                 )}
                 <span className="ml-auto flex gap-1">
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setEkleAlt(a.alternatif)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={yazma.kilitli}
+                    title={yazma.neden}
+                    onClick={() => setEkleAlt(a.alternatif)}
+                  >
                     <Plus className="size-3.5" /> Satır ekle
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
-                    disabled={kopyala.isPending}
+                    disabled={yazma.kilitli || kopyala.isPending}
+                    title={yazma.neden}
                     onClick={() => kopyala.mutate({ kod: r.ana_kod, kaynak: a.alternatif, yeni: yeniAlt })}
                   >
                     <Copy className="size-3.5" /> {yeniAlt} olarak kopyala
@@ -407,7 +433,7 @@ export function ReceteCekmecesi({ kod, onKapat }: { kod: string | null; onKapat:
             </section>
           ))}
         </div>
-        {donOnayi && r && (
+        {donOnayi && r && !yazma.kilitli && (
           <OnayDiyalogu
             baslik="Canias reçetesine dönülsün mü?"
             onayMetni="Canias'a döndür"
@@ -427,6 +453,7 @@ export function ReceteCekmecesi({ kod, onKapat }: { kod: string | null; onKapat:
 /** Canias'ta henüz olmayan ürün için elle reçete (ilk satırıyla). */
 export function YeniReceteDiyalogu({ acik, onKapat, onAcildi }: { acik: boolean; onKapat: () => void; onAcildi: (kod: string) => void }) {
   const { yeniUrun } = useSmmReceteDuzenle();
+  const yazma = useSmmYazmaKilidi();
   const [kod, setKod] = useState("");
   const [ad, setAd] = useState("");
   const [mal, setMal] = useState<{ kod: string; ad: string | null } | null>(null);
@@ -450,7 +477,7 @@ export function YeniReceteDiyalogu({ acik, onKapat, onAcildi }: { acik: boolean;
           className="flex flex-col gap-3"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!gecerli || !mal) return;
+            if (!gecerli || !mal || yazma.kilitli) return;
             yeniUrun.mutate(
               {
                 ana_kod: kod.trim(),
@@ -533,7 +560,7 @@ export function YeniReceteDiyalogu({ acik, onKapat, onAcildi }: { acik: boolean;
             <Button type="button" variant="outline" onClick={onKapat}>
               Vazgeç
             </Button>
-            <Button type="submit" disabled={!gecerli || yeniUrun.isPending}>
+            <Button type="submit" disabled={yazma.kilitli || !gecerli || yeniUrun.isPending} title={yazma.neden}>
               {yeniUrun.isPending ? "Oluşturuluyor…" : "Reçeteyi oluştur"}
             </Button>
           </div>

@@ -10,6 +10,7 @@ import { Button } from "@/bilesenler/ui/button";
 import { Input } from "@/bilesenler/ui/input";
 import { paraBicimle } from "@/yardimcilar/para";
 import { kilitTarihi } from "./SmmDevirKilit";
+import { SmmDuzenlemeKilidi, useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
 
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const SECIM_SINIFI = "h-8 rounded-lg border border-input bg-background px-2 text-sm";
@@ -59,6 +60,7 @@ function ExcelKontrol({ d }: { d: SmmDonem }) {
 /** Dönemin aşama hesabında kullandığı reçete: dönemle yüklenen Excel reçetesi ya da kalıcı Canias reçeteleri. */
 function ReceteKaynagiSecici({ d }: { d: SmmDonem }) {
   const degistir = useSmmReceteKaynagi();
+  const { kilitli, neden } = useSmmYazmaKilidi(Boolean(d.kilitli));
   return (
     <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
       Reçete
@@ -66,7 +68,8 @@ function ReceteKaynagiSecici({ d }: { d: SmmDonem }) {
         aria-label={`Reçete kaynağı — ${d.ad}`}
         className={SECIM_SINIFI}
         value={d.recete_kaynagi ?? "excel"}
-        disabled={degistir.isPending}
+        disabled={kilitli || degistir.isPending}
+        title={neden}
         onChange={(e) => degistir.mutate({ donemId: d.id, kaynak: e.target.value as "excel" | "ana" })}
       >
         {d.kaynak_dosya && <option value="excel">Excel'deki</option>}
@@ -106,6 +109,7 @@ function DonemDurumu({ d, liste }: { d: SmmDonem; liste: SmmDonem[] }) {
 /** Excel'siz yeni dönem: dönem başı stok önceki dönemin sayımından devreder. */
 function YeniDonemKarti({ liste }: { liste: SmmDonem[] }) {
   const yeni = useSmmYeniDonem();
+  const { kilitli, neden } = useSmmYazmaKilidi();
   const son = liste[0];
   const sonraki = son ? (son.ay === 12 ? { ay: 1, yil: son.yil + 1 } : { ay: son.ay + 1, yil: son.yil }) : null;
   const [ay, setAy] = useState<number | null>(null);
@@ -147,7 +151,7 @@ function YeniDonemKarti({ liste }: { liste: SmmDonem[] }) {
             onChange={(e) => setYil(Number(e.target.value) || y)}
           />
         </label>
-        <Button type="button" disabled={yeni.isPending} onClick={() => yeni.mutate({ yil: y, ay: a })}>
+        <Button type="button" disabled={kilitli || yeni.isPending} title={neden} onClick={() => yeni.mutate({ yil: y, ay: a })}>
           {yeni.isPending ? "Açılıyor…" : `${AYLAR[a - 1]} ${y} dönemini aç`}
         </Button>
         {son && <span className="text-sm text-muted-foreground">Devir: {son.ad}</span>}
@@ -188,6 +192,7 @@ export default function SmmDonemler() {
   const donemler = useSmmDonemleri();
   const yukle = useSmmYukle();
   const sil = useSmmSil();
+  const { kilitli, neden } = useSmmYazmaKilidi();
   const dosyaRef = useRef<HTMLInputElement>(null);
   const [dosya, setDosya] = useState<File | null>(null);
   const [ay, setAy] = useState<number>(new Date().getMonth() + 1);
@@ -220,6 +225,7 @@ export default function SmmDonemler() {
   return (
     <section className="flex flex-col gap-5">
       <SayfaBasligi bant baslik="Maliyet Muhasebesi" altBaslik="Aylık SMM: dönem başı, alım, sayım, sarf ve ortalama maliyet" />
+      <SmmDuzenlemeKilidi />
 
       <YeniDonemKarti liste={liste} />
 
@@ -278,7 +284,7 @@ export default function SmmDonemler() {
                 onChange={(e) => setYil(Number(e.target.value) || yil)}
               />
             </label>
-            <Button type="button" disabled={!dosya || yukle.isPending} onClick={() => gonder(false)}>
+            <Button type="button" disabled={kilitli || !dosya || yukle.isPending} title={neden} onClick={() => gonder(false)}>
               {yukle.isPending ? "Yükleniyor…" : "Yükle"}
             </Button>
           </div>
@@ -336,6 +342,8 @@ export default function SmmDonemler() {
                     size="sm"
                     variant="ghost"
                     aria-label={`Sil — ${d.ad}`}
+                    disabled={kilitli}
+                    title={neden}
                     onClick={() => {
                       sil.reset();
                       setSilinecek(d);
@@ -350,7 +358,7 @@ export default function SmmDonemler() {
         </section>
       </div>
 
-      {ustuneYazOnayi && dosya && (
+      {ustuneYazOnayi && dosya && !kilitli && (
         <OnayDiyalogu
           baslik="Dönem zaten yüklü"
           onayMetni="Üzerine yaz"
@@ -366,7 +374,7 @@ export default function SmmDonemler() {
           </p>
         </OnayDiyalogu>
       )}
-      {silinecek && (
+      {silinecek && !kilitli && (
         <OnayDiyalogu
           baslik="Dönem silinsin mi?"
           onayMetni="Sil"

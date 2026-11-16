@@ -639,7 +639,7 @@
   },
   "2.4 rapor (Güncel, kilitsiz) Excel": {
    "http": 200,
-   "bayt": 46941,
+   "bayt": 46943,
    "basliklar": "Zeytursan | Fiyat Çalışması Onay Çıktısı | TASLAK — çalışma kapatılmadı | 2026-2027 SEZONU FİYAT ÇALIŞMALARI - TEST GÜNCEL 2026-2027 | GİDERLER | TASLAK — çalışma kapatılmadı | Grup | S.\nNO | ÜRÜN KODU | ÜRÜN ADI | REÇETE MALİYETİ | GÜG | FAALİYET\nGİDERİ | FİNANS\nGİDERİ | GÜG+\nFAAL+\nFİN | GİDER\nMALİYET\n% | BİRİM MALİYET | BİRİM MALİYET | Maliyet | Maliyet\n% | TL | USD | EURO | Üretim\nAdedi | Üretim\nAdedi | TL | USD | EURO | Üretim\nAdedi | Kavanoz Hattı | 1 | 03.99.001 | Test Berrak Turşu 370 ml | 17.75859333968944 | 0.7238543592961388 | 1.658983333333333 | 1.026905829596413 | 4.088896500523837"
   },
   "3.1 zam etkisi kavanoz %15 (öngörü)": {
@@ -909,7 +909,7 @@
       "musteri": "Test Toptan Ltd.",
       "durum": "gonderildi",
       "tur_no": 3,
-      "tarih": "2026-11-16T11:25:14+00:00",
+      "tarih": "2026-11-16T12:18:51+00:00",
       "hesap_tarihi": "2026-11-16",
       "fiyat_tl": "29.44005480377162287087469999"
      }
@@ -1048,7 +1048,7 @@
    ]
   },
   "3.9 geçmiş hesaplar kıyas 03.99.001": {
-   "yanit": "{\"a\": {\"id\": 1, \"urun_kodu\": \"03.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml\", \"senaryo_id\": 2, \"hesap_tarihi\": \"2026-11-16\", \"olusturma_zamani\": \"2026-11-16T11:25:14+00:00\", \"olusturan\": \"muhasebe1\"}, \"b\": {\"id\": 2, \"urun_kodu\": \"03.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml\", \"senaryo_id\": 2, \"hesap_tarihi\": \"2026-11-16\", \"olusturma_zamani\": \"2026-11-16T11:25:15+00:00\", \"olusturan\": \"muhasebe1\"}, \"uyari\": null, \"toplamlar\": [{\"alan\": \"malzeme_toplami\", \"etiket\": \"Malzeme toplamı\", \"a\": \"17.75859333968943665983139667\", \"b\": \"18.97605695181064878104351788\", \"fark\": \"1.21746361212121212121212121\"}, {\"alan\": \"direkt_iscilik_toplami\", \"etiket\": \"Direkt işçilik\", \"a\": \"0.6456\", \"b\": \"0.6456\", \"fark\": \"0.0000\"}, {\"alan\": \"gug_toplami\", \"etiket\": \"GÜG\", \"a\": \"1.013383333333333333333333333\", \"b\": \"1.013383333333333333333333333\", \"fark\": \"0E-27\"}, {\"alan\": \"uretim_gideri_toplami\", \"etiket\": \"Üretim gideri\", \"a\": \"1.658983333333333333333333333\", \"b\": \"1.658983333333333333333333333\", \"fark\": \"0E-27\"}, {\"alan\": \"diger_giderler_toplami\", \"etiket\": \"Diğer giderler\", \"a\": \"1.026905829596412556053811659\", \"b\": \"1.026905829596412556053811659\", \"fark\": \"0E-27\"}, {\"alan\": \"giydirilmis_maliyet\", \"etiket\": \"Giydirilmiş maliyet\", \"a\": \"20.44448250261918254921854166\", \"b\": \"21.66194611474039467043066287\", \"fark\": \"1.21746361212121212121212121\"}, {\"alan\": \"finansman_dahil_maliyet_tl\", \"etiket\": \"Maliyet (TL, finansman dahil)\", \"a\": \"24.53337900314301905906224999\", \"b\": \"25.99433533768847360451"
+   "yanit": "{\"a\": {\"id\": 1, \"urun_kodu\": \"03.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml\", \"senaryo_id\": 2, \"hesap_tarihi\": \"2026-11-16\", \"olusturma_zamani\": \"2026-11-16T12:18:51+00:00\", \"olusturan\": \"muhasebe1\"}, \"b\": {\"id\": 2, \"urun_kodu\": \"03.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml\", \"senaryo_id\": 2, \"hesap_tarihi\": \"2026-11-16\", \"olusturma_zamani\": \"2026-11-16T12:18:52+00:00\", \"olusturan\": \"muhasebe1\"}, \"uyari\": null, \"toplamlar\": [{\"alan\": \"malzeme_toplami\", \"etiket\": \"Malzeme toplamı\", \"a\": \"17.75859333968943665983139667\", \"b\": \"18.97605695181064878104351788\", \"fark\": \"1.21746361212121212121212121\"}, {\"alan\": \"direkt_iscilik_toplami\", \"etiket\": \"Direkt işçilik\", \"a\": \"0.6456\", \"b\": \"0.6456\", \"fark\": \"0.0000\"}, {\"alan\": \"gug_toplami\", \"etiket\": \"GÜG\", \"a\": \"1.013383333333333333333333333\", \"b\": \"1.013383333333333333333333333\", \"fark\": \"0E-27\"}, {\"alan\": \"uretim_gideri_toplami\", \"etiket\": \"Üretim gideri\", \"a\": \"1.658983333333333333333333333\", \"b\": \"1.658983333333333333333333333\", \"fark\": \"0E-27\"}, {\"alan\": \"diger_giderler_toplami\", \"etiket\": \"Diğer giderler\", \"a\": \"1.026905829596412556053811659\", \"b\": \"1.026905829596412556053811659\", \"fark\": \"0E-27\"}, {\"alan\": \"giydirilmis_maliyet\", \"etiket\": \"Giydirilmiş maliyet\", \"a\": \"20.44448250261918254921854166\", \"b\": \"21.66194611474039467043066287\", \"fark\": \"1.21746361212121212121212121\"}, {\"alan\": \"finansman_dahil_maliyet_tl\", \"etiket\": \"Maliyet (TL, finansman dahil)\", \"a\": \"24.53337900314301905906224999\", \"b\": \"25.99433533768847360451"
   },
   "3.10 fiyat eğilimi": {
    "ozet": {
@@ -1682,7 +1682,7 @@
   },
   "4.10 SMM raporu (kilitli Ekim)": {
    "http": 200,
-   "bayt": 31954
+   "bayt": 31956
   },
   "4.11 Ekim kilidi aç (Muhasebe)": {
    "http": 403
@@ -2667,25 +2667,25 @@
   },
   "6.1 rapor bütçe excel (direktor)": {
    "http": 200,
-   "bayt": 47979,
+   "bayt": 47969,
    "tur": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
    "ad": "attachment; filename=\"onay-ciktisi-fiyat-2026-2027-11-16-2026.xlsx\"; filename*=UTF-8''onay-ciktisi-fiyat-2026-2027-11-16-2026.xlsx"
   },
   "6.1 rapor bütçe pdf (direktor)": {
    "http": 200,
-   "bayt": 114463,
+   "bayt": 114434,
    "tur": "application/pdf",
    "ad": "attachment; filename=\"onay-ciktisi-fiyat-2026-2027-11-16-2026.pdf\"; filename*=UTF-8''onay-ciktisi-fiyat-2026-2027-11-16-2026.pdf"
   },
   "6.1 rapor gerçekleşen excel (direktor)": {
    "http": 200,
-   "bayt": 47747,
+   "bayt": 47743,
    "tur": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
    "ad": "attachment; filename=\"onay-ciktisi-fiyat-2026-2027-11-16-2026.xlsx\"; filename*=UTF-8''onay-ciktisi-fiyat-2026-2027-11-16-2026.xlsx"
   },
   "6.1 rapor gerçekleşen pdf (direktor)": {
    "http": 200,
-   "bayt": 112422,
+   "bayt": 112412,
    "tur": "application/pdf",
    "ad": "attachment; filename=\"onay-ciktisi-fiyat-2026-2027-11-16-2026.pdf\"; filename*=UTF-8''onay-ciktisi-fiyat-2026-2027-11-16-2026.pdf"
   },

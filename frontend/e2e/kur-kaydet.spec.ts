@@ -24,7 +24,7 @@ test("kur: ürün ekranında USD kurunu değiştir -> Senaryo geneli -> Kaydet -
   await expect(page.getByText("1 alanda değişiklik")).toBeVisible();
 
   // Diyalog: kur senaryo genelidir, tüm ürünleri etkiler.
-  await page.getByRole("button", { name: "Kaydet" }).click();
+  await page.getByRole("button", { name: "Kaydet", exact: true }).click();
   const diyalog = page.getByRole("dialog");
   await expect(diyalog.getByText(/Senaryo geneli — (tüm ürünleri|\d+ ürünü) etkiler/)).toBeVisible();
   const neden = `E2E kur güncellemesi ${Date.now()}`;
