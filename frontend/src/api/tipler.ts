@@ -182,6 +182,10 @@ export type FiyatEgilimiSatiri = Sema["FiyatEgilimiSatiri"];
 export type FiyatEgilimiSonucu = Sema["FiyatEgilimiCikis"];
 export type YonetimOzeti = Sema["YonetimOzetiCikis"];
 
+// Önemli malzemeler (80/20, 13.11.2026): pay / kümülatif yüzde metni ("12.34" = %12,34), eşik oran ("0.8").
+export type OnemliMalzemeSatiri = Sema["OnemliMalzemeSatiri"];
+export type OnemliMalzemelerSonucu = Sema["OnemliMalzemelerCikis"];
+
 // SMM raporları (13.11.2026): bütçe / fiili kıyası, aylar arası SMM, ürün birim maliyet kartı. Oranlar metin (0.05 = %5).
 export type SmmButceKiyas = Sema["SmmButceKiyas"];
 export type SmmButceKiyasSatiri = Sema["SmmButceKiyasSatiri"];

@@ -21,6 +21,7 @@ const KurRiski = lazy(() => import("@/sayfalar/KurRiski"));
 const KarlilikHaritasi = lazy(() => import("@/sayfalar/KarlilikHaritasi"));
 const HedefFiyat = lazy(() => import("@/sayfalar/HedefFiyat"));
 const FiyatEgilimi = lazy(() => import("@/sayfalar/FiyatEgilimi"));
+const OnemliMalzemeler = lazy(() => import("@/sayfalar/OnemliMalzemeler"));
 const YonetimOzeti = lazy(() => import("@/sayfalar/YonetimOzeti"));
 const SmmDonemler = lazy(() => import("@/sayfalar/smm/SmmDonemler"));
 const SmmStok = lazy(() => import("@/sayfalar/smm/SmmStok"));
@@ -72,6 +73,7 @@ export const rotalar = [
       { path: "karlilik", element: <KarlilikHaritasi /> },
       { path: "hedef-fiyat", element: <HedefFiyat /> },
       { path: "fiyat-egilimi", element: <FiyatEgilimi /> },
+      { path: "onemli-malzemeler", element: <OnemliMalzemeler /> },
       { path: "yonetim-ozeti", element: <YonetimOzeti /> },
       { path: "smm", element: <SmmDonemler /> },
       { path: "smm/stok", element: <SmmStok /> },

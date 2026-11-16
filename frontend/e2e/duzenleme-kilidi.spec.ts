@@ -22,6 +22,7 @@ test("düzenleme kilidi: ürün ekranı kilitli açılır -> Düzenlemeyi aç ->
   await expect(usd).toBeDisabled();
 
   await serit.getByRole("button", { name: "Düzenlemeyi aç" }).click();
+  await page.getByRole("button", { name: "Evet, aç" }).click();
   await expect(serit).toContainText("Düzenleme açık");
   await expect(miktar).toBeEnabled();
   await expect(usd).toBeEnabled();

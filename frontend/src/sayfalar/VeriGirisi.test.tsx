@@ -388,6 +388,7 @@ describe("VeriGirisi — Yeni ürün kartı (Faz 5c)", () => {
     expect(within(screen.getByRole("region", { name: "Parametre" })).getByLabelText("Parametre")).toBeDisabled();
 
     await u.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await u.click(await screen.findByRole("button", { name: "Evet, aç" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Ürünü kaydet" })).toBeEnabled());
     await waitFor(() => expect(havuz).toBeEnabled());
     expect(screen.getByRole("group", { name: "Düzenleme kilidi" })).toHaveTextContent("Düzenleme açık");

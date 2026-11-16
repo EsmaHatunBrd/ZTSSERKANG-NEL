@@ -3,7 +3,7 @@ hedef marjın altındaki ürünler ve fiyat girişi sapma eşikleri. Hesaplar me
 Oranlar 0,10 = %10."""
 from dataclasses import replace
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from fiyat_motoru.para import SIFIR
@@ -414,3 +414,71 @@ def hedef_fiyat(s: Session, senaryo_id: int, marj: Decimal | None = None, tarih:
             "ort_zam": fark / ciro if ciro else None}
     return decimal_str({"marj": marj, "bolen_yurtici": bolenler["yurtici"], "bolen_yurtdisi": bolenler["yurtdisi"], "yuvarlama": adim,
                         "adet_kaynagi": "satis_gecmisi", "ozet": ozet, "kayitlar": satirlar})
+
+
+# ---------------------------------------------------------------- Önemli malzemeler (80/20)
+VARSAYILAN_ONEM_ESIGI = Decimal("0.8")
+_YUZDE_ADIMI = Decimal("0.01")
+
+
+def _yuzde(pay: Decimal, toplam: Decimal) -> Decimal:
+    """pay / toplam x 100, 2 basamak (ROUND_HALF_UP); toplam 0 ise 0."""
+    return (pay / toplam * 100).quantize(_YUZDE_ADIMI, rounding=ROUND_HALF_UP) if toplam else SIFIR.quantize(_YUZDE_ADIMI)
+
+
+def onemli_malzemeler(s: Session, senaryo_id: int, esik: Decimal = VARSAYILAN_ONEM_ESIGI, tarih: date | None = None) -> dict:
+    """Önemli malzemeler (80/20, Pareto): yıllık malzeme tutarının `esik` kadarını (0,8 = %80) oluşturan malzemeler.
+    Yıllık tutar = Σ ürünler (yıllık adet x o malzemenin üründeki fireli TL tutarı); yıllık miktar = Σ (yıllık adet x brüt miktar).
+    Yıllık adet `yillik_adetler` (geçen yıl satış adedi; kur riski ve kârlılıkla aynı kaynak). Adedi olmayan ürün hesaba girmez
+    (`adetsiz_urun`), hesaplanamayan ürün de girmez (`hatali_urun`). Tutarlar tek toplu hesabın (`toplu_hesapla`) reçete satırlarından
+    alınır; yeni hesap kuralı yok: Σ yıllık tutar = Σ (yıllık adet x ürünün malzeme toplamı).
+    Ara mamul / alt satırı olan (başlık) satırlar tutar taşımıyorsa atlanır: maliyetleri alt satırlardadır, çift sayılmaz. Böyle bir
+    satıra fiyat girilmişse motor onu ürün maliyetine kattığı için burada da sayılır.
+    Sıra: yıllık tutar azalan, sonra kod; fiyatsız (tutarı 0) malzemeler sonda, payı 0. `pay_yuzde` / `kumulatif_yuzde` yüzde metni
+    ("12.34" = %12,34). `esik_icinde`: kendinden önceki kümülatif pay eşiğin altında olan satırlar, yani kümülatifi eşiği geçmeyenler
+    ile eşiği aşan (ya da tam tutturan) ilk satır. `birim_fiyat`: malzeme kartının geçerli fiyatı (kendi para biriminde; kart yoksa null).
+    `kullanan_urun_sayisi`: hesaba giren (adedi olan) ürünlerden kaçında geçtiği."""
+    sen = hs.senaryo_getir(s, senaryo_id)
+    esik = Decimal(str(esik))
+    if not (SIFIR < esik <= 1):
+        raise DogrulamaHatasi("eşik 0 ile 1 arasında olmalı (0.8 = %80)", {"esik": str(esik)})
+    t = tarih or date.today()
+    hesaplar = hs.toplu_hesapla(s, sen.id, t)
+    urunler = {u.kod: u for u in s.scalars(select(m.Urun).where(m.Urun.kod.in_([k for k, _ in hesaplar])))} if hesaplar else {}
+    adetler = yillik_adetler(s, sen, list(urunler.values()))
+    toplamlar: dict[tuple[str, str], dict] = {}
+    adetsiz = hatali = 0
+    for kod, c in hesaplar:
+        if isinstance(c, Exception):
+            hatali += 1
+            continue
+        adet = adetler.get(kod)
+        if adet is None:
+            adetsiz += 1
+            continue
+        for rs_, ms in zip(c.girdi.recete, c.sonuc.satirlar):   # malzeme satırları reçeteyle aynı sırada, gider satırlarından önce
+            if (rs_.dugum_tipi == "ara_mamul" or rs_.alt_satiri_var) and not ms.tutar:
+                continue
+            kart = (c.malzemeler or {}).get(ms.kod)
+            k = toplamlar.setdefault((ms.kod, "" if ms.kod else ms.kalem), {
+                "kod": ms.kod, "ad": kart.ad if kart else ms.kalem, "tip": kart.tip if kart else None,
+                "para_birimi": (kart.para_birimi if kart else rs_.para_birimi_elle) or None, "birim": (kart.birim if kart else rs_.birim) or None,
+                "birim_fiyat": kart.fiyat if kart else None, "yillik_miktar": SIFIR, "yillik_tutar_tl": SIFIR, "_urunler": set()})
+            k["yillik_miktar"] += adet * ms.brut_miktar
+            k["yillik_tutar_tl"] += adet * ms.tutar
+            k["_urunler"].add(kod)
+    sirali = sorted(toplamlar.values(), key=lambda r: (-r["yillik_tutar_tl"], r["kod"], r["ad"]))
+    toplam = sum((r["yillik_tutar_tl"] for r in sirali), SIFIR)
+    sinir = esik * toplam
+    kumulatif, satirlar = SIFIR, []
+    for i, r in enumerate(sirali, start=1):
+        onceki = kumulatif
+        kumulatif += r["yillik_tutar_tl"]
+        satirlar.append({"sira": i, "kod": r["kod"], "ad": r["ad"], "tip": r["tip"], "para_birimi": r["para_birimi"], "birim": r["birim"],
+                         "yillik_miktar": r["yillik_miktar"], "yillik_tutar_tl": r["yillik_tutar_tl"],
+                         "pay_yuzde": _yuzde(r["yillik_tutar_tl"], toplam), "kumulatif_yuzde": _yuzde(kumulatif, toplam),
+                         "esik_icinde": bool(r["yillik_tutar_tl"] > 0 and onceki < sinir),
+                         "kullanan_urun_sayisi": len(r["_urunler"]), "birim_fiyat": r["birim_fiyat"]})
+    return decimal_str({"senaryo_id": sen.id, "esik": esik, "tarih": t.isoformat(), "adet_kaynagi": "satis_gecmisi", "toplam_tutar_tl": toplam,
+                        "adetsiz_urun": adetsiz, "hatali_urun": hatali, "satirlar": satirlar,
+                        "esik_icindeki_sayi": sum(1 for r in satirlar if r["esik_icinde"])})

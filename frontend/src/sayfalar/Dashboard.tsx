@@ -22,6 +22,7 @@ import { AmbalajOzeti } from "./dashboard/AmbalajOzeti";
 import { GerceklesenSeridi } from "./dashboard/GerceklesenSeridi";
 import { VeriKontroluSeridi } from "./dashboard/VeriKontroluSeridi";
 import { GenelGrafikler } from "./dashboard/GenelGrafikler";
+import { MaliyetKartlariDugmesi } from "./dashboard/MaliyetKartlariDugmesi";
 import { OneCikanlar } from "./dashboard/OneCikanlar";
 import { UstKartlar } from "./dashboard/UstKartlar";
 import { UyariHucresi } from "./dashboard/UyariHucresi";
@@ -416,10 +417,18 @@ export default function Dashboard() {
         baslik="Genel Bakış"
         altBaslik={senaryo ? `${senaryo.sezon_ad} · ${senaryo.ad} — ürünlerin maliyet ve satış özeti` : "Ürünlerin maliyet ve satış özeti"}
         eylemler={
-          <a href={`/api/v1/disa-aktar/urunler.xlsx?senaryo=${senaryoId}`} download className={cn(buttonVariants({ variant: "outline" }))}>
-            <Download aria-hidden />
-            Excel&apos;e aktar
-          </a>
+          <>
+            <a
+              href={`/api/v1/disa-aktar/urunler.xlsx?senaryo=${senaryoId}`}
+              download
+              title="Bu tablo"
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              <Download aria-hidden />
+              Excel&apos;e aktar
+            </a>
+            {senaryoId !== null && <MaliyetKartlariDugmesi senaryoId={senaryoId} />}
+          </>
         }
       />
 

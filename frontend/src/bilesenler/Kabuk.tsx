@@ -85,7 +85,7 @@ export const MENU_GRUPLARI: MenuGrubu[] = [
         etiket: "Analiz",
         son: false,
         simge: TrendingUp,
-        ekYollar: ["/zam-etkisi", "/kur-riski", "/karlilik", "/hedef-fiyat", "/liste-calismasi", "/fiyat-egilimi"],
+        ekYollar: ["/zam-etkisi", "/kur-riski", "/karlilik", "/hedef-fiyat", "/liste-calismasi", "/fiyat-egilimi", "/onemli-malzemeler"],
         aciklama: "Ya olursa, zam etkisi, liste fiyatı çalışması",
       },
       // Bütçe vs Gerçekleşen, ürün aileleri ve geçmiş kayıtlar tek öğe; sayfalar arası geçiş sekmelerle (SayfaSekmeleri).

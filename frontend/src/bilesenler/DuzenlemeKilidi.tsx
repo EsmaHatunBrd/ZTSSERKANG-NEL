@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } fr
 import { useLocation } from "react-router-dom";
 import { Lock, LockOpen } from "lucide-react";
 import { hataMetni, yanitDinle } from "@/api/istemci";
+import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { duzenlemeKilidiAcildiBildir } from "@/api/sorgular/duzenlemeKilidi";
 import { Button } from "@/bilesenler/ui/button";
 import { cn } from "@/lib/utils";
@@ -218,6 +219,8 @@ export function DuzenlemeKilidi({ className }: { className?: string }) {
   const { acik, sureDoldu: doldu, ac: kilidiAc, kilitle } = useDuzenlemeKilidi();
   const { pathname } = useLocation();
   const [uyari, setUyari] = useState<string | null>(null);
+  // Kilit açılırken bir kez sorulur; açık kaldığı sürece (15 dk) her değişiklikte yeniden sorulmaz.
+  const [onay, setOnay] = useState(false);
   const kalan = useKalanSn(acik);
 
   if (acik) {
@@ -281,13 +284,28 @@ export function DuzenlemeKilidi({ className }: { className?: string }) {
           size="sm"
           disabled={senaryoKilitli}
           title={senaryoKilitli ? "Senaryo kilitli: düzenleme açılamaz" : "Düzenlemeyi açar; 15 dakika işlem yapılmazsa yeniden kilitlenir"}
-          onClick={() => {
+          onClick={() => setOnay(true)}
+        >
+          <LockOpen aria-hidden /> Düzenlemeyi aç
+        </Button>
+      )}
+      {onay && (
+        <OnayDiyalogu
+          baslik="Düzenleme açılsın mı?"
+          onayMetni="Evet, aç"
+          onVazgec={() => setOnay(false)}
+          onOnayla={() => {
+            setOnay(false);
             setUyari(null);
             void kilidiAc(pathname, senaryoId).then(setUyari);
           }}
         >
-          <LockOpen aria-hidden /> Düzenlemeyi aç
-        </Button>
+          <p>Değişiklik yapmak üzeresiniz. Emin misiniz?</p>
+          <p className="text-muted-foreground">
+            Düzenleme 15 dakika açık kalır; bu sürede yaptığınız değişiklikler için yeniden sorulmaz. Kilidi açtığınız Değişiklik Günlüğü'ne
+            yazılır.
+          </p>
+        </OnayDiyalogu>
       )}
     </div>
   );

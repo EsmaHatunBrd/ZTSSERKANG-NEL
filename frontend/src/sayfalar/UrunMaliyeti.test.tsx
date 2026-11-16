@@ -1651,6 +1651,7 @@ describe("Düzenleme kilidi: ürün ekranı", () => {
     expect(screen.getByLabelText("Hesap tarihi")).toBeEnabled();
 
     await userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Evet, aç" }));
     await waitFor(() => expect(miktarlar()[0]).toBeEnabled());
     expect(screen.getByLabelText("Üretim hattı")).toBeEnabled();
     expect(screen.getByLabelText("Vardiya üretim adedi")).toBeEnabled();
@@ -1675,6 +1676,7 @@ describe("Düzenleme kilidi: ürün ekranı", () => {
     expect(within(tablo).getByLabelText(/Fire % .*Pet Şişe/)).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await user.click(await screen.findByRole("button", { name: "Evet, aç" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Kaydet" })).toBeEnabled());
     expect(screen.getByText("1 satırda değişiklik · 1 fire")).toBeInTheDocument();
   });

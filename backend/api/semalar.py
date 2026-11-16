@@ -2596,3 +2596,33 @@ class DuzenlemeKilidiAcCikis(BaseModel):
     sayfa: str
     senaryo_id: int | None
     kullanici: str
+
+
+# ---------------------------------------------------------------- Önemli malzemeler (80/20) — 13.11.2026
+class OnemliMalzemeSatiri(BaseModel):
+    """Tutar ve miktarlar ondalık metin. pay_yuzde / kumulatif_yuzde yüzde metni, 2 basamak ("12.34" = %12,34)."""
+    sira: int                       # yıllık tutara göre sıra (1 = en büyük)
+    kod: str
+    ad: str
+    tip: str | None
+    para_birimi: str | None         # malzeme kartının para birimi
+    birim: str | None
+    yillik_miktar: str              # Σ (yıllık adet x brüt miktar)
+    yillik_tutar_tl: str            # Σ (yıllık adet x üründeki fireli TL tutarı)
+    pay_yuzde: str                  # yıllık tutarın toplam içindeki payı (%)
+    kumulatif_yuzde: str            # koşan toplam (%)
+    esik_icinde: bool               # kümülatifi eşiği geçmeyenler + eşiği aşan ilk satır
+    kullanan_urun_sayisi: int       # hesaba giren (yıllık adedi olan) ürünlerden kaçında geçtiği
+    birim_fiyat: str | None         # malzeme kartının geçerli fiyatı (kendi para biriminde); kart yoksa null
+
+
+class OnemliMalzemelerCikis(BaseModel):
+    senaryo_id: int
+    esik: str                       # 0.8 = %80
+    tarih: str                      # hesap tarihi (ISO)
+    adet_kaynagi: str               # "satis_gecmisi": yıllık adet = geçen yıl satış adedi
+    toplam_tutar_tl: str            # hesaba giren ürünlerin yıllık malzeme tutarı
+    adetsiz_urun: int               # yıllık adedi olmadığı için hesaba girmeyen ürün sayısı
+    hatali_urun: int                # hesaplanamadığı için hesaba girmeyen ürün sayısı
+    satirlar: list[OnemliMalzemeSatiri]
+    esik_icindeki_sayi: int

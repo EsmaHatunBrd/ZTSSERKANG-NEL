@@ -202,6 +202,7 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
     expect(screen.getByRole("link", { name: /Şablonu indir/ })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Evet, aç" }));
     await waitFor(() => expect(within(satir).getByRole("button", { name: /^Sil/ })).toBeEnabled());
     expect(screen.getByRole("button", { name: "Ekle" })).toBeEnabled();
   });

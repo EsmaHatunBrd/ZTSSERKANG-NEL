@@ -139,7 +139,10 @@ describe("Düzenleme kilidi: kilitliyken yazma düğmeleri pasif, kilit açılı
       ),
     );
   }
-  const ac = () => userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+  const ac = async () => {
+    await userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Evet, aç" }));
+  };
   const serit = () => screen.getByRole("group", { name: "Düzenleme kilidi" });
 
   it("Parametreler: Değiştir pasif (ipucu 'Düzenleme kilitli'), geçmiş serbest; açılınca etkin", async () => {

@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from io import BytesIO
 from fastapi import APIRouter, Query
@@ -8,11 +9,12 @@ from openpyxl.styles import Alignment, Font
 from sqlalchemy import select
 from ..depo import modeller as m
 from openpyxl.utils import get_column_letter
-from ..servisler import analiz_servisi as an, hesap_servisi as hs
+from openpyxl.worksheet.hyperlink import Hyperlink
+from ..servisler import aile as aile_servisi, analiz_servisi as an, hesap_servisi as hs
 from ..servisler.hatalar import ServisHatasi
 from .bagimliliklar import OturumDep, SenaryoDep
 from .semalar import HATA_404_422, KarlilikBolgesi
-from .urunler import dashboard_satirlari
+from .urunler import _hesap_yaniti, dashboard_satirlari
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 router = APIRouter(tags=["disa-aktar"])
@@ -281,3 +283,242 @@ def kur_riski_xlsx(s: OturumDep, sen: SenaryoDep, oran: Decimal = Query(Decimal(
             ("Yıllık adedi olmayan", o["adetsiz_urun"], "adet"), ("Hatalı", o["hatali"], "adet")]
     tampon = _analiz_excel("Kur Riski", sen, parametre, KUR_KOLONLAR, d["kayitlar"], ozet, (KUR_PB_KOLONLAR, d["para_birimleri"]))
     return _excel_yaniti(tampon, "kur-riski.xlsx")
+
+
+# ---------------------------------------------------------------- Toplu maliyet kartları (ürün başına sayfa)
+B_TUTAR, B_FIYAT, B_ORAN, B_ADET = "#,##0.00", "#,##0.0000", "0.00%", "#,##0"
+KART_SUTUNLARI = [("Satır", 8), ("Kod", 16), ("Cinsi", 46), ("Miktar", 13), ("Fire %", 9), ("Brüt", 13), ("Birim", 8), ("Birim fiyat", 14), ("Döviz", 8),
+                  ("Tutar (firesiz)", 16), ("Tutar (fireli)", 16)]
+GIDER_SUTUNLARI = {1: "Grup", 3: "Gider kalemi", 4: "Miktar", 6: "Brüt", 7: "Birim", 8: "Birim fiyat", 10: "Tutar (firesiz)", 11: "Tutar (fireli)"}
+GIDER_GRUBU = {"direkt_iscilik": "Direkt işçilik", "gug": "GÜG", "diger": "Diğer giderler", "finansman": "Finansman"}
+KART_OZET_SUTUNLARI = [("Kod", 16), ("Ürün", 46), ("Hat", 12), ("Ambalaj", 12), ("Malzeme toplamı", 16), ("Üretim gideri", 15), ("Faaliyet gideri", 15),
+                       ("Finansman", 13), ("Birim maliyet TL", 17), ("Satış TL", 14), ("Satış USD", 12), ("Satış EUR", 12), ("Uyarı sayısı", 12),
+                       ("Sayfa", 18), ("Durum", 50)]
+BIRIM_MALIYET_ETIKETI = "Finansman dahil maliyet TL"
+# (etiket, görünüm alanı, sayı biçimi, vurgulu): ürün ekranındaki Toplamlar kartıyla aynı satırlar ve sıra.
+KART_TOPLAMLARI = [("Hammadde-yardımcı malzeme toplamı", "malzeme", B_TUTAR, False), ("Direkt işçilik", "direkt_iscilik", B_TUTAR, False),
+                   ("GÜG", "gug", B_TUTAR, False), ("Gider toplamı", "uretim_gideri", B_TUTAR, False),
+                   ("Toplam birim maliyet", "_toplam_birim", B_TUTAR, True), ("Diğer giderler", "diger", B_TUTAR, False),
+                   ("Giydirilmiş maliyet", "giydirilmis", B_TUTAR, False), ("Finansman (TL)", "finansman_tl", B_TUTAR, False),
+                   (BIRIM_MALIYET_ETIKETI, "maliyet_tl", B_TUTAR, True),
+                   ("Finansman dahil maliyet USD", "maliyet_usd", B_FIYAT, False), ("Finansman dahil maliyet EUR", "maliyet_eur", B_FIYAT, False),
+                   ("Finansman dahil maliyet GBP", "maliyet_gbp", B_FIYAT, False), ("Finansman dahil maliyet ZAR", "maliyet_zar", B_FIYAT, False)]
+KART_SATISLARI = [("Satış fiyatı TL", "satis_tl", B_TUTAR), ("Satış fiyatı USD", "satis_usd", B_FIYAT), ("Satış fiyatı EUR", "satis_eur", B_FIYAT),
+                  ("Satış fiyatı GBP", "satis_gbp", B_FIYAT), ("Satış fiyatı ZAR", "satis_zar", B_FIYAT),
+                  ("Süzme kg birim fiyatı TL", "suzme_kg_tl", B_TUTAR)]
+ISTEGE_BAGLI = {"maliyet_gbp", "maliyet_zar", "satis_gbp", "satis_zar"}   # yalnız değeri olan üründe yazılır (ürün ekranıyla aynı)
+_SAYFA_ADI_YASAK = re.compile(r"[\[\]:*?/\\]")
+_DOSYA_ADI_YASAK = re.compile(r"[^A-Za-z0-9-]+")
+KALIN = Font(bold=True)
+
+
+def sayfa_adi(kod: str, kullanilan: set[str]) -> str:
+    """Excel sayfa adı kuralları: en çok 31 karakter, [ ] : * ? / \\ yok, baş/sonda kesme işareti yok, boş olmaz, büyük/küçük harf
+    ayırmadan benzersiz. Çakışmada sonuna " (2)", " (3)" eklenir. `kullanilan` (casefold) güncellenir."""
+    taban = _SAYFA_ADI_YASAK.sub("-", kod or "").strip().strip("'").strip()[:31] or "Ürün"
+    ad, n = taban, 1
+    while ad.casefold() in kullanilan:
+        n += 1
+        ek = f" ({n})"
+        ad = taban[:31 - len(ek)] + ek
+    kullanilan.add(ad.casefold())
+    return ad
+
+
+def _ic_baglanti(hucre, sayfa: str, metin: str):
+    """Çalışma kitabı içindeki sayfaya köprü."""
+    hucre.hyperlink = Hyperlink(ref=hucre.coordinate, location="'" + sayfa.replace("'", "''") + "'!A1", display=metin)
+    hucre.value = metin
+    hucre.style = "Hyperlink"
+
+
+def _sayi(ws, satir: int, sutun: int, deger, bicim: str):
+    """Decimal metnini SAYI hücresi olarak yazar (boşsa boş hücre)."""
+    c = ws.cell(row=satir, column=sutun, value=_d(deger))
+    c.number_format = bicim
+    return c
+
+
+def _baslik_satiri(ws, satir: int, basliklar: dict[int, str]):
+    for j, b in basliklar.items():
+        h = ws.cell(row=satir, column=j, value=b)
+        h.font = KALIN
+        h.alignment = Alignment(wrap_text=True, vertical="center", horizontal="left" if j <= 3 or j in (7, 9) else "right")
+
+
+def _oran_notu(o) -> str:
+    return "" if o is None else f" ({_tr_yuzde(o)})"
+
+
+def _kart_sayfasi(ws, u, c, g: dict, sen, t: date, not_: str):
+    """Tek ürünün maliyet kartı. g: ürün ekranının görünümü (`urunler._hesap_yaniti`); c: aynı hesabın çıktısı (firesiz satır tutarları için).
+    Satır 1-3 başlık bloğu, 4 reçete sütun başlıkları (dondurulmuş), sonra reçete, gider kalemleri, toplamlar, satış ve teklif fiyatları."""
+    ws["A1"] = u.ad
+    ws["A1"].font = Font(bold=True, size=13)
+    _ic_baglanti(ws["K1"], "Özet", "Özet'e dön")
+    ws["A2"] = f"Kod: {u.kod} · Çalışma: {sen.sezon.ad} — {sen.ad} · Hesap tarihi: {t:%d.%m.%Y}"
+    ws["A3"] = not_
+    ws["A3"].font = Font(italic=True)
+    for j, (_, genislik) in enumerate(KART_SUTUNLARI, start=1):
+        ws.column_dimensions[get_column_letter(j)].width = genislik
+    _baslik_satiri(ws, 4, {j: b for j, (b, _) in enumerate(KART_SUTUNLARI, start=1)})
+    ws.freeze_panes = "A5"
+    firesiz = c.sonuc.firesiz.satirlar if c.sonuc.firesiz is not None else None
+    i = 4
+    giderler = []
+    for sira, r in enumerate(g["satirlar"]):
+        tutar_firesiz = firesiz[sira].tutar if firesiz is not None and sira < len(firesiz) else r.get("tutar_firesiz")
+        if r["grup"] != "malzeme":
+            giderler.append((r, tutar_firesiz))
+            continue
+        i += 1
+        ws.cell(row=i, column=1, value=r["sira"])
+        ws.cell(row=i, column=2, value=r["kod"] or None)
+        ws.cell(row=i, column=3, value=r["kalem"])
+        _sayi(ws, i, 4, r["miktar"], B_FIYAT)
+        _sayi(ws, i, 5, r["fire_orani"], B_ORAN)
+        _sayi(ws, i, 6, r["brut_miktar"], B_FIYAT)
+        ws.cell(row=i, column=7, value=r["birim"])
+        _sayi(ws, i, 8, r["birim_fiyat"], B_FIYAT)
+        ws.cell(row=i, column=9, value=r["doviz"])
+        _sayi(ws, i, 10, tutar_firesiz, B_TUTAR)
+        _sayi(ws, i, 11, r["tutar"], B_TUTAR)
+    tp, tf = g["toplamlar"], g["toplamlar_firesiz"] or {}
+    i += 1
+    ws.cell(row=i, column=3, value="Malzeme toplamı").font = KALIN
+    _sayi(ws, i, 10, tf.get("malzeme"), B_TUTAR).font = KALIN
+    _sayi(ws, i, 11, tp["malzeme"], B_TUTAR).font = KALIN
+
+    i += 2
+    ws.cell(row=i, column=1, value="Gider kalemleri").font = Font(bold=True, size=12)
+    i += 1
+    _baslik_satiri(ws, i, GIDER_SUTUNLARI)
+    for r, tutar_firesiz in giderler:
+        i += 1
+        ws.cell(row=i, column=1, value=GIDER_GRUBU.get(r["grup"], r["grup"]))
+        ws.cell(row=i, column=3, value=r["kalem"])
+        _sayi(ws, i, 4, r["miktar"], B_FIYAT)
+        _sayi(ws, i, 6, r["brut_miktar"], B_FIYAT)
+        ws.cell(row=i, column=7, value=r["birim"])
+        _sayi(ws, i, 8, r["birim_fiyat"], B_FIYAT)
+        _sayi(ws, i, 10, tutar_firesiz, B_TUTAR)
+        _sayi(ws, i, 11, r["tutar"], B_TUTAR)
+
+    def toplam_birim(x: dict):
+        return None if not x else Decimal(x["malzeme"]) + Decimal(x["uretim_gideri"])
+
+    i += 2
+    ws.cell(row=i, column=1, value="Toplamlar").font = Font(bold=True, size=12)
+    _baslik_satiri(ws, i, {10: "Firesiz", 11: "Fireli"})
+    for etiket, alan, bicim, vurgulu in KART_TOPLAMLARI:
+        fireli, firesiz_d = (toplam_birim(tp), toplam_birim(tf)) if alan == "_toplam_birim" else (tp.get(alan), tf.get(alan))
+        if alan in ISTEGE_BAGLI and fireli is None and firesiz_d is None:
+            continue
+        i += 1
+        e = ws.cell(row=i, column=3, value=etiket)
+        a, b = _sayi(ws, i, 10, firesiz_d, bicim), _sayi(ws, i, 11, fireli, bicim)
+        if vurgulu:
+            e.font = a.font = b.font = KALIN
+
+    fy, ff = g["fiyatlar"], g["fiyatlar_firesiz"] or {}
+    i += 2
+    ws.cell(row=i, column=1, value="Satış fiyatı ve teklif fiyatları").font = Font(bold=True, size=12)
+    _baslik_satiri(ws, i, {10: "Firesiz", 11: "Fireli"})
+    for etiket, alan, bicim in KART_SATISLARI:
+        if alan in ISTEGE_BAGLI and fy.get(alan) is None and ff.get(alan) is None:
+            continue
+        i += 1
+        ws.cell(row=i, column=3, value=etiket + (_oran_notu(fy.get("satis_kar_orani")) if alan.startswith("satis_") else ""))
+        _sayi(ws, i, 10, ff.get(alan), bicim)
+        _sayi(ws, i, 11, fy.get(alan), bicim)
+    oranlar = fy.get("teklif_kar_oranlari") or []
+    tek, tek_f = fy.get("teklifler_usd") or [], ff.get("teklifler_usd") or []
+    for n in range(max(len(tek), len(tek_f))):
+        i += 1
+        ws.cell(row=i, column=3, value=f"{n + 1}. teklif USD/adet" + _oran_notu(oranlar[n] if n < len(oranlar) else None))
+        _sayi(ws, i, 10, tek_f[n] if n < len(tek_f) else None, B_FIYAT)
+        _sayi(ws, i, 11, tek[n] if n < len(tek) else None, B_FIYAT)
+    for n, uyari in enumerate(g["uyarilar"]):
+        if n == 0:
+            i += 2
+            ws.cell(row=i, column=1, value="Uyarılar").font = Font(bold=True, size=12)
+        i += 1
+        ws.cell(row=i, column=1, value=uyari)
+
+
+def maliyet_kartlari_kitabi(s, sen, t: date) -> BytesIO:
+    """Tüm senaryo üyesi ürünlerin maliyet kartları tek kitapta: "Özet" + hesaplanan ürün başına bir sayfa. Tek toplu hesap
+    (`toplu_hesapla`); ürün sayfası ürün ekranının görünümünden (`_hesap_yaniti`) yazılır: yeni hesap kuralı yok, formül yok."""
+    hesaplar = hs.toplu_hesapla(s, sen.id, t)
+    urunler = {u.kod: u for u in hs.urunler(s, aktif=False)}
+    not_ = f"Değerler {t:%d.%m.%Y} itibarıyla uygulamadan alınmıştır (formül yoktur)."
+    wb = Workbook()
+    oz = wb.active
+    oz.title = "Özet"
+    oz["A1"] = f"Maliyet kartları — {sen.sezon.ad} — {sen.ad}"
+    oz["A1"].font = Font(bold=True, size=13)
+    oz["A2"] = not_
+    oz["A2"].font = Font(italic=True)
+    for j, (b, genislik) in enumerate(KART_OZET_SUTUNLARI, start=1):
+        h = oz.cell(row=4, column=j, value=b)
+        h.font = KALIN
+        h.alignment = Alignment(wrap_text=True, vertical="center")
+        oz.column_dimensions[get_column_letter(j)].width = genislik
+    oz.freeze_panes = "A5"
+    kullanilan = {"özet"}
+    for i, (kod, c) in enumerate(hesaplar, start=5):
+        u = urunler[kod]
+        oz.cell(row=i, column=1, value=kod)
+        oz.cell(row=i, column=2, value=u.ad)
+        oz.cell(row=i, column=3, value=u.hat)
+        oz.cell(row=i, column=4, value=aile_servisi.ambalaj_etiket(u.ad) or str(u.ambalaj_hacmi))
+        if isinstance(c, Exception):
+            oz.cell(row=i, column=15, value=f"hesaplanamadı: {getattr(c, 'mesaj', None) or c}")
+            continue
+        g = _hesap_yaniti(c, kod, sen.id, t)
+        tp, fy = g["toplamlar"], g["fiyatlar"]
+        for j, deger in enumerate((tp["malzeme"], tp["uretim_gideri"], tp["diger"], tp["finansman_tl"], tp["maliyet_tl"], fy["satis_tl"]), start=5):
+            _sayi(oz, i, j, deger, B_TUTAR)
+        _sayi(oz, i, 11, fy["satis_usd"], B_FIYAT)
+        _sayi(oz, i, 12, fy["satis_eur"], B_FIYAT)
+        oz.cell(row=i, column=13, value=len(g["uyarilar"])).number_format = B_ADET
+        ad = sayfa_adi(kod, kullanilan)
+        _ic_baglanti(oz.cell(row=i, column=14), ad, ad)
+        _kart_sayfasi(wb.create_sheet(ad), u, c, g, sen, t, not_)
+    oz.auto_filter.ref = f"A4:{get_column_letter(len(KART_OZET_SUTUNLARI))}{max(len(hesaplar), 1) + 4}"
+    tampon = BytesIO()
+    wb.save(tampon)
+    tampon.seek(0)
+    return tampon
+
+
+@router.get("/disa-aktar/maliyet-kartlari", response_model=None, responses=XLSX_YANIT)
+def maliyet_kartlari_xlsx(s: OturumDep, sen: SenaryoDep, tarih: date | None = None):
+    """Tüm ürünlerin maliyet kartları tek Excel dosyasında: ilk sayfa "Özet" (ürün başına satır + sayfa köprüsü), sonra hesaplanan her
+    ürün için bir sayfa (reçete, gider kalemleri, toplamlar, satış ve teklif fiyatları). Hesaplanamayan ürün yalnız Özet'te görünür.
+    Değerler sayı olarak yazılır; formül yoktur. Yalnız okur (her rol indirebilir)."""
+    sezon = _DOSYA_ADI_YASAK.sub("-", sen.sezon.ad).strip("-") or "sezon"
+    return _excel_yaniti(maliyet_kartlari_kitabi(s, sen, tarih or date.today()), f"maliyet-kartlari-{sezon}-{date.today():%m-%d-%Y}.xlsx")
+
+
+# ---------------------------------------------------------------- Önemli malzemeler (80/20)
+BICIM.update(fiyat=B_FIYAT, miktar=B_TUTAR, puan="0.00")
+GENISLIK.update(fiyat=14, miktar=16, puan=12)
+OM_KOLONLAR = [("sira", "Sıra", "adet"), ("kod", "Kod", "metin"), ("ad", "Malzeme", "urun"), ("tip", "Tip", "metin"), ("birim", "Birim", "metin"),
+               ("para_birimi", "Para Birimi", "metin"), ("birim_fiyat", "Birim Fiyat", "fiyat"), ("yillik_miktar", "Yıllık Miktar", "miktar"),
+               ("yillik_tutar_tl", "Yıllık Tutar TL", "tl"), ("pay_yuzde", "Pay %", "puan"), ("kumulatif_yuzde", "Kümülatif %", "puan"),
+               ("esik_etiketi", "Eşik İçinde", "metin"), ("kullanan_urun_sayisi", "Kullanan Ürün", "adet")]
+
+
+@router.get("/disa-aktar/onemli-malzemeler", response_model=None, responses=XLSX_YANIT)
+def onemli_malzemeler_xlsx(s: OturumDep, sen: SenaryoDep, tarih: date | None = None,
+                           esik: Decimal = Query(an.VARSAYILAN_ONEM_ESIGI, description="Kümülatif pay eşiği (0.8 = %80)")):
+    """Önemli malzemeler (80/20) analizini Excel olarak indirir; sayılar sayı tipindedir (Pay % / Kümülatif % yüzde puanı)."""
+    d = an.onemli_malzemeler(s, sen.id, esik, tarih)
+    satirlar = [{**r, "esik_etiketi": "Evet" if r["esik_icinde"] else None} for r in d["satirlar"]]
+    parametre = (f"Eşik: {_tr_yuzde(d['esik'])} · Yıllık tutar = Σ (yıllık adet × üründeki fireli malzeme tutarı) · {ADET_NOTU} · "
+                 f"Birim fiyat malzemenin kendi para birimindedir")
+    ozet = [("Malzeme sayısı", len(satirlar), "adet"), (f"Toplam tutarın {_tr_yuzde(d['esik'])} kadarını oluşturan malzeme", d["esik_icindeki_sayi"], "adet"),
+            ("Toplam yıllık malzeme tutarı TL", d["toplam_tutar_tl"], "tl"), ("Eşik %", d["esik"], "yuzde"),
+            ("Yıllık adedi olmayan ürün (hesaba girmedi)", d["adetsiz_urun"], "adet"), ("Hesaplanamayan ürün (hesaba girmedi)", d["hatali_urun"], "adet")]
+    return _excel_yaniti(_analiz_excel("Önemli Malzemeler", sen, parametre, OM_KOLONLAR, satirlar, ozet), "onemli-malzemeler.xlsx")

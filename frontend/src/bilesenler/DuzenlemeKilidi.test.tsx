@@ -77,6 +77,7 @@ describe("Düzenleme kilidi şeridi", () => {
     kurSayfa(<Deneme />);
     await waitFor(() => expect(screen.getByRole("button", { name: "Düzenlemeyi aç" })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Evet, aç" }));
     const serit = await screen.findByRole("group", { name: "Düzenleme kilidi" });
     expect(serit).toHaveAttribute("data-durum", "acik");
     expect(serit).toHaveTextContent("Düzenleme açık");
@@ -98,6 +99,7 @@ describe("Düzenleme kilidi şeridi", () => {
     sunucu.use(http.post("*/api/v1/duzenleme-kilidi/ac", () => HttpResponse.error()));
     kurSayfa(<Deneme />);
     await userEvent.click(await screen.findByRole("button", { name: "Düzenlemeyi aç" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Evet, aç" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Kilit açıldı ancak bu işlem Değişiklik Günlüğü'ne yazılamadı");
     expect(screen.getByRole("group", { name: "Düzenleme kilidi" })).toHaveAttribute("data-durum", "acik");
     expect(screen.getByRole("textbox", { name: "Miktar" })).toBeEnabled();
@@ -165,6 +167,7 @@ describe("Düzenleme kilidi süresi (sahte zamanlayıcı)", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
     kur();
     fireEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    fireEvent.click(screen.getByRole("button", { name: "Evet, aç" }));
     expect(screen.getByTestId("durum")).toHaveTextContent("acik");
     act(() => {
       vi.advanceTimersByTime(DUZENLEME_SURESI_MS - 30_000);
@@ -180,6 +183,7 @@ describe("Düzenleme kilidi süresi (sahte zamanlayıcı)", () => {
     expect(sessionStorage.getItem(DUZENLEME_ANAHTARI)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    fireEvent.click(screen.getByRole("button", { name: "Evet, aç" }));
     expect(screen.getByTestId("durum")).toHaveTextContent("acik");
   });
 
@@ -188,6 +192,7 @@ describe("Düzenleme kilidi süresi (sahte zamanlayıcı)", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
     kur();
     fireEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    fireEvent.click(screen.getByRole("button", { name: "Evet, aç" }));
     act(() => {
       vi.advanceTimersByTime(DUZENLEME_SURESI_MS - 60_000);
     });

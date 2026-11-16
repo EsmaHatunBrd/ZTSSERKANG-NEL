@@ -1,9 +1,10 @@
 """Analizler: ya olursa (kur / ambalaj / hammadde / üretim adedi) ve malzeme zam etkisi. Kaydetmez; yalnız okur ve hesaplar."""
+from datetime import date
 from decimal import Decimal
 from fastapi import APIRouter, Query
 from ..servisler import analiz_servisi as an
 from .bagimliliklar import OturumDep, SenaryoDep
-from .semalar import HATA_404_422, HedefFiyatCikis, KarlilikCikis, KurRiskiCikis, YaOlursaCikis, ZamEtkisiCikis
+from .semalar import HATA_404_422, HedefFiyatCikis, KarlilikCikis, KurRiskiCikis, OnemliMalzemelerCikis, YaOlursaCikis, ZamEtkisiCikis
 
 router = APIRouter(tags=["analiz"])
 
@@ -36,3 +37,10 @@ def hedef_fiyat(s: OturumDep, sen: SenaryoDep,
                 marj: Decimal | None = Query(None, description="Hedef marj (0.15 = %15); boşsa marj eşiği")):
     """Marjı koruyan fiyat: hedef fiyat = maliyet x (1 + marj), geçen yıl fiyatına göre gereken zam, liste fiyatı ve yıllık ek gelir."""
     return an.hedef_fiyat(s, sen.id, marj)
+
+
+@router.get("/analiz/onemli-malzemeler", response_model=OnemliMalzemelerCikis, responses=HATA_404_422)
+def onemli_malzemeler(s: OturumDep, sen: SenaryoDep, tarih: date | None = None,
+                      esik: Decimal = Query(an.VARSAYILAN_ONEM_ESIGI, description="Kümülatif pay eşiği (0.8 = %80)")):
+    """Önemli malzemeler (80/20): yıllık üretim adediyle ağırlıklı malzeme tutarları, pay ve kümülatif pay. Yalnız okur."""
+    return an.onemli_malzemeler(s, sen.id, esik, tarih)

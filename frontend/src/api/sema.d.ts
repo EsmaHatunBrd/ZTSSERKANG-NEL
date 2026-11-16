@@ -883,6 +883,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/disa-aktar/maliyet-kartlari": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Maliyet Kartlari Xlsx
+         * @description Tüm ürünlerin maliyet kartları tek Excel dosyasında: ilk sayfa "Özet" (ürün başına satır + sayfa köprüsü), sonra hesaplanan her
+         *     ürün için bir sayfa (reçete, gider kalemleri, toplamlar, satış ve teklif fiyatları). Hesaplanamayan ürün yalnız Özet'te görünür.
+         *     Değerler sayı olarak yazılır; formül yoktur. Yalnız okur (her rol indirebilir).
+         */
+        get: operations["maliyet_kartlari_xlsx_api_v1_disa_aktar_maliyet_kartlari_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disa-aktar/onemli-malzemeler": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Onemli Malzemeler Xlsx
+         * @description Önemli malzemeler (80/20) analizini Excel olarak indirir; sayılar sayı tipindedir (Pay % / Kümülatif % yüzde puanı).
+         */
+        get: operations["onemli_malzemeler_xlsx_api_v1_disa_aktar_onemli_malzemeler_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/uretim-kapasitesi": {
         parameters: {
             query?: never;
@@ -1703,6 +1745,26 @@ export interface paths {
          * @description Marjı koruyan fiyat: hedef fiyat = maliyet x (1 + marj), geçen yıl fiyatına göre gereken zam, liste fiyatı ve yıllık ek gelir.
          */
         get: operations["hedef_fiyat_api_v1_analiz_hedef_fiyat_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analiz/onemli-malzemeler": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Onemli Malzemeler
+         * @description Önemli malzemeler (80/20): yıllık üretim adediyle ağırlıklı malzeme tutarları, pay ve kümülatif pay. Yalnız okur.
+         */
+        get: operations["onemli_malzemeler_api_v1_analiz_onemli_malzemeler_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5067,6 +5129,59 @@ export interface components {
             kayitlar: components["schemas"]["MetinParametreCikis"][];
             /** Toplam */
             toplam: number;
+        };
+        /**
+         * OnemliMalzemeSatiri
+         * @description Tutar ve miktarlar ondalık metin. pay_yuzde / kumulatif_yuzde yüzde metni, 2 basamak ("12.34" = %12,34).
+         */
+        OnemliMalzemeSatiri: {
+            /** Sira */
+            sira: number;
+            /** Kod */
+            kod: string;
+            /** Ad */
+            ad: string;
+            /** Tip */
+            tip: string | null;
+            /** Para Birimi */
+            para_birimi: string | null;
+            /** Birim */
+            birim: string | null;
+            /** Yillik Miktar */
+            yillik_miktar: string;
+            /** Yillik Tutar Tl */
+            yillik_tutar_tl: string;
+            /** Pay Yuzde */
+            pay_yuzde: string;
+            /** Kumulatif Yuzde */
+            kumulatif_yuzde: string;
+            /** Esik Icinde */
+            esik_icinde: boolean;
+            /** Kullanan Urun Sayisi */
+            kullanan_urun_sayisi: number;
+            /** Birim Fiyat */
+            birim_fiyat: string | null;
+        };
+        /** OnemliMalzemelerCikis */
+        OnemliMalzemelerCikis: {
+            /** Senaryo Id */
+            senaryo_id: number;
+            /** Esik */
+            esik: string;
+            /** Tarih */
+            tarih: string;
+            /** Adet Kaynagi */
+            adet_kaynagi: string;
+            /** Toplam Tutar Tl */
+            toplam_tutar_tl: string;
+            /** Adetsiz Urun */
+            adetsiz_urun: number;
+            /** Hatali Urun */
+            hatali_urun: number;
+            /** Satirlar */
+            satirlar: components["schemas"]["OnemliMalzemeSatiri"][];
+            /** Esik Icindeki Sayi */
+            esik_icindeki_sayi: number;
         };
         /** OverrideGiris */
         OverrideGiris: {
@@ -11096,6 +11211,92 @@ export interface operations {
             };
         };
     };
+    maliyet_kartlari_xlsx_api_v1_disa_aktar_maliyet_kartlari_get: {
+        parameters: {
+            query: {
+                tarih?: string | null;
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excel dosyası (.xlsx) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    onemli_malzemeler_xlsx_api_v1_disa_aktar_onemli_malzemeler_get: {
+        parameters: {
+            query: {
+                tarih?: string | null;
+                /** @description Kümülatif pay eşiği (0.8 = %80) */
+                esik?: number | string;
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excel dosyası (.xlsx) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
     listele_api_v1_uretim_kapasitesi_get: {
         parameters: {
             query: {
@@ -13262,6 +13463,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HedefFiyatCikis"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    onemli_malzemeler_api_v1_analiz_onemli_malzemeler_get: {
+        parameters: {
+            query: {
+                tarih?: string | null;
+                /** @description Kümülatif pay eşiği (0.8 = %80) */
+                esik?: number | string;
+                senaryo: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnemliMalzemelerCikis"];
                 };
             };
             /** @description Not Found */

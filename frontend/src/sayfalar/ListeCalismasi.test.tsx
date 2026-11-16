@@ -294,6 +294,7 @@ describe("Liste Çalışması", () => {
     expect(kaydet).toHaveAttribute("title", "Düzenleme kilitli");
 
     await userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Evet, aç" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Ayarı kaydet" })).toBeEnabled());
     expect(screen.getByRole("button", { name: "Örnek veriyle göster" })).toBeEnabled();
   });
