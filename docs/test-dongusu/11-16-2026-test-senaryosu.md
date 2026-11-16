@@ -1,5 +1,7 @@
 # Uçtan uca test senaryosu: Fiyat Çalışması ve Maliyet Muhasebesi
 
+> **Bu senaryo yerine sezon senaryosunu kullanın:** `docs\test-dongusu\11-16-2026-sezon-senaryosu.md` (ve PDF'i). Sezon senaryosu iki modülü tek bir hikâyede (öngörü → şok → ay kapanışları → gerçekleşen) ve bilerek konmuş farklarla dener. Bu eski senaryo `test-dongusu\excel\11-16-2026-*.xlsx` (ön eki `sezon-` olmayan) dosyalarına ve `test-dongusu\kuru_kosu.py`'ye göre yazılmıştır; o dosyalar yerinde duruyor, ancak `uret.py` artık yalnız sezon dosyalarını üretir.
+
 Bu senaryo uygulamayı baştan sona gerçek bir kullanıcı gibi denemek içindir. Ayrı bir test veritabanı (`veri\test-dongusu.db`) ve uydurma test verisi kullanılır. Gerçek veritabanına (`veri\fiyat.db`) ve 8000 portundaki uygulamaya dokunulmaz.
 
 **Beklenen sayılar nereden geliyor?** Yükleme yapan ve sayı içeren adımlar aynı dosyalarla ve aynı sırayla API üzerinden gerçekten koşturuldu (kuru koşu: `test-dongusu\kuru_kosu.py`, 16.11.2026). Beklenen sayılar bu koşudan alındı, tahmin değil. Her adımda iki etiketten biri var:

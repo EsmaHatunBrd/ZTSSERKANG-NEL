@@ -1,0 +1,4756 @@
+{
+ "senaryolar": {
+  "butce": 1,
+  "aktarim_satinalma_http": 403,
+  "guncel": 2,
+  "hesap_once": 1,
+  "hesap_sonra": 2,
+  "ekim": 1,
+  "kasim": 2,
+  "gercek": 3
+ },
+ "adimlar": {
+  "0.3 kullanıcılar": {
+   "kullanici": [
+    [
+     "direktor",
+     "genel_direktor"
+    ],
+    [
+     "muhasebe1",
+     "muhasebe"
+    ],
+    [
+     "satinalma1",
+     "satin_alma"
+    ],
+    [
+     "izleyici1",
+     "izleyici"
+    ]
+   ]
+  },
+  "1.1 bütçe kitabı içe aktarma": {
+   "senaryo_id": 1,
+   "malzeme": 32,
+   "fiyat": 30,
+   "havuz": 11,
+   "ambalaj": 5,
+   "urun": 7,
+   "recete": 7,
+   "parametre": 17,
+   "atlanan": [
+    "001 (2)"
+   ],
+   "uyarilar": [],
+   "urun_parametre_farklari": [],
+   "kapasite": 7,
+   "revize": 0,
+   "satis_notu": 1
+  },
+  "1.2 parametreler": {
+   "enflasyon": "0.25",
+   "satis_kar": "0.2",
+   "kur.USD": "42",
+   "kur.EUR": "48",
+   "kur.GBP": "55",
+   "kur.CHF": "50",
+   "faiz.TL": "0.4",
+   "stok_ay.TL": "6",
+   "teklif_kar.1": "0.2",
+   "teklif_kar.2": "0.17",
+   "teklif_kar.3": "0.14",
+   "vardiya_saati": "7.5"
+  },
+  "1.3 veri kontrolü (önce)": {
+   "ozet": {
+    "hata": 0,
+    "dikkat": 2,
+    "tamam": 12,
+    "bilgi": 1
+   },
+   "kontroller": {
+    "hesaplanamayan": [
+     "tamam",
+     0,
+     []
+    ],
+    "parametre_eksik": [
+     "tamam",
+     0,
+     []
+    ],
+    "fiyatsiz": [
+     "dikkat",
+     2,
+     [
+      "99.11.010 · Test Biber Salçası",
+      "99.20.015 · Test Shrink Kılıf"
+     ]
+    ],
+    "eksik_fiyat_etkisi": [
+     "dikkat",
+     2,
+     [
+      "03.99.002 · Test Berrak Turşu 720 ml",
+      "03.99.004 · Test Domates Sos 340 g"
+     ]
+    ],
+    "hedef_alti": [
+     "tamam",
+     0,
+     []
+    ],
+    "malzeme_karti": [
+     "tamam",
+     0,
+     []
+    ],
+    "pay": [
+     "tamam",
+     0,
+     []
+    ],
+    "hat": [
+     "tamam",
+     0,
+     []
+    ],
+    "parametre_uyari": [
+     "tamam",
+     0,
+     []
+    ],
+    "recetesiz": [
+     "tamam",
+     0,
+     []
+    ],
+    "gecici_kod": [
+     "tamam",
+     0,
+     []
+    ],
+    "uretim_adetleri": [
+     "tamam",
+     0,
+     []
+    ],
+    "ambalaj_tutarsiz": [
+     "tamam",
+     0,
+     []
+    ],
+    "fiyat_egilimi": [
+     "tamam",
+     0,
+     []
+    ],
+    "elle_hucre": [
+     "bilgi",
+     3,
+     [
+      "03.99.003 · Test Közlenmiş Biber 370 ml",
+      "03.99.004 · Test Domates Sos 340 g",
+      "03.99.005 · Test Siyah Zeytin 500 g"
+     ]
+    ]
+   }
+  },
+  "1.3 genel bakış (fiyatsız iki malzemeyle)": {
+   "maliyet": {
+    "03.99.001": "24.53",
+    "03.99.002": "38.83",
+    "03.99.003": "31.25",
+    "03.99.004": "29.03",
+    "03.99.005": "73.24",
+    "03.99.006": "83.62",
+    "03.99.007": "26.61"
+   }
+  },
+  "1.4 satın alma aktarım önizleme (satinalma1)": {
+   "http": 200,
+   "yanit": {
+    "yeni_malzeme": [],
+    "fiyat_yeni": [
+     {
+      "kod": "99.11.010",
+      "yeni": "68",
+      "para": "TL"
+     },
+     {
+      "kod": "99.20.015",
+      "yeni": "0.35",
+      "para": "TL"
+     }
+    ],
+    "fiyat_degisen": [],
+    "ayni": 0,
+    "hatali": []
+   }
+  },
+  "1.4 satın alma aktarım uygula (satinalma1)": {
+   "http": 403,
+   "yanit": {
+    "hata": "yetki",
+    "mesaj": "Satın alma rolünün bu işleme izni yok",
+    "alanlar": {},
+    "kod": null
+   }
+  },
+  "1.4 tek fiyat girişi 99.11.010 (satinalma1)": {
+   "http": 201
+  },
+  "1.4 tek fiyat girişi 99.20.015 (satinalma1)": {
+   "http": 201
+  },
+  "1.5 veri kontrolü (sonra)": {
+   "ozet": {
+    "hata": 0,
+    "dikkat": 0,
+    "tamam": 14,
+    "bilgi": 1
+   },
+   "kontroller": {
+    "hesaplanamayan": [
+     "tamam",
+     0,
+     []
+    ],
+    "parametre_eksik": [
+     "tamam",
+     0,
+     []
+    ],
+    "fiyatsiz": [
+     "tamam",
+     0,
+     []
+    ],
+    "eksik_fiyat_etkisi": [
+     "tamam",
+     0,
+     []
+    ],
+    "hedef_alti": [
+     "tamam",
+     0,
+     []
+    ],
+    "malzeme_karti": [
+     "tamam",
+     0,
+     []
+    ],
+    "pay": [
+     "tamam",
+     0,
+     []
+    ],
+    "hat": [
+     "tamam",
+     0,
+     []
+    ],
+    "parametre_uyari": [
+     "tamam",
+     0,
+     []
+    ],
+    "recetesiz": [
+     "tamam",
+     0,
+     []
+    ],
+    "gecici_kod": [
+     "tamam",
+     0,
+     []
+    ],
+    "uretim_adetleri": [
+     "tamam",
+     0,
+     []
+    ],
+    "ambalaj_tutarsiz": [
+     "tamam",
+     0,
+     []
+    ],
+    "fiyat_egilimi": [
+     "tamam",
+     0,
+     []
+    ],
+    "elle_hucre": [
+     "bilgi",
+     3,
+     [
+      "03.99.003 · Test Közlenmiş Biber 370 ml",
+      "03.99.004 · Test Domates Sos 340 g",
+      "03.99.005 · Test Siyah Zeytin 500 g"
+     ]
+    ]
+   }
+  },
+  "1.6 genel bakış": {
+   "maliyet": {
+    "03.99.001": "24.53",
+    "03.99.002": "39.35",
+    "03.99.003": "31.25",
+    "03.99.004": "31.07",
+    "03.99.005": "73.24",
+    "03.99.006": "83.62",
+    "03.99.007": "26.61"
+   },
+   "satis": {
+    "03.99.001": "29.44",
+    "03.99.002": "47.22",
+    "03.99.003": "37.50",
+    "03.99.004": "37.28",
+    "03.99.005": "87.89",
+    "03.99.006": "100.34",
+    "03.99.007": "31.93"
+   }
+  },
+  "1.6 ürün maliyeti 03.99.001": {
+   "toplamlar": {
+    "malzeme": "17.7586",
+    "direkt_iscilik": "0.6456",
+    "gug": "1.0134",
+    "uretim_gideri": "1.6590",
+    "diger": "1.0269",
+    "giydirilmis": "20.4445",
+    "finansman_tl": "4.0889",
+    "maliyet_tl": "24.5334",
+    "maliyet_usd": "0.5014",
+    "maliyet_eur": "0.4387"
+   }
+  },
+  "1.7 satış geçmişi": {
+   "eklenen": 168,
+   "hatalar": []
+  },
+  "1.8 yönetim özeti (bütçe)": {
+   "marj": {
+    "ortalama": "0.200000000000000000000000000",
+    "agirlikli_ortalama": "0.2000000000000000000000000001",
+    "adetli_urun": 7,
+    "hedef": "0.2",
+    "marj_esigi": "0.10",
+    "adet_kaynagi": "satis_gecmisi"
+   },
+   "maliyet_yapisi": {
+    "malzeme": [
+     "229.03",
+     "73.96"
+    ],
+    "uretim": [
+     "22.14",
+     "7.15"
+    ],
+    "faaliyet": [
+     "6.88",
+     "2.22"
+    ],
+    "finansman": [
+     "51.61",
+     "16.67"
+    ]
+   },
+   "kur": {
+    "doviz_payi_yuzde": "0.731",
+    "yillik_etki": "212382.43",
+    "yillik_maliyet": "290474013.60"
+   },
+   "veri_kontrolu": {
+    "hata": 0,
+    "dikkat": 0,
+    "bilgi": 1,
+    "tamam": 14,
+    "sorunlar": []
+   },
+   "hedef_alti": 0
+  },
+  "1.8 kur riski %10 (bütçe)": {
+   "ozet": {
+    "urun_sayisi": "7.0000",
+    "doviz_payi_ort": "0.0073",
+    "yillik_maliyet": "290474013.6027",
+    "yillik_etki": "212382.4320",
+    "adetsiz_urun": "0.0000",
+    "hatali": "0.0000"
+   },
+   "para_birimleri": [
+    [
+     "EUR",
+     "163302.91"
+    ],
+    [
+     "USD",
+     "49079.52"
+    ],
+    [
+     "CHF",
+     "0.00"
+    ],
+    [
+     "GBP",
+     "0.00"
+    ]
+   ]
+  },
+  "1.9 kârlılık haritası (bütçe)": {
+   "ozet": {
+    "yuksek_adet_yuksek_marj": 2,
+    "yuksek_adet_dusuk_marj": 2,
+    "dusuk_adet_yuksek_marj": 2,
+    "dusuk_adet_dusuk_marj": 1,
+    "adetsiz": 0,
+    "hatali": 0
+   },
+   "esik_adet": "1080000",
+   "yillik_kar_toplam": "37395986.40",
+   "kayitlar": [
+    [
+     "03.99.001",
+     "yuksek_adet_yuksek_marj",
+     "18.00",
+     "15899835.59"
+    ],
+    [
+     "03.99.005",
+     "dusuk_adet_yuksek_marj",
+     "29.99",
+     "10541524.28"
+    ],
+    [
+     "03.99.002",
+     "yuksek_adet_dusuk_marj",
+     "8.00",
+     "4534579.38"
+    ],
+    [
+     "03.99.003",
+     "yuksek_adet_yuksek_marj",
+     "12.01",
+     "4052713.59"
+    ],
+    [
+     "03.99.007",
+     "dusuk_adet_yuksek_marj",
+     "15.00",
+     "3830820.67"
+    ],
+    [
+     "03.99.006",
+     "dusuk_adet_dusuk_marj",
+     "6.02",
+     "603727.55"
+    ],
+    [
+     "03.99.004",
+     "yuksek_adet_dusuk_marj",
+     "-5.04",
+     "-2067214.66"
+    ]
+   ]
+  },
+  "1.10 önemli malzemeler": {
+   "toplam": "213769000.21",
+   "esik_icindeki": 9,
+   "ilk": [
+    [
+     "99.20.001",
+     "Test Kavanoz 370 ml",
+     "21.32",
+     "21.32",
+     "45575757.58"
+    ],
+    [
+     "99.10.001",
+     "Test Taze Hıyar",
+     "13.75",
+     "35.07",
+     "29397473.68"
+    ],
+    [
+     "99.10.005",
+     "Test Siyah Zeytin",
+     "11.31",
+     "46.38",
+     "24168000.00"
+    ],
+    [
+     "99.20.003",
+     "Test Kapak 63 mm",
+     "8.84",
+     "55.22",
+     "18893939.39"
+    ],
+    [
+     "99.20.002",
+     "Test Kavanoz 720 ml",
+     "7.74",
+     "62.96",
+     "16545454.55"
+    ],
+    [
+     "99.10.004",
+     "Test Domates",
+     "5.06",
+     "68.01",
+     "10812765.96"
+    ],
+    [
+     "99.20.010",
+     "Test Kavanoz 340 g Sos",
+     "4.52",
+     "72.54",
+     "9666666.67"
+    ],
+    [
+     "99.10.003",
+     "Test Kapya Biber",
+     "4.39",
+     "76.93",
+     "9391304.35"
+    ],
+    [
+     "99.20.007",
+     "Test Koli 12'li",
+     "3.90",
+     "80.83",
+     "8337500.00"
+    ],
+    [
+     "99.11.002",
+     "Test Sirke %10",
+     "3.44",
+     "84.27",
+     "7360714.29"
+    ]
+   ]
+  },
+  "1.11 liste çalışması": {
+   "yukleme": {
+    "yazilan": 18,
+    "hatalar": []
+   },
+   "ozet": {
+    "liste_artis_ort": "-0.0257907714457631954648438548",
+    "maliyet_artis_ort": "0.123929757003452292131635047",
+    "fark": "-0.1497205284492154875964789018",
+    "karsilastirilan": 3,
+    "urun_sayisi": 3,
+    "gerisinde": 3
+   },
+   "kayitlar": [
+    [
+     "03.99.001",
+     "46.73",
+     "49.9",
+     "-6.35",
+     "11.52"
+    ],
+    [
+     "03.99.002",
+     "74.95",
+     "72.9",
+     "2.81",
+     "12.43"
+    ],
+    [
+     "03.99.007",
+     "50.68",
+     "52.9",
+     "-4.20",
+     "13.23"
+    ]
+   ]
+  },
+  "1.12 kopya (Test Güncel)": {
+   "yanit": {
+    "id": 2,
+    "sezon_ad": "2026-2027",
+    "tur": "fiyat_calismasi",
+    "ad": "Test Güncel 2026-2027",
+    "kilitli": false,
+    "aciklama": null,
+    "urun_sayisi": 7,
+    "kopyalanan": {
+     "recete": 7,
+     "fiyat": 32,
+     "parametre": 17,
+     "metin": 1,
+     "havuz": 11,
+     "ambalaj": 5,
+     "hedef": 7,
+     "kapasite": 7,
+     "fire": 5
+    }
+   }
+  },
+  "1.12 bütçe kilitli": {
+   "http": 200,
+   "kilitliye_yazma": 409,
+   "mesaj": "senaryo kilitli"
+  },
+  "2.1 hesap kaydı (şok öncesi)": {
+   "id": 1,
+   "olusturan": "muhasebe1",
+   "hesap_tarihi": "2026-11-16"
+  },
+  "2.2 teklifler": {
+   "m1": {
+    "id": 1,
+    "tur_no": 1,
+    "musteri": "Test Market A.Ş.",
+    "kar_orani": "0.20",
+    "fiyat_tl": "29.44005480377162287087469999",
+    "fiyat_usd": "0.6016519136485073721627170832",
+    "durum": "taslak"
+   },
+   "m2": {
+    "id": 2,
+    "tur_no": 2,
+    "musteri": "Test Market A.Ş.",
+    "kar_orani": "0.17",
+    "fiyat_tl": "28.70405343367733229910283249",
+    "fiyat_usd": "0.5866106158072946878586491561",
+    "durum": "taslak"
+   },
+   "t1": {
+    "id": 3,
+    "tur_no": 3,
+    "musteri": "Test Toptan Ltd.",
+    "kar_orani": "0.20",
+    "fiyat_tl": "29.44005480377162287087469999",
+    "fiyat_usd": "0.6016519136485073721627170832",
+    "durum": "taslak"
+   }
+  },
+  "2.3 süzgeçler": {
+   "None": 3,
+   "kabul": 1,
+   "red": 1,
+   "gonderildi": 1,
+   "taslak": 0
+  },
+  "2.4 rapor (Güncel, kilitsiz) Excel": {
+   "http": 200,
+   "bayt": 46941,
+   "basliklar": "Zeytursan | Fiyat Çalışması Onay Çıktısı | TASLAK — çalışma kapatılmadı | 2026-2027 SEZONU FİYAT ÇALIŞMALARI - TEST GÜNCEL 2026-2027 | GİDERLER | TASLAK — çalışma kapatılmadı | Grup | S.\nNO | ÜRÜN KODU | ÜRÜN ADI | REÇETE MALİYETİ | GÜG | FAALİYET\nGİDERİ | FİNANS\nGİDERİ | GÜG+\nFAAL+\nFİN | GİDER\nMALİYET\n% | BİRİM MALİYET | BİRİM MALİYET | Maliyet | Maliyet\n% | TL | USD | EURO | Üretim\nAdedi | Üretim\nAdedi | TL | USD | EURO | Üretim\nAdedi | Kavanoz Hattı | 1 | 03.99.001 | Test Berrak Turşu 370 ml | 17.75859333968944 | 0.7238543592961388 | 1.658983333333333 | 1.026905829596413 | 4.088896500523837"
+  },
+  "3.1 zam etkisi kavanoz %15 (öngörü)": {
+   "malzeme": {
+    "kod": "99.20.001",
+    "ad": "Test Kavanoz 370 ml",
+    "tip": "0008-Ambalaj Malzeme",
+    "birim": "AD",
+    "fiyat": "6.4",
+    "para_birimi": "TL",
+    "yeni_fiyat": "7.360"
+   },
+   "ozet": {
+    "urun_sayisi": 3,
+    "etkilenen": 3,
+    "ort_fark_yuzde": "0.05350004500967618121696529233",
+    "en_yuksek_fark_yuzde": "0.059288427181559861315519499",
+    "esik_alti": 0,
+    "hatali": 0
+   },
+   "kayitlar": [
+    [
+     "03.99.001",
+     "24.53",
+     "25.99",
+     "1.4545",
+     "13.28"
+    ],
+    [
+     "03.99.007",
+     "26.61",
+     "28.06",
+     "1.4545",
+     "13.78"
+    ],
+    [
+     "03.99.003",
+     "31.25",
+     "32.70",
+     "1.4545",
+     "14.66"
+    ]
+   ]
+  },
+  "3.2 düzenleme kilidi (satinalma1)": {
+   "http": 201
+  },
+  "3.2 fiyat listesi önizleme (satinalma1)": {
+   "http": 200,
+   "degisen": [
+    {
+     "kod": "99.20.001",
+     "eski": "6.4",
+     "yeni": "7.36"
+    }
+   ],
+   "yeni": [],
+   "ayni": 31,
+   "revize": [
+    {
+     "kod": "99.20.001",
+     "ilk": "6.4",
+     "revize": "7.36"
+    }
+   ],
+   "hatali": []
+  },
+  "3.2 fiyat listesi uygula (satinalma1)": {
+   "http": 200,
+   "yanit": {
+    "yazilan": 1,
+    "kodlar": [
+     "99.20.001"
+    ]
+   }
+  },
+  "3.3 genel bakış kavanoz sonrası": {
+   "maliyet": [
+    [
+     "03.99.001",
+     "24.53",
+     "25.99",
+     "1.4545"
+    ],
+    [
+     "03.99.002",
+     "39.35",
+     "39.35",
+     "0.0000"
+    ],
+    [
+     "03.99.003",
+     "31.25",
+     "32.70",
+     "1.4545"
+    ],
+    [
+     "03.99.004",
+     "31.07",
+     "31.07",
+     "0.0000"
+    ],
+    [
+     "03.99.005",
+     "73.24",
+     "73.24",
+     "0.0000"
+    ],
+    [
+     "03.99.006",
+     "83.62",
+     "83.62",
+     "0.0000"
+    ],
+    [
+     "03.99.007",
+     "26.61",
+     "28.06",
+     "1.4545"
+    ]
+   ]
+  },
+  "3.4 ya olursa kur +%8 (tüm dövizler)": {
+   "ozet": {
+    "urun_sayisi": 7,
+    "etkilenen": 5,
+    "ort_fark_yuzde": "0.0006113832473831305052603442857",
+    "en_yuksek_fark_yuzde": "0.002371224810291159261813056",
+    "esik_alti": 0,
+    "hatali": 0
+   },
+   "kayitlar": [
+    [
+     "03.99.004",
+     "0.0737"
+    ],
+    [
+     "03.99.007",
+     "0.0383"
+    ],
+    [
+     "03.99.001",
+     "0.0064"
+    ],
+    [
+     "03.99.005",
+     "0.0136"
+    ],
+    [
+     "03.99.002",
+     "0.0044"
+    ],
+    [
+     "03.99.003",
+     "0.0000"
+    ],
+    [
+     "03.99.006",
+     "0.0000"
+    ]
+   ]
+  },
+  "3.4 kur riski %8": {
+   "ozet": {
+    "urun_sayisi": "7.0000",
+    "doviz_payi_ort": "0.0071",
+    "yillik_maliyet": "298677649.9663",
+    "yillik_etki": "169905.9456",
+    "adetsiz_urun": "0.0000",
+    "hatali": "0.0000"
+   },
+   "para_birimleri": [
+    [
+     "EUR",
+     "130642.33"
+    ],
+    [
+     "USD",
+     "39263.62"
+    ],
+    [
+     "CHF",
+     "0.00"
+    ],
+    [
+     "GBP",
+     "0.00"
+    ]
+   ]
+  },
+  "3.5 USD kuru güncellendi": {
+   "yanit": {
+    "id": 35,
+    "deger": "45.36",
+    "gecerlilik_basi": "2026-11-01"
+   },
+   "maliyet": [
+    [
+     "03.99.001",
+     "25.99",
+     "25.99",
+     "0.0064"
+    ],
+    [
+     "03.99.002",
+     "39.35",
+     "39.36",
+     "0.0044"
+    ],
+    [
+     "03.99.003",
+     "32.70",
+     "32.70",
+     "0.0000"
+    ],
+    [
+     "03.99.004",
+     "31.07",
+     "31.07",
+     "0.0059"
+    ],
+    [
+     "03.99.005",
+     "73.24",
+     "73.24",
+     "0.0000"
+    ],
+    [
+     "03.99.006",
+     "83.62",
+     "83.62",
+     "0.0000"
+    ],
+    [
+     "03.99.007",
+     "28.06",
+     "28.07",
+     "0.0022"
+    ]
+   ]
+  },
+  "3.6 yönetim özeti (güncel)": {
+   "marj": {
+    "ortalama": "0.200000000000000000000000000",
+    "agirlikli_ortalama": "0.2000000000000000000000000000",
+    "adetli_urun": 7,
+    "hedef": "0.2",
+    "marj_esigi": "0.10",
+    "adet_kaynagi": "satis_gecmisi"
+   },
+   "yillik_maliyet": "298716913.58",
+   "acik_teklifler": {
+    "toplam": 3,
+    "durumlar": {
+     "taslak": 0,
+     "gonderildi": 1,
+     "kabul": 1,
+     "red": 1
+    },
+    "acik_sayi": 1,
+    "acik_toplam_tl": "29.44005480377162287087469999",
+    "en_eski_acik": [
+     {
+      "teklif_id": 3,
+      "urun_kodu": "03.99.001",
+      "urun_ad": "Test Berrak Turşu 370 ml",
+      "musteri": "Test Toptan Ltd.",
+      "durum": "gonderildi",
+      "tur_no": 3,
+      "tarih": "2026-11-16T11:25:14+00:00",
+      "hesap_tarihi": "2026-11-16",
+      "fiyat_tl": "29.44005480377162287087469999"
+     }
+    ]
+   }
+  },
+  "3.7 kârlılık haritası (güncel)": {
+   "ozet": {
+    "yuksek_adet_yuksek_marj": 1,
+    "yuksek_adet_dusuk_marj": 3,
+    "dusuk_adet_yuksek_marj": 1,
+    "dusuk_adet_dusuk_marj": 2,
+    "adetsiz": 0,
+    "hatali": 0
+   },
+   "yillik_kar_toplam": "29153086.42",
+   "dusus": "8242899.98",
+   "kayitlar": [
+    [
+     "03.99.001",
+     "yuksek_adet_yuksek_marj",
+     "11.37",
+     "10640392.78"
+    ],
+    [
+     "03.99.005",
+     "dusuk_adet_yuksek_marj",
+     "29.99",
+     "10541524.28"
+    ],
+    [
+     "03.99.002",
+     "yuksek_adet_dusuk_marj",
+     "7.99",
+     "4528308.81"
+    ],
+    [
+     "03.99.003",
+     "yuksek_adet_dusuk_marj",
+     "7.03",
+     "2481804.50"
+    ],
+    [
+     "03.99.007",
+     "dusuk_adet_dusuk_marj",
+     "9.03",
+     "2432366.85"
+    ],
+    [
+     "03.99.006",
+     "dusuk_adet_dusuk_marj",
+     "6.02",
+     "603727.55"
+    ],
+    [
+     "03.99.004",
+     "yuksek_adet_dusuk_marj",
+     "-5.06",
+     "-2075038.35"
+    ]
+   ]
+  },
+  "3.8 marjı koruyan fiyat %20": {
+   "ozet": {
+    "urun_sayisi": 7,
+    "zam_gereken": 6,
+    "fiyatsiz": 0,
+    "hatali": 0,
+    "yillik_ek_gelir": "34100925.43608510709618209601",
+    "ort_zam": "0.09330007716102248560140795312"
+   },
+   "kayitlar": [
+    [
+     "03.99.004",
+     "31.07",
+     "29.50",
+     "37.29",
+     "26.39",
+     null,
+     "10278046.02"
+    ],
+    [
+     "03.99.001",
+     "25.99",
+     "28.95",
+     "31.19",
+     "7.75",
+     "49.51",
+     "8075528.66"
+    ],
+    [
+     "03.99.002",
+     "39.36",
+     "42.50",
+     "47.23",
+     "11.12",
+     "74.96",
+     "6806029.43"
+    ],
+    [
+     "03.99.003",
+     "32.70",
+     "35.00",
+     "39.24",
+     "12.12",
+     null,
+     "4581834.60"
+    ],
+    [
+     "03.99.007",
+     "28.07",
+     "30.60",
+     "33.68",
+     "10.06",
+     "53.46",
+     "2956359.78"
+    ],
+    [
+     "03.99.006",
+     "83.62",
+     "88.65",
+     "100.34",
+     "13.19",
+     null,
+     "1403126.94"
+    ],
+    [
+     "03.99.005",
+     "73.24",
+     "95.20",
+     "87.89",
+     "-7.68",
+     null,
+     "-3510629.14"
+    ]
+   ]
+  },
+  "3.9 geçmiş hesaplar kıyas 03.99.001": {
+   "yanit": "{\"a\": {\"id\": 1, \"urun_kodu\": \"03.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml\", \"senaryo_id\": 2, \"hesap_tarihi\": \"2026-11-16\", \"olusturma_zamani\": \"2026-11-16T11:25:14+00:00\", \"olusturan\": \"muhasebe1\"}, \"b\": {\"id\": 2, \"urun_kodu\": \"03.99.001\", \"urun_ad\": \"Test Berrak Turşu 370 ml\", \"senaryo_id\": 2, \"hesap_tarihi\": \"2026-11-16\", \"olusturma_zamani\": \"2026-11-16T11:25:15+00:00\", \"olusturan\": \"muhasebe1\"}, \"uyari\": null, \"toplamlar\": [{\"alan\": \"malzeme_toplami\", \"etiket\": \"Malzeme toplamı\", \"a\": \"17.75859333968943665983139667\", \"b\": \"18.97605695181064878104351788\", \"fark\": \"1.21746361212121212121212121\"}, {\"alan\": \"direkt_iscilik_toplami\", \"etiket\": \"Direkt işçilik\", \"a\": \"0.6456\", \"b\": \"0.6456\", \"fark\": \"0.0000\"}, {\"alan\": \"gug_toplami\", \"etiket\": \"GÜG\", \"a\": \"1.013383333333333333333333333\", \"b\": \"1.013383333333333333333333333\", \"fark\": \"0E-27\"}, {\"alan\": \"uretim_gideri_toplami\", \"etiket\": \"Üretim gideri\", \"a\": \"1.658983333333333333333333333\", \"b\": \"1.658983333333333333333333333\", \"fark\": \"0E-27\"}, {\"alan\": \"diger_giderler_toplami\", \"etiket\": \"Diğer giderler\", \"a\": \"1.026905829596412556053811659\", \"b\": \"1.026905829596412556053811659\", \"fark\": \"0E-27\"}, {\"alan\": \"giydirilmis_maliyet\", \"etiket\": \"Giydirilmiş maliyet\", \"a\": \"20.44448250261918254921854166\", \"b\": \"21.66194611474039467043066287\", \"fark\": \"1.21746361212121212121212121\"}, {\"alan\": \"finansman_dahil_maliyet_tl\", \"etiket\": \"Maliyet (TL, finansman dahil)\", \"a\": \"24.53337900314301905906224999\", \"b\": \"25.99433533768847360451"
+  },
+  "3.10 fiyat eğilimi": {
+   "ozet": {
+    "ay": 12,
+    "tarih": "2026-11-16",
+    "pencere_basi": "2025-11-16",
+    "enflasyon_yuzde": "25.00"
+   },
+   "ilk": [
+    [
+     "99.20.001",
+     "6.4",
+     "7.36",
+     "15.00",
+     "15.00",
+     false,
+     2
+    ],
+    [
+     "99.10.001",
+     "18.5",
+     "18.5",
+     "0",
+     "0",
+     false,
+     1
+    ],
+    [
+     "99.10.002",
+     "26",
+     "26",
+     "0",
+     "0",
+     false,
+     1
+    ],
+    [
+     "99.10.003",
+     "32",
+     "32",
+     "0",
+     "0",
+     false,
+     1
+    ]
+   ]
+  },
+  "3.11 açık teklif eskidi mi": {
+   "teklif_toptan_tl": "29.4401",
+   "bugunku_maliyetle_ayni_kar_tl": "31.1932",
+   "teklifte_kalan_kar": "13.26"
+  },
+  "4.1 Ekim yükleme": {
+   "ad": "Ekim 2026",
+   "kalem_sayisi": 37,
+   "finansman": "0",
+   "excel_kontrol": {
+    "karsilastirilan": 37,
+    "esit": 37,
+    "farkli": 0,
+    "farkli_ornek": [],
+    "excelde_sarf_bos": 0,
+    "excelde_sarf_bos_ornek": [],
+    "excelde_sarf_bos_tutar": "0",
+    "excelde_tekrar": []
+   },
+   "recete_kaynagi": "excel"
+  },
+  "4.2 kontrol listesi": {
+   "kaynaklar": [
+    [
+     "alim",
+     true,
+     23
+    ],
+    [
+     "iade",
+     true,
+     1
+    ],
+    [
+     "uretim",
+     true,
+     14
+    ],
+    [
+     "sayim",
+     true,
+     37
+    ],
+    [
+     "sahit",
+     true,
+     2
+    ],
+    [
+     "gider_mizan",
+     true,
+     5
+    ],
+    [
+     "stok_mizan",
+     true,
+     6
+    ]
+   ],
+   "eksik": [],
+   "donem_basi": {
+    "kaynak": "excel",
+    "dolu": 28,
+    "tutar": "8439054.88",
+    "hazir": true
+   },
+   "ayarlar": {
+    "finansman": "0",
+    "gider_720": "520000",
+    "gider_730": "792000"
+   }
+  },
+  "4.3 stok ve envanter": {
+   "toplamlar": {
+    "dbs_tutar": "8439054.88",
+    "alim_tutar": "15002972.69",
+    "finansman_payi": "0",
+    "iade_tutar": "19200",
+    "dss_tutar": "9490258.602505214020043527041",
+    "sarf_tutar": "13932568.96749478597995647295",
+    "uretime_giden": "13951768.96749478597995647295"
+   },
+   "kontrol_sayisi": 0,
+   "turler": [
+    [
+     "0001-Hammadde",
+     5
+    ],
+    [
+     "0002-Yarı Mamul",
+     5
+    ],
+    [
+     "0003-Mamul",
+     5
+    ],
+    [
+     "0008-Ambalaj Malzeme",
+     10
+    ],
+    [
+     "0015-Üretim Yarı Mamulü",
+     4
+    ],
+    [
+     "0017-Yardımcı Malzeme",
+     8
+    ]
+   ],
+   "ornek": {
+    "99.10.001": {
+     "ortalama_fiyat": "18.5",
+     "sarf_miktar": "131226.2",
+     "sarf_tutar": "2427684.70",
+     "sayim_miktar": "48290.5"
+    },
+    "99.20.001": {
+     "ortalama_fiyat": "8",
+     "sarf_miktar": "477548",
+     "sarf_tutar": "3820384",
+     "sayim_miktar": "188619"
+    }
+   }
+  },
+  "4.4 üretim 20": {
+   "kayitlar": [
+    [
+     "01.99.001",
+     "116400.00",
+     "20.4609",
+     "0.3901",
+     "0.0000",
+     "0.4092",
+     "21.2602"
+    ],
+    [
+     "01.99.004",
+     "38400.00",
+     "26.9118",
+     "0.3901",
+     "0.0000",
+     "0.5382",
+     "27.8401"
+    ],
+    [
+     "01.99.003",
+     "18500.00",
+     "40.0000",
+     "0.3901",
+     "0.0000",
+     "1.2000",
+     "41.5901"
+    ],
+    [
+     "01.99.002",
+     "16400.00",
+     "28.5609",
+     "0.3901",
+     "0.0000",
+     "0.5712",
+     "29.5222"
+    ]
+   ]
+  },
+  "4.4 üretim 40": {
+   "kayitlar": [
+    [
+     "02.99.001",
+     "301800.00",
+     "16.0257",
+     "0.3872",
+     "0.9746",
+     "0.1603",
+     "17.5477"
+    ],
+    [
+     "02.99.002",
+     "120720.00",
+     "25.5883",
+     "0.5807",
+     "1.4619",
+     "0.2559",
+     "27.8868"
+    ],
+    [
+     "02.99.004",
+     "110660.00",
+     "19.5097",
+     "0.3872",
+     "0.8771",
+     "0.1951",
+     "20.9691"
+    ],
+    [
+     "02.99.003",
+     "90540.00",
+     "20.6855",
+     "0.3872",
+     "1.1695",
+     "0.2069",
+     "22.4490"
+    ],
+    [
+     "02.99.007",
+     "80480.00",
+     "17.8918",
+     "0.3872",
+     "0.9746",
+     "0.1789",
+     "19.4325"
+    ]
+   ]
+  },
+  "4.4 üretim 50": {
+   "kayitlar": [
+    [
+     "03.99.001",
+     "300000.00",
+     "19.5077",
+     "0.1617",
+     "0.0000",
+     "0.0585",
+     "19.7279"
+    ],
+    [
+     "03.99.002",
+     "120000.00",
+     "30.8476",
+     "0.2425",
+     "0.0000",
+     "0.0925",
+     "31.1826"
+    ],
+    [
+     "03.99.004",
+     "110000.00",
+     "22.9290",
+     "0.1455",
+     "0.0000",
+     "0.0688",
+     "23.1433"
+    ],
+    [
+     "03.99.003",
+     "90000.00",
+     "24.4090",
+     "0.1940",
+     "0.0000",
+     "0.0732",
+     "24.6762"
+    ],
+    [
+     "03.99.007",
+     "80000.00",
+     "21.3924",
+     "0.1617",
+     "0.0000",
+     "0.0642",
+     "21.6183"
+    ]
+   ],
+   "dagitim": {
+    "dagitilan": "1246000",
+    "mizan_720": "520000",
+    "mizan_730": "792000",
+    "dagitilmayan": "66000"
+   }
+  },
+  "4.5 gider dağıtımı bölümü": {
+   "http": 200,
+   "yanit": "{\"kaynaklar\": [{\"hesap\": \"720\", \"ad\": \"Direkt işçilik giderleri\", \"mizan_tutari\": \"520000\", \"dagitilan\": \"296000.00\", \"dagitilan_kapsami\": \"40 · işçilik\", \"dagitilmayan\": null, \"dagitilmayan_yuzde\": null}, {\"hesap\": \"730\", \"ad\": \"Genel üretim giderleri\", \"mizan_tutari\": \"792000\", \"dagitilan\": \"752000.00\", \"dagitilan_kapsami\": \"40 · GÜG\", \"dagitilmayan\": null, \"dagitilmayan_yuzde\": null}], \"toplam\": {\"mizan_tutari\": \"1312000\", \"dagitilan\": \"1246000.00\", \"dagitilmayan\": \"66000.00\", \"dagitilmayan_yuzde\": \"0.05030487804878048780487804878\"}, \"ayrilmamis\": \"198000.00\", \"havuz_toplami\": \"1246000\", \"asamalar\": [{\"asama\": 20, \"ad\": \"Sebze kabul\", \"anahtar\": \"Üretim miktarı\", \"birlesik\": true, \"havuz\": \"74000\", \"iscilik\": \"74000.00\", \"gug\": \"0.00\", \"toplam\": \"74000.00\", \"pay_yuzde\": \"0.05939004815409309791332263242\", \"urun_sayisi\": 4, \"uretim_miktar\": \"189700\", \"birim_basina_ortalama\": \"0.3900896151818661043753294676\"}, {\"asama\": 40, \"ad\": \"Üretim hattı\", \"anahtar\": \"İşçilik: Üretim × etiket adam-sn · GÜG: Üretim × dolum sn\", \"birlesik\": false, \"havuz\": \"1048000\", \"iscilik\": \"296000.00\", \"gug\": \"752000.00\", \"toplam\": \"1048000.00\", \"pay_yuzde\": \"0.8410914927768860353130016051\", \"urun_sayisi\": 5, \"uretim_miktar\": \"704200\", \"birim_basina_ortalama\": \"1.488213575688724794092587333\"}, {\"asama\": 50, \"ad\": \"Etiketleme\", \"anahtar\": \"Üretim × dolum sn\", \"birlesik\": true, \"havuz\": \"124000\", \"iscilik\": \"124000.00\", \"gug\": \"0.00\", \"toplam\": \"124000.00\", \"pay_yuzde\": \"0.09951845906902086677367576244"
+  },
+  "4.6 sarf farkı": {
+   "toplamlar": {
+    "recete_tutar": "34286996.31319747962847725758",
+    "stok_tutar": "34342503.38771744133855980153",
+    "fazla": "55534.76782010303391216434205",
+    "eksik": "-27.69330014132382962039500174"
+   },
+   "ilk": [
+    [
+     "99.10.001",
+     "128226.24",
+     "131226.20",
+     "2999.96",
+     "55499.26"
+    ],
+    [
+     "99.11.005",
+     "237.96",
+     "238.00",
+     "0.04",
+     "20.32"
+    ],
+    [
+     "99.11.008",
+     "33.53",
+     "33.50",
+     "-0.03",
+     "-10.65"
+    ],
+    [
+     "99.20.011",
+     "1524.56",
+     "1524.60",
+     "0.04",
+     "4.75"
+    ],
+    [
+     "99.11.007",
+     "914.45",
+     "914.50",
+     "0.05",
+     "4.14"
+    ]
+   ]
+  },
+  "4.6 en büyük farklar": {
+   "http": 200,
+   "yanit": "{\"ilk\": 20, \"kalem_sayisi\": 23, \"kalemler\": [{\"kod\": \"99.10.001\", \"ad\": \"Test Taze Hıyar\", \"birim\": \"KG\", \"tur\": \"0001-Hammadde\", \"birim_fiyat\": \"18.5\", \"beklenen_sarf\": \"128226.2400\", \"gercek_sarf\": \"131226.2\", \"fark_miktar\": \"2999.9600\", \"fark_tutar\": \"55499.26000\", \"fark_yuzde\": \"0.02339583536099943350128647615\", \"yon\": \"fazla\"}, {\"kod\": \"99.11.005\", \"ad\": \"Test Baharat Karışımı\", \"birim\": \"KG\", \"tur\": \"0017-Yardımcı Malzeme\", \"birim_fiyat\": \"470.4\", \"beklenen_sarf\": \"237.95680\", \"gercek_sarf\": \"238.0\", \"fark_miktar\": \"0.04320\", \"fark_tutar\": \"20.321280\", \"fark_yuzde\": \"0.0001815455578491558131560014255\", \"yon\": \"fazla\"}, {\"kod\": \"99.11.008\", \"ad\": \"Test Potasyum Sorbat\", \"birim\": \"KG\", \"tur\": \"0017-Yardımcı Malzeme\", \"birim_fiyat\": \"355.2\", \"beklenen_sarf\": \"33.529980\", \"gercek_sarf\": \"33.5\", \"fark_miktar\": \"-0.029980\", \"fark_tutar\": \"-10.6488960\", \"fark_yuzde\": \"-0.0008941251978080511828518835979\", \"yon\": \"eksik\"}, {\"kod\": \"99.20.011\", \"ad\": \"Test Streç Film\", \"birim\": \"KG\", \"tur\": \"0008-Ambalaj Malzeme\", \"birim_fiyat\": \"118.75\", \"beklenen_sarf\": \"1524.560000\", \"gercek_sarf\": \"1524.6\", \"fark_miktar\": \"0.040000\", \"fark_tutar\": \"4.75000000\", \"fark_yuzde\": \"0.00002623707823896730"
+  },
+  "4.7 SMM özeti Ekim": {
+   "smm": "15158553.39",
+   "uretim": "16370521.63",
+   "uretilen": "16277870.64",
+   "ilk_madde": "15058521.63",
+   "donem_sonu_stok": "9564633.84",
+   "mizan_kiyas": [
+    {
+     "hesap": "150",
+     "ad": "İlk madde ve malzeme",
+     "mizan": "5918597.40",
+     "sayim": "5918597.40",
+     "fark": "0.00"
+    },
+    {
+     "hesap": "151",
+     "ad": "Yarı mamuller",
+     "mizan": "92650.99",
+     "sayim": "92650.99",
+     "fark": "0.00"
+    },
+    {
+     "hesap": "152",
+     "ad": "Mamuller",
+     "mizan": "3553385.45",
+     "sayim": "3553385.45",
+     "fark": "0.00"
+    }
+   ],
+   "fis": [
+    [
+     "710",
+     "15058521.63",
+     "0.00"
+    ],
+    [
+     "150",
+     "0.00",
+     "15058521.63"
+    ],
+    [
+     "151",
+     "15058521.63",
+     "0.00"
+    ],
+    [
+     "711",
+     "0.00",
+     "15058521.63"
+    ],
+    [
+     "151",
+     "520000.00",
+     "0.00"
+    ],
+    [
+     "721",
+     "0.00",
+     "520000.00"
+    ],
+    [
+     "151",
+     "792000.00",
+     "0.00"
+    ],
+    [
+     "731",
+     "0.00",
+     "792000.00"
+    ],
+    [
+     "152",
+     "16277870.64",
+     "0.00"
+    ],
+    [
+     "151",
+     "0.00",
+     "16277870.64"
+    ],
+    [
+     "620",
+     "15158553.39",
+     "0.00"
+    ],
+    [
+     "152",
+     "0.00",
+     "15158553.39"
+    ]
+   ],
+   "fis_borc": "62865467.29",
+   "fis_alacak": "62865467.29"
+  },
+  "4.8 bütçe kıyası Ekim": {
+   "ozet": {
+    "eslesen": 5,
+    "karsilastirilan": 5,
+    "uretimsiz": 0,
+    "yalniz_butce": 2,
+    "yalniz_fiili": 0,
+    "ortalama_fark_yuzde": "-0.009418839264676946271397717814",
+    "fiili_yuksek": 3
+   },
+   "kayitlar": [
+    [
+     "03.99.004",
+     "24.9642",
+     "23.1433",
+     "-1.8209",
+     "-7.29",
+     {
+      "malzeme": "22.92900665296275560765399100",
+      "iscilik": "0.1455019556714471968709256845",
+      "gug": "0",
+      "fire": "0.06878701995888826682296197299",
+      "stok_payi": "0E-28"
+     },
+     {
+      "malzeme": "22.6615066661875",
+      "iscilik": "0.68250",
+      "gug": "1.023000000000000000000000000",
+      "fire": "0.59717117988394584139264989",
+      "uretim_gideri": "1.705500000000000000000000000",
+      "pazarlama_yonetim": "0.9242152466367713004484304933",
+      "finansman": "5.177678618541643428368216076"
+     }
+    ],
+    [
+     "03.99.007",
+     "21.1477",
+     "21.6183",
+     "0.4706",
+     "2.23",
+     {
+      "malzeme": "21.39244394880006329610574887",
+      "iscilik": "0.1616688396349413298565840939",
+      "gug": "0",
+      "fire": "0.06417733184640018988831724660",
+      "stok_payi": "0E-28"
+     },
+     {
+      "malzeme": "19.1304166661875",
+      "iscilik": "0.6456",
+      "gug": "1.013383333333333333333333333",
+      "fire": "0.35832900432900432900432900",
+      "uretim_gideri": "1.658983333333333333333333333",
+      "pazarlama_yonetim": "1.026905829596412556053811659",
+      "finansman": "4.434926966689250043678294798"
+     }
+    ],
+    [
+     "03.99.001",
+     "19.4176",
+     "19.7279",
+     "0.3103",
+     "1.60",
+     {
+      "malzeme": "19.50768504588386065234749590",
+      "iscilik": "0.1616688396349413298565840939",
+      "gug": "0",
+      "fire": "0.05852305513765158195704248769",
+      "stok_payi": "0E-28"
+     },
+     {
+      "malzeme": "17.4134466661875",
+      "iscilik": "0.6456",
+      "gug": "1.013383333333333333333333333",
+      "fire": "0.34514667350193665983139667",
+      "uretim_gideri": "1.658983333333333333333333333",
+      "pazarlama_yonetim": "1.026905829596412556053811659",
+      "finansman": "4.088896500523836509843708332"
+     }
+    ],
+    [
+     "03.99.003",
+     "25.0127",
+     "24.6762",
+     "-0.3365",
+     "-1.35",
+     {
+      "malzeme": "24.40897624799276801094991073",
+      "iscilik": "0.1940026075619295958279009127",
+      "gug": "0",
+      "fire": "0.07322692874397830403284973218",
+      "stok_payi": "0E-28"
+     },
+     {
+      "malzeme": "22.1114166661875",
+      "iscilik": "0.8544",
+      "gug": "1.212700000000000000000000000",
+      "fire": "0.83415035117437863433286774",
+      "uretim_gideri": "2.067100000000000000000000000",
+      "pazarlama_yonetim": "1.026905829596412556053811659",
+      "finansman": "5.207914569391658238077335880"
+     }
+    ],
+    [
+     "03.99.002",
+     "31.1494",
+     "31.1826",
+     "0.0332",
+     "0.11",
+     {
+      "malzeme": "30.84758994630921636255711687",
+      "iscilik": "0.2425032594524119947848761408",
+      "gug": "0",
+      "fire": "0.09254276983892764908767135061",
+      "stok_payi": "0E-28"
+     },
+     {
+      "malzeme": "27.9595266670500",
+      "iscilik": "1.02120",
+      "gug": "1.546475000000000000000000000",
+      "fire": "0.62223779144831776410723779",
+      "uretim_gideri": "2.567675000000000000000000000",
+      "pazarlama_yonetim": "1.643049327354260089686098655",
+      "finansman": "6.558497757170515570758667288"
+     }
+    ]
+   ]
+  },
+  "4.9 ürün maliyet kartı 03.99.001": {
+   "birim": "19.7279",
+   "asamalar": [
+    [
+     50,
+     "03.99.001",
+     "19.5077",
+     "0.1617",
+     "0.0000",
+     "0.0585",
+     "19.7279"
+    ],
+    [
+     40,
+     "02.99.001",
+     "16.0257",
+     "0.3872",
+     "0.9746",
+     "0.1603",
+     "17.5477"
+    ],
+    [
+     20,
+     "01.99.001",
+     "20.4609",
+     "0.3901",
+     "0.0000",
+     "0.4092",
+     "21.2602"
+    ]
+   ]
+  },
+  "4.10 Ekim kapat": {
+   "http": 200,
+   "yanit": {
+    "kilitli": true
+   }
+  },
+  "4.10 kilitliye yazma": {
+   "http": 409
+  },
+  "4.10 SMM raporu (kilitli Ekim)": {
+   "http": 200,
+   "bayt": 31954
+  },
+  "4.11 Ekim kilidi aç (Muhasebe)": {
+   "http": 403
+  },
+  "4.12 Canias önizleme": {
+   "satir_sayisi": 63,
+   "urun_sayisi": 14,
+   "asama": {
+    "20": 4,
+    "40": 5,
+    "50": 5
+   },
+   "alternatifli_urun": 1,
+   "eklenecek_urun": 14
+  },
+  "4.13 Kasım yeni dönem": {
+   "ad": "Kasım 2026",
+   "kalem": 37,
+   "devir": {
+    "onceki": "Ekim 2026",
+    "kalem": 37,
+    "tutar": "9564633.84",
+    "uyari": null
+   },
+   "recete_kaynagi": "ana"
+  },
+  "4.14 Kasım alim": {
+   "dolu": 23,
+   "eksik": [
+    "Üretim miktarları",
+    "Sayım (dönem sonu stok)",
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "4.14 Kasım iade": {
+   "dolu": 1,
+   "eksik": [
+    "Üretim miktarları",
+    "Sayım (dönem sonu stok)",
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "4.14 Kasım uretim": {
+   "dolu": 14,
+   "eksik": [
+    "Sayım (dönem sonu stok)",
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "4.14 Kasım sayim": {
+   "dolu": 37,
+   "eksik": [
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "4.14 Kasım sahit": {
+   "dolu": 2,
+   "eksik": [
+    "Gider mizanı (720 / 730)"
+   ]
+  },
+  "4.14 Kasım gider_mizan": {
+   "dolu": 5,
+   "eksik": []
+  },
+  "4.14 Kasım stok_mizan": {
+   "dolu": 6,
+   "eksik": []
+  },
+  "4.15 Kasım üretim 50": {
+   "dagitim": {
+    "dagitilan": "1246000",
+    "mizan_720": "520000",
+    "mizan_730": "792000",
+    "dagitilmayan": "66000"
+   },
+   "birim": [
+    [
+     "03.99.001",
+     "20.6019",
+     "0.8740",
+     "0.876634"
+    ],
+    [
+     "03.99.002",
+     "31.1854",
+     "0.0028",
+     "0.002812"
+    ],
+    [
+     "03.99.004",
+     "23.1468",
+     "0.0035",
+     "0.003541"
+    ],
+    [
+     "03.99.003",
+     "25.5463",
+     "0.8701",
+     "0.872676"
+    ],
+    [
+     "03.99.007",
+     "22.4897",
+     "0.8714",
+     "0.874015"
+    ]
+   ]
+  },
+  "4.16 SMM özeti Kasım": {
+   "smm": "15406839.90",
+   "uretim": "16728446.04",
+   "ilk_madde": "15416446.04",
+   "donem_sonu_stok": "11122626.84",
+   "mizan_kiyas": [
+    {
+     "hesap": "150",
+     "ad": "İlk madde ve malzeme",
+     "mizan": "6158479.73",
+     "sayim": "6158479.73",
+     "fark": "0.00"
+    },
+    {
+     "hesap": "151",
+     "ad": "Yarı mamuller",
+     "mizan": "187785.61",
+     "sayim": "187785.61",
+     "fark": "0.00"
+    },
+    {
+     "hesap": "152",
+     "ad": "Mamuller",
+     "mizan": "4776361.5",
+     "sayim": "4776361.50",
+     "fark": "0.00"
+    }
+   ]
+  },
+  "4.16 Kasım devir durumu": {
+   "onceki": {
+    "id": 1,
+    "ad": "Ekim 2026",
+    "kilitli": true
+   },
+   "uyumlu": true,
+   "fark_kalem": 0,
+   "fark_tutar": "0.00",
+   "acilis_tutar": "9564633.84",
+   "kapanis_tutar": "9564633.84",
+   "elle_kalem": 0,
+   "ornek": []
+  },
+  "4.17 bütçe kıyası Kasım": {
+   "ozet": {
+    "eslesen": 5,
+    "karsilastirilan": 5,
+    "uretimsiz": 0,
+    "yalniz_butce": 2,
+    "yalniz_fiili": 0,
+    "ortalama_fark_yuzde": "0.01482751039614965243046745549",
+    "fiili_yuksek": 4
+   },
+   "kayitlar": [
+    [
+     "03.99.004",
+     "24.9642",
+     "23.1468",
+     "-1.8174",
+     "-7.28",
+     "0.0035"
+    ],
+    [
+     "03.99.007",
+     "21.1477",
+     "22.4897",
+     "1.3420",
+     "6.35",
+     "0.8714"
+    ],
+    [
+     "03.99.001",
+     "19.4176",
+     "20.6019",
+     "1.1843",
+     "6.10",
+     "0.8740"
+    ],
+    [
+     "03.99.003",
+     "25.0127",
+     "25.5463",
+     "0.5336",
+     "2.13",
+     "0.8701"
+    ],
+    [
+     "03.99.002",
+     "31.1494",
+     "31.1854",
+     "0.0360",
+     "0.12",
+     "0.0028"
+    ]
+   ]
+  },
+  "4.18 aylar arası": {
+   "satirlar": [
+    [
+     "ilk_madde",
+     "710 · İlk madde ve malzeme gideri",
+     [
+      "15058521.63",
+      "15416446.04"
+     ],
+     "357924.41",
+     "2.38"
+    ],
+    [
+     "iscilik",
+     "720 Direkt işçilik (gider mizanı)",
+     [
+      "520000.00",
+      "520000.00"
+     ],
+     "0.00",
+     "0.00"
+    ],
+    [
+     "gug",
+     "730 Genel üretim gideri (gider mizanı)",
+     [
+      "792000.00",
+      "792000.00"
+     ],
+     "0.00",
+     "0.00"
+    ],
+    [
+     "uretim_maliyeti",
+     "Üretim maliyeti",
+     [
+      "16370521.63",
+      "16728446.04"
+     ],
+     "357924.41",
+     "2.19"
+    ],
+    [
+     "yari_mamul_donem_basi",
+     "151 Yarı mamuller · Dönem başı stok",
+     [
+      "0.00",
+      "92650.99"
+     ],
+     "92650.99",
+     null
+    ],
+    [
+     "yari_mamul_donem_sonu",
+     "151 Yarı mamuller · Dönem sonu stok (sayım)",
+     [
+      "92650.99",
+      "187785.61"
+     ],
+     "95134.62",
+     "102.68"
+    ],
+    [
+     "uretilen",
+     "Üretilen mamul maliyeti",
+     [
+      "16277870.64",
+      "16633311.42"
+     ],
+     "355440.78",
+     "2.18"
+    ],
+    [
+     "mamul_donem_basi",
+     "152 Mamuller · Dönem başı stok",
+     [
+      "2437833.54",
+      "3553385.45"
+     ],
+     "1115551.91",
+     "45.76"
+    ],
+    [
+     "mamul_donem_sonu",
+     "152 Mamuller · Dönem sonu stok (sayım)",
+     [
+      "3553385.45",
+      "4776361.50"
+     ],
+     "1222976.05",
+     "34.42"
+    ],
+    [
+     "smm",
+     "620 · Satılan mamul maliyeti",
+     [
+      "15158553.39",
+      "15406839.90"
+     ],
+     "248286.51",
+     "1.64"
+    ]
+   ]
+  },
+  "4.19 Kasım kapat": {
+   "http": 200,
+   "yanit": "kilitli"
+  },
+  "4.19 Ekim kilidi aç (GD, Kasım kilitli)": {
+   "http": 409,
+   "yanit": {
+    "hata": "catisma",
+    "mesaj": "önce Kasım 2026 kilidini açın; açılışı bu dönemden devralındı",
+    "alanlar": {
+     "donem_id": 2
+    },
+    "kod": "sonraki_kilitli"
+   }
+  },
+  "4.19 Kasım kilidi aç (GD)": {
+   "http": 200
+  },
+  "4.19 Ekim kilidi aç (GD)": {
+   "http": 200,
+   "uyari": "Kasım 2026 açılışı bu dönemden devralındı; değişiklik sonrası devri yenileyin"
+  },
+  "5.1 gerçekleşen içe aktarma": {
+   "senaryo_id": 3,
+   "malzeme": 32,
+   "fiyat": 32,
+   "urun": 7,
+   "recete": 7,
+   "parametre": 17,
+   "kart_farklari": [],
+   "uyarilar": [],
+   "atlanan": [
+    "001 (2)"
+   ]
+  },
+  "5.2 bütçe vs gerçekleşen": {
+   "ozet": {
+    "karsilastirilan": 7,
+    "sapan": 2,
+    "yalniz_a": 0,
+    "yalniz_b": 0,
+    "hatali": 0,
+    "ortalama_sapma_yuzde": "2.11335845533304893998548118"
+   },
+   "satirlar": [
+    [
+     "03.99.001",
+     "iki",
+     true,
+     "24.5334",
+     "25.9943",
+     "1.4610",
+     "5.95"
+    ],
+    [
+     "03.99.002",
+     "iki",
+     false,
+     "39.3510",
+     "39.4162",
+     "0.0653",
+     "0.17"
+    ],
+    [
+     "03.99.003",
+     "iki",
+     false,
+     "31.2475",
+     "31.6586",
+     "0.4111",
+     "1.32"
+    ],
+    [
+     "03.99.004",
+     "iki",
+     false,
+     "31.0661",
+     "31.1143",
+     "0.0483",
+     "0.16"
+    ],
+    [
+     "03.99.005",
+     "iki",
+     false,
+     "73.2385",
+     "73.2470",
+     "0.0085",
+     "0.01"
+    ],
+    [
+     "03.99.006",
+     "iki",
+     false,
+     "83.6189",
+     "83.6189",
+     "0.0000",
+     "0.00"
+    ],
+    [
+     "03.99.007",
+     "iki",
+     true,
+     "26.6096",
+     "28.5228",
+     "1.9133",
+     "7.19"
+    ]
+   ]
+  },
+  "5.3 sapmanın kaynağı 03.99.001": {
+   "ayristirma": {
+    "fiyat": "5.840463",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.006411",
+    "enflasyon": "-4.385917",
+    "diger": "0.000000"
+   },
+   "toplam_fark": "1.460956",
+   "uretim_degisen": [],
+   "recete_degisen": [
+    [
+     "99.11.001",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.009",
+     [
+      "tutar"
+     ]
+    ],
+    [
+     "99.11.002",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.003",
+     [
+      "tutar"
+     ]
+    ],
+    [
+     "99.20.001",
+     [
+      "birim_fiyat",
+      "tutar"
+     ]
+    ],
+    [
+     "99.20.003",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.005",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.007",
+     [
+      "birim_fiyat"
+     ]
+    ]
+   ],
+   "parametre_degisen": [
+    "enflasyon",
+    "kur.EUR",
+    "kur.USD"
+   ]
+  },
+  "5.3 sapmanın kaynağı 03.99.002": {
+   "ayristirma": {
+    "fiyat": "5.990395",
+    "recete": "0.076128",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.004355",
+    "enflasyon": "-6.005621",
+    "diger": "0.000000"
+   },
+   "toplam_fark": "0.065257",
+   "uretim_degisen": [],
+   "recete_degisen": [
+    [
+     "99.11.001",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.009",
+     [
+      "tutar"
+     ]
+    ],
+    [
+     "99.11.002",
+     [
+      "fire",
+      "brut_miktar",
+      "birim_fiyat",
+      "tutar"
+     ]
+    ],
+    [
+     "99.20.002",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.004",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.006",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.008",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.015",
+     [
+      "birim_fiyat"
+     ]
+    ]
+   ],
+   "parametre_degisen": [
+    "enflasyon",
+    "kur.EUR",
+    "kur.USD"
+   ]
+  },
+  "5.3 sapmanın kaynağı 03.99.003": {
+   "ayristirma": {
+    "fiyat": "4.962520",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.000000",
+    "enflasyon": "-4.551453",
+    "diger": "0.000000"
+   },
+   "toplam_fark": "0.411067",
+   "uretim_degisen": [],
+   "recete_degisen": [
+    [
+     "99.10.003",
+     [
+      "birim_fiyat",
+      "tutar"
+     ]
+    ],
+    [
+     "99.11.002",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.007",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.001",
+     [
+      "birim_fiyat",
+      "tutar"
+     ]
+    ],
+    [
+     "99.20.003",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.005",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.007",
+     [
+      "birim_fiyat"
+     ]
+    ]
+   ],
+   "parametre_degisen": [
+    "enflasyon",
+    "kur.EUR",
+    "kur.USD"
+   ]
+  },
+  "5.3 sapmanın kaynağı 03.99.004": {
+   "ayristirma": {
+    "fiyat": "4.289955",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.048263",
+    "enflasyon": "-4.289955",
+    "diger": "0.000000"
+   },
+   "toplam_fark": "0.048263",
+   "uretim_degisen": [],
+   "recete_degisen": [
+    [
+     "99.11.006",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.001",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.003",
+     [
+      "tutar"
+     ]
+    ],
+    [
+     "99.11.005",
+     [
+      "tutar"
+     ]
+    ],
+    [
+     "99.11.010",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.010",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.003",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.005",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.007",
+     [
+      "birim_fiyat"
+     ]
+    ]
+   ],
+   "parametre_degisen": [
+    "enflasyon",
+    "kur.EUR",
+    "kur.USD"
+   ]
+  },
+  "5.3 sapmanın kaynağı 03.99.005": {
+   "ayristirma": {
+    "fiyat": "1.893043",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.008525",
+    "enflasyon": "-1.893043",
+    "diger": "0.000000"
+   },
+   "toplam_fark": "0.008525",
+   "uretim_degisen": [],
+   "recete_degisen": [
+    [
+     "99.11.007",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.008",
+     [
+      "tutar"
+     ]
+    ],
+    [
+     "99.20.013",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.012",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.014",
+     [
+      "birim_fiyat"
+     ]
+    ]
+   ],
+   "parametre_degisen": [
+    "enflasyon",
+    "kur.EUR",
+    "kur.USD"
+   ]
+  },
+  "5.3 sapmanın kaynağı 03.99.006": {
+   "ayristirma": {
+    "fiyat": "11.292695",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.000000",
+    "enflasyon": "-11.292695",
+    "diger": "0.000000"
+   },
+   "toplam_fark": "0.000000",
+   "uretim_degisen": [],
+   "recete_degisen": [
+    [
+     "99.11.001",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.002",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.009",
+     [
+      "birim_fiyat"
+     ]
+    ]
+   ],
+   "parametre_degisen": [
+    "enflasyon",
+    "kur.EUR",
+    "kur.USD"
+   ]
+  },
+  "5.3 sapmanın kaynağı 03.99.007": {
+   "ayristirma": {
+    "fiyat": "5.838856",
+    "recete": "0.000000",
+    "uretim": "0.433975",
+    "gider": "0.000000",
+    "kur": "0.024756",
+    "enflasyon": "-4.384310",
+    "diger": "0.000000"
+   },
+   "toplam_fark": "1.913277",
+   "uretim_degisen": [
+    "vardiya_uretim_adedi"
+   ],
+   "recete_degisen": [
+    [
+     "99.11.001",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.009",
+     [
+      "tutar"
+     ]
+    ],
+    [
+     "99.11.002",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.11.005",
+     [
+      "tutar"
+     ]
+    ],
+    [
+     "99.20.001",
+     [
+      "birim_fiyat",
+      "tutar"
+     ]
+    ],
+    [
+     "99.20.003",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.005",
+     [
+      "birim_fiyat"
+     ]
+    ],
+    [
+     "99.20.007",
+     [
+      "birim_fiyat"
+     ]
+    ]
+   ],
+   "parametre_degisen": [
+    "enflasyon",
+    "kur.EUR",
+    "kur.USD"
+   ]
+  },
+  "5.4 şirket toplamı uygulama satırlarına göre (yıllık, birim fark x geçen yıl adedi)": {
+   "fiyat": "48543181.30",
+   "recete": "109624.06",
+   "uretim": "416616.00",
+   "gider": "0.00",
+   "kur": "120915.07",
+   "enflasyon": "-41488426.27",
+   "diger": "0.00"
+  },
+  "5.4 şirket toplamı iş anlamında (yıllık)": {
+   "kur": "120915.07",
+   "adet": "416616.00",
+   "fire": "87699.25",
+   "fiyat": "7076679.84"
+  },
+  "5.5 yönetim özeti bütçe vs gerçekleşen": {
+   "butce": {
+    "marj": "0.2000000000000000000000000001",
+    "yillik_maliyet": "290474013.60",
+    "maliyet_toplam": "309.6649",
+    "doviz_payi": "0.731"
+   },
+   "gerceklesen": {
+    "marj": "0.2000000000000000000000000001",
+    "yillik_maliyet": "298175923.76",
+    "maliyet_toplam": "313.5723",
+    "doviz_payi": "0.753"
+   },
+   "fark": "7701910.16"
+  },
+  "5.6 kârlılık haritası (gerçekleşen)": {
+   "ozet": {
+    "yuksek_adet_yuksek_marj": 2,
+    "yuksek_adet_dusuk_marj": 2,
+    "dusuk_adet_yuksek_marj": 1,
+    "dusuk_adet_dusuk_marj": 2,
+    "adetsiz": 0,
+    "hatali": 0
+   },
+   "yillik_kar_toplam": "29694076.24",
+   "butceye_gore": "-7701910.16",
+   "kayitlar": [
+    [
+     "03.99.001",
+     "yuksek_adet_yuksek_marj",
+     "11.37",
+     "10640392.78"
+    ],
+    [
+     "03.99.005",
+     "dusuk_adet_yuksek_marj",
+     "29.97",
+     "10537432.38"
+    ],
+    [
+     "03.99.002",
+     "yuksek_adet_dusuk_marj",
+     "7.82",
+     "4440609.56"
+    ],
+    [
+     "03.99.003",
+     "yuksek_adet_yuksek_marj",
+     "10.55",
+     "3608761.02"
+    ],
+    [
+     "03.99.007",
+     "dusuk_adet_dusuk_marj",
+     "7.28",
+     "1994074.81"
+    ],
+    [
+     "03.99.006",
+     "dusuk_adet_dusuk_marj",
+     "6.02",
+     "603727.55"
+    ],
+    [
+     "03.99.004",
+     "yuksek_adet_dusuk_marj",
+     "-5.19",
+     "-2130921.87"
+    ]
+   ]
+  },
+  "5.7 güncel vs gerçekleşen (şoktan sonra kalan fark)": {
+   "ozet": {
+    "karsilastirilan": 7,
+    "sapan": 0,
+    "yalniz_a": 0,
+    "yalniz_b": 0,
+    "hatali": 0,
+    "ortalama_sapma_yuzde": "-0.1802180141216196276866921119"
+   },
+   "satirlar": [
+    [
+     "03.99.001",
+     "0.0000"
+    ],
+    [
+     "03.99.002",
+     "0.0609"
+    ],
+    [
+     "03.99.003",
+     "-1.0435"
+    ],
+    [
+     "03.99.004",
+     "0.0423"
+    ],
+    [
+     "03.99.005",
+     "0.0085"
+    ],
+    [
+     "03.99.006",
+     "0.0000"
+    ],
+    [
+     "03.99.007",
+     "0.4566"
+    ]
+   ]
+  },
+  "6.1 rapor bütçe excel (direktor)": {
+   "http": 200,
+   "bayt": 47979,
+   "tur": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+   "ad": "attachment; filename=\"onay-ciktisi-fiyat-2026-2027-11-16-2026.xlsx\"; filename*=UTF-8''onay-ciktisi-fiyat-2026-2027-11-16-2026.xlsx"
+  },
+  "6.1 rapor bütçe pdf (direktor)": {
+   "http": 200,
+   "bayt": 114463,
+   "tur": "application/pdf",
+   "ad": "attachment; filename=\"onay-ciktisi-fiyat-2026-2027-11-16-2026.pdf\"; filename*=UTF-8''onay-ciktisi-fiyat-2026-2027-11-16-2026.pdf"
+  },
+  "6.1 rapor gerçekleşen excel (direktor)": {
+   "http": 200,
+   "bayt": 47747,
+   "tur": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+   "ad": "attachment; filename=\"onay-ciktisi-fiyat-2026-2027-11-16-2026.xlsx\"; filename*=UTF-8''onay-ciktisi-fiyat-2026-2027-11-16-2026.xlsx"
+  },
+  "6.1 rapor gerçekleşen pdf (direktor)": {
+   "http": 200,
+   "bayt": 112422,
+   "tur": "application/pdf",
+   "ad": "attachment; filename=\"onay-ciktisi-fiyat-2026-2027-11-16-2026.pdf\"; filename*=UTF-8''onay-ciktisi-fiyat-2026-2027-11-16-2026.pdf"
+  },
+  "6.2 izleyici rapor indirme": {
+   "http": 200
+  },
+  "6.2 izleyici yazma denemeleri": {
+   "fiyat": 403,
+   "kilit": 403,
+   "okuma": 200
+  },
+  "6.3 değişiklik günlüğü (30 gün)": {
+   "gun": 30,
+   "toplam": 225,
+   "kullanici_bazinda": [
+    {
+     "kullanici": "muhasebe1",
+     "adet": 166
+    },
+    {
+     "kullanici": "import",
+     "adet": 36
+    },
+    {
+     "kullanici": "sistem",
+     "adet": 10
+    },
+    {
+     "kullanici": "direktor",
+     "adet": 6
+    },
+    {
+     "kullanici": "satinalma1",
+     "adet": 5
+    },
+    {
+     "kullanici": "izleyici1",
+     "adet": 1
+    },
+    {
+     "kullanici": "kurulum",
+     "adet": 1
+    }
+   ],
+   "tur_bazinda": [
+    {
+     "tur": "fiyat",
+     "adet": 97
+    },
+    {
+     "tur": "parametre",
+     "adet": 52
+    },
+    {
+     "tur": "diger",
+     "adet": 29
+    },
+    {
+     "tur": "recete",
+     "adet": 21
+    },
+    {
+     "tur": "fire",
+     "adet": 15
+    },
+    {
+     "tur": "metin",
+     "adet": 3
+    },
+    {
+     "tur": "teklif",
+     "adet": 3
+    },
+    {
+     "tur": "ambalaj",
+     "adet": 2
+    },
+    {
+     "tur": "hesap",
+     "adet": 2
+    },
+    {
+     "tur": "satis",
+     "adet": 1
+    }
+   ]
+  },
+  "6.3 günlük satinalma1": {
+   "toplam": 5,
+   "kayitlar": [
+    [
+     "diger",
+     "Düzenleme kilidi açıldı",
+     2,
+     null,
+     "sayfa: fiyatlar, senaryo_id: 2",
+     ""
+    ],
+    [
+     "fiyat",
+     "Malzeme fiyatı: 99.20.001",
+     2,
+     "6.4",
+     "7.36",
+     "Kasım revize fiyat listesi: kavanoz 370 ml +%15 · Revize (S."
+    ],
+    [
+     "fiyat",
+     "Malzeme fiyatı: 99.20.015",
+     1,
+     null,
+     "0.35",
+     "Sezon başı: eksik satın alma fiyatı"
+    ],
+    [
+     "fiyat",
+     "Malzeme fiyatı: 99.11.010",
+     1,
+     null,
+     "68.00",
+     "Sezon başı: eksik satın alma fiyatı"
+    ],
+    [
+     "diger",
+     "kullanici sifre_degistir",
+     null,
+     null,
+     "",
+     ""
+    ]
+   ]
+  },
+  "6.3 günlük direktor": {
+   "toplam": 6,
+   "kayitlar": [
+    [
+     "diger",
+     "SMM dönemi kilidi açıldı",
+     null,
+     null,
+     "donem: Ekim 2026",
+     ""
+    ],
+    [
+     "diger",
+     "SMM dönemi kilidi açıldı",
+     null,
+     null,
+     "donem: Kasım 2026",
+     ""
+    ],
+    [
+     "diger",
+     "kullanici eklendi",
+     null,
+     null,
+     "kullanici_adi: izleyici1, ad: Test İzleyici, rol: izleyici",
+     ""
+    ],
+    [
+     "diger",
+     "kullanici eklendi",
+     null,
+     null,
+     "kullanici_adi: satinalma1, ad: Test Satın Alma, rol: satin_alma",
+     ""
+    ],
+    [
+     "diger",
+     "kullanici eklendi",
+     null,
+     null,
+     "kullanici_adi: muhasebe1, ad: Test Muhasebe, rol: muhasebe",
+     ""
+    ],
+    [
+     "diger",
+     "kullanici sifre_degistir",
+     null,
+     null,
+     "",
+     ""
+    ]
+   ]
+  },
+  "6.3 günlük izleyici1": {
+   "toplam": 1,
+   "kayitlar": [
+    [
+     "diger",
+     "kullanici sifre_degistir",
+     null,
+     null,
+     "",
+     ""
+    ]
+   ]
+  },
+  "6.3 günlük bütçe": {
+   "toplam": 90,
+   "ozet": [
+    [
+     "direktor",
+     "diger",
+     "SMM dönemi kilidi açıldı"
+    ],
+    [
+     "direktor",
+     "diger",
+     "kullanici eklendi"
+    ],
+    [
+     "direktor",
+     "diger",
+     "kullanici sifre_degistir"
+    ],
+    [
+     "import",
+     "metin",
+     "Metin parametresi: satis_fiyati_notu"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: enflasyon"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: faiz.EUR"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: faiz.TL"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: faiz.USD"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: kur.CHF"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: kur.EUR"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: kur.GBP"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: kur.USD"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: maliyet_sapma"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: satis_kar"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: stok_ay.EUR"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: stok_ay.TL"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: stok_ay.USD"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: teklif_kar.1"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: teklif_kar.2"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: teklif_kar.3"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: vardiya_saati"
+    ],
+    [
+     "izleyici1",
+     "diger",
+     "kullanici sifre_degistir"
+    ],
+    [
+     "kurulum",
+     "diger",
+     "kullanici eklendi"
+    ],
+    [
+     "muhasebe1",
+     "ambalaj",
+     "Ambalaj sınıfları güncellendi"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "Liste fiyatı toplu yüklendi"
+    ]
+   ]
+  },
+  "6.3 günlük güncel": {
+   "toplam": 97,
+   "ozet": [
+    [
+     "direktor",
+     "diger",
+     "SMM dönemi kilidi açıldı"
+    ],
+    [
+     "direktor",
+     "diger",
+     "kullanici eklendi"
+    ],
+    [
+     "direktor",
+     "diger",
+     "kullanici sifre_degistir"
+    ],
+    [
+     "izleyici1",
+     "diger",
+     "kullanici sifre_degistir"
+    ],
+    [
+     "kurulum",
+     "diger",
+     "kullanici eklendi"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "Liste fiyatı toplu yüklendi"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "SMM dönemi eklendi"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "SMM dönemi kilitlendi"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "SMM dönemi toplu yüklendi"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "SMM dönemi veri yüklendi"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "SMM reçeteleri toplu yüklendi"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "Senaryo kopyalanarak oluşturuldu"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "kullanici sifre_degistir"
+    ],
+    [
+     "muhasebe1",
+     "fire",
+     "Fire kuralı: tip 0001-Hammadde"
+    ],
+    [
+     "muhasebe1",
+     "fire",
+     "Fire kuralı: tip 0004-Ticari Malzeme"
+    ],
+    [
+     "muhasebe1",
+     "fire",
+     "Fire kuralı: tip 0008-Ambalaj Malzeme"
+    ],
+    [
+     "muhasebe1",
+     "fire",
+     "Fire kuralı: tip 0017-Yardımcı Malzeme"
+    ],
+    [
+     "muhasebe1",
+     "fire",
+     "Fire kuralı: tip 0018-Sarf Malzemesi"
+    ],
+    [
+     "muhasebe1",
+     "fiyat",
+     "Malzeme fiyatı: 99.10.001"
+    ],
+    [
+     "muhasebe1",
+     "fiyat",
+     "Malzeme fiyatı: 99.10.002"
+    ],
+    [
+     "muhasebe1",
+     "fiyat",
+     "Malzeme fiyatı: 99.10.003"
+    ],
+    [
+     "muhasebe1",
+     "fiyat",
+     "Malzeme fiyatı: 99.10.004"
+    ],
+    [
+     "muhasebe1",
+     "fiyat",
+     "Malzeme fiyatı: 99.10.005"
+    ],
+    [
+     "muhasebe1",
+     "fiyat",
+     "Malzeme fiyatı: 99.10.006"
+    ],
+    [
+     "muhasebe1",
+     "fiyat",
+     "Malzeme fiyatı: 99.10.007"
+    ]
+   ]
+  },
+  "6.3 günlük gerçekleşen": {
+   "toplam": 90,
+   "ozet": [
+    [
+     "direktor",
+     "diger",
+     "SMM dönemi kilidi açıldı"
+    ],
+    [
+     "direktor",
+     "diger",
+     "kullanici eklendi"
+    ],
+    [
+     "direktor",
+     "diger",
+     "kullanici sifre_degistir"
+    ],
+    [
+     "import",
+     "metin",
+     "Metin parametresi: satis_fiyati_notu"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: enflasyon"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: faiz.EUR"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: faiz.TL"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: faiz.USD"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: kur.CHF"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: kur.EUR"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: kur.GBP"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: kur.USD"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: maliyet_sapma"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: satis_kar"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: stok_ay.EUR"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: stok_ay.TL"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: stok_ay.USD"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: teklif_kar.1"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: teklif_kar.2"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: teklif_kar.3"
+    ],
+    [
+     "import",
+     "parametre",
+     "Parametre: vardiya_saati"
+    ],
+    [
+     "izleyici1",
+     "diger",
+     "kullanici sifre_degistir"
+    ],
+    [
+     "kurulum",
+     "diger",
+     "kullanici eklendi"
+    ],
+    [
+     "muhasebe1",
+     "ambalaj",
+     "Ambalaj sınıfları güncellendi"
+    ],
+    [
+     "muhasebe1",
+     "diger",
+     "Liste fiyatı toplu yüklendi"
+    ]
+   ]
+  }
+ },
+ "kontroller": {
+  "toplam": 206,
+  "gecen": 206,
+  "tutmayan": [],
+  "liste": [
+   {
+    "ad": "1.6 bütçe birim maliyet 03.99.001",
+    "api": "24.53337900314301905906224999",
+    "beklenen": "24.533379",
+    "fark": "3.14301905906224999E-9",
+    "gecti": true
+   },
+   {
+    "ad": "1.6 bütçe birim maliyet 03.99.002",
+    "api": "39.35098654302309342455200373",
+    "beklenen": "39.350987",
+    "fark": "-4.5697690657544799627E-7",
+    "gecti": true
+   },
+   {
+    "ad": "1.6 bütçe birim maliyet 03.99.003",
+    "api": "31.24748741634994942846401528",
+    "beklenen": "31.247487",
+    "fark": "4.1634994942846401528E-7",
+    "gecti": true
+   },
+   {
+    "ad": "1.6 bütçe birim maliyet 03.99.004",
+    "api": "31.06607171124986057020929646",
+    "beklenen": "31.066072",
+    "fark": "-2.8875013942979070354E-7",
+    "gecti": true
+   },
+   {
+    "ad": "1.6 bütçe birim maliyet 03.99.005",
+    "api": "73.23849108107523482283251663",
+    "beklenen": "73.238491",
+    "fark": "8.107523482283251663E-8",
+    "gecti": true
+   },
+   {
+    "ad": "1.6 bütçe birim maliyet 03.99.006",
+    "api": "83.61893711551606288448393711",
+    "beklenen": "83.618937",
+    "fark": "1.1551606288448393711E-7",
+    "gecti": true
+   },
+   {
+    "ad": "1.6 bütçe birim maliyet 03.99.007",
+    "api": "26.60956180013550026206976879",
+    "beklenen": "26.609562",
+    "fark": "-1.9986449973793023121E-7",
+    "gecti": true
+   },
+   {
+    "ad": "1.8 bütçe yıllık maliyet (kur riski kartı)",
+    "api": "290474013.6026840049920810516",
+    "beklenen": "290474013.60",
+    "fark": "0.0026840049920810516",
+    "gecti": true
+   },
+   {
+    "ad": "1.9 yıllık kâr toplamı (bütçe, geçen yıl fiyatıyla)",
+    "api": "37395986.39731599500791894837",
+    "beklenen": "37395986.40",
+    "fark": "-0.00268400499208105163",
+    "gecti": true
+   },
+   {
+    "ad": "1.12 güncel = bütçe 03.99.001",
+    "api": "24.53337900314301905906224999",
+    "beklenen": "24.533379",
+    "fark": "3.14301905906224999E-9",
+    "gecti": true
+   },
+   {
+    "ad": "1.12 güncel = bütçe 03.99.002",
+    "api": "39.35098654302309342455200373",
+    "beklenen": "39.350987",
+    "fark": "-4.5697690657544799627E-7",
+    "gecti": true
+   },
+   {
+    "ad": "1.12 güncel = bütçe 03.99.003",
+    "api": "31.24748741634994942846401528",
+    "beklenen": "31.247487",
+    "fark": "4.1634994942846401528E-7",
+    "gecti": true
+   },
+   {
+    "ad": "1.12 güncel = bütçe 03.99.004",
+    "api": "31.06607171124986057020929646",
+    "beklenen": "31.066072",
+    "fark": "-2.8875013942979070354E-7",
+    "gecti": true
+   },
+   {
+    "ad": "1.12 güncel = bütçe 03.99.005",
+    "api": "73.23849108107523482283251663",
+    "beklenen": "73.238491",
+    "fark": "8.107523482283251663E-8",
+    "gecti": true
+   },
+   {
+    "ad": "1.12 güncel = bütçe 03.99.006",
+    "api": "83.61893711551606288448393711",
+    "beklenen": "83.618937",
+    "fark": "1.1551606288448393711E-7",
+    "gecti": true
+   },
+   {
+    "ad": "1.12 güncel = bütçe 03.99.007",
+    "api": "26.60956180013550026206976879",
+    "beklenen": "26.609562",
+    "fark": "-1.9986449973793023121E-7",
+    "gecti": true
+   },
+   {
+    "ad": "2.2 teklif Market tur 1 (%20) TL",
+    "api": "29.44005480377162287087469999",
+    "beklenen": "29.44005480",
+    "fark": "3.77162287087469999E-9",
+    "gecti": true
+   },
+   {
+    "ad": "2.2 teklif Market tur 2 (%17) TL",
+    "api": "28.70405343367733229910283249",
+    "beklenen": "28.70405343",
+    "fark": "3.67733229910283249E-9",
+    "gecti": true
+   },
+   {
+    "ad": "2.4 kilitsiz çalışmada rapor TASLAK",
+    "api": true,
+    "beklenen": true,
+    "gecti": true
+   },
+   {
+    "ad": "3.1 zam etkisi 03.99.001",
+    "api": "1.45454545454545454545454545",
+    "beklenen": "1.454545",
+    "fark": "4.5454545454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.1 zam etkisi 03.99.007",
+    "api": "1.45454545454545454545454545",
+    "beklenen": "1.454545",
+    "fark": "4.5454545454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.1 zam etkisi 03.99.003",
+    "api": "1.45454545454545454545454545",
+    "beklenen": "1.454545",
+    "fark": "4.5454545454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.3 kavanoz zammı gerçekleşti 03.99.001",
+    "api": "1.45454545454545454545454545",
+    "beklenen": "1.454545",
+    "fark": "4.5454545454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.3 kavanoz zammı gerçekleşti 03.99.002",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.3 kavanoz zammı gerçekleşti 03.99.003",
+    "api": "1.45454545454545454545454545",
+    "beklenen": "1.454545",
+    "fark": "4.5454545454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.3 kavanoz zammı gerçekleşti 03.99.004",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.3 kavanoz zammı gerçekleşti 03.99.005",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.3 kavanoz zammı gerçekleşti 03.99.006",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.3 kavanoz zammı gerçekleşti 03.99.007",
+    "api": "1.45454545454545454545454545",
+    "beklenen": "1.454545",
+    "fark": "4.5454545454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.4 ya olursa kur +8 03.99.004",
+    "api": "0.07366464000000000000000000",
+    "beklenen": "0.073665",
+    "fark": "-3.6000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.4 ya olursa kur +8 03.99.007",
+    "api": "0.03830400000000000000000000",
+    "beklenen": "0.038304",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.4 ya olursa kur +8 03.99.001",
+    "api": "0.00641088000000000000000000",
+    "beklenen": "0.006411",
+    "fark": "-1.2000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.4 ya olursa kur +8 03.99.005",
+    "api": "0.01363968000000000000000000",
+    "beklenen": "0.013640",
+    "fark": "-3.2000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.4 ya olursa kur +8 03.99.002",
+    "api": "0.00435456000000000000000000",
+    "beklenen": "0.004355",
+    "fark": "-4.4000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.4 ya olursa kur +8 03.99.003",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.4 ya olursa kur +8 03.99.006",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.4 kur riski %8 USD yıllık etki",
+    "api": "39263.61600000000000000000000",
+    "beklenen": "39263.62",
+    "fark": "-0.00400000000000000000000",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 USD +%8 etkisi 03.99.001",
+    "api": "0.00641088000000000000000000",
+    "beklenen": "0.006411",
+    "fark": "-1.2000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 güncel birim maliyet 03.99.001",
+    "api": "25.99433533768847360451679544",
+    "beklenen": "25.994335",
+    "fark": "3.3768847360451679544E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 USD +%8 etkisi 03.99.002",
+    "api": "0.00435456000000000000000000",
+    "beklenen": "0.004355",
+    "fark": "-4.4000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 güncel birim maliyet 03.99.002",
+    "api": "39.35534110302309342455200373",
+    "beklenen": "39.355341",
+    "fark": "1.0302309342455200373E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 USD +%8 etkisi 03.99.003",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 güncel birim maliyet 03.99.003",
+    "api": "32.70203287089540397391856073",
+    "beklenen": "32.702033",
+    "fark": "-1.2910459602608143927E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 USD +%8 etkisi 03.99.004",
+    "api": "0.00592704000000000000000000",
+    "beklenen": "0.005927",
+    "fark": "4.000000000000000000E-8",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 güncel birim maliyet 03.99.004",
+    "api": "31.07199875124986057020929646",
+    "beklenen": "31.071999",
+    "fark": "-2.4875013942979070354E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 USD +%8 etkisi 03.99.005",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 güncel birim maliyet 03.99.005",
+    "api": "73.23849108107523482283251663",
+    "beklenen": "73.238491",
+    "fark": "8.107523482283251663E-8",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 USD +%8 etkisi 03.99.006",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 güncel birim maliyet 03.99.006",
+    "api": "83.61893711551606288448393711",
+    "beklenen": "83.618937",
+    "fark": "1.1551606288448393711E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 USD +%8 etkisi 03.99.007",
+    "api": "0.00217728000000000000000000",
+    "beklenen": "0.002177",
+    "fark": "2.8000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.5 güncel birim maliyet 03.99.007",
+    "api": "28.06628453468095480752431424",
+    "beklenen": "28.066285",
+    "fark": "-4.6531904519247568576E-7",
+    "gecti": true
+   },
+   {
+    "ad": "3.6 güncel yıllık maliyet",
+    "api": "298716913.5823203686284446880",
+    "beklenen": "298716913.58",
+    "fark": "0.0023203686284446880",
+    "gecti": true
+   },
+   {
+    "ad": "3.6 şokun yıllık etkisi",
+    "api": "8242899.9823203686284446880",
+    "beklenen": "8242899.98",
+    "fark": "0.0023203686284446880",
+    "gecti": true
+   },
+   {
+    "ad": "3.7 yıllık kâr toplamı (güncel)",
+    "api": "29153086.41767963137155531203",
+    "beklenen": "29153086.42",
+    "fark": "-0.00232036862844468797",
+    "gecti": true
+   },
+   {
+    "ad": "4.3 kavanoz Ekim ortalama fiyat",
+    "api": "8",
+    "beklenen": "8.000000",
+    "fark": "0.000000",
+    "gecti": true
+   },
+   {
+    "ad": "4.4 Ekim dağıtılan",
+    "api": "1246000",
+    "beklenen": "1246000",
+    "fark": "0",
+    "gecti": true
+   },
+   {
+    "ad": "4.4 Ekim dağıtılmayan",
+    "api": "66000",
+    "beklenen": "66000",
+    "fark": "0",
+    "gecti": true
+   },
+   {
+    "ad": "4.6 sarf farkı en büyük kalem",
+    "api": "99.10.001",
+    "beklenen": "99.10.001",
+    "gecti": true
+   },
+   {
+    "ad": "4.6 hıyar sarf farkı tutarı",
+    "api": "55499.26000",
+    "beklenen": "55500.00",
+    "fark": "-0.74000",
+    "gecti": true
+   },
+   {
+    "ad": "4.8 bütçe kıyası bütçe tarafı 03.99.004",
+    "api": "24.96417784607144584139264989",
+    "beklenen": "24.964178",
+    "fark": "-1.5392855415860735011E-7",
+    "gecti": true
+   },
+   {
+    "ad": "4.8 bütçe kıyası bütçe tarafı 03.99.007",
+    "api": "21.14772900384983766233766233",
+    "beklenen": "21.147729",
+    "fark": "3.84983766233766233E-9",
+    "gecti": true
+   },
+   {
+    "ad": "4.8 bütçe kıyası bütçe tarafı 03.99.001",
+    "api": "19.41757667302276999316473000",
+    "beklenen": "19.417577",
+    "fark": "-3.2697723000683527000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "4.8 bütçe kıyası bütçe tarafı 03.99.003",
+    "api": "25.01266701736187863433286774",
+    "beklenen": "25.012667",
+    "fark": "1.736187863433286774E-8",
+    "gecti": true
+   },
+   {
+    "ad": "4.8 bütçe kıyası bütçe tarafı 03.99.002",
+    "api": "31.14943945849831776410723779",
+    "beklenen": "31.149439",
+    "fark": "4.5849831776410723779E-7",
+    "gecti": true
+   },
+   {
+    "ad": "4.10 kilitli dönemde SMM raporu KESİN",
+    "api": true,
+    "beklenen": true,
+    "gecti": true
+   },
+   {
+    "ad": "4.15 kavanoz Kasım ortalama fiyat",
+    "api": "8.861450834396552626737484800",
+    "beklenen": "8.861451",
+    "fark": "-1.65603447373262515200E-7",
+    "gecti": true
+   },
+   {
+    "ad": "4.15 Kasım-Ekim birim maliyet farkı = fiyat etkisi 03.99.001",
+    "api": "0.87401373044580666486950495",
+    "beklenen": "0.876634",
+    "fark": "-0.00262026955419333513049505",
+    "gecti": true
+   },
+   {
+    "ad": "4.15 Kasım-Ekim birim maliyet farkı = fiyat etkisi 03.99.002",
+    "api": "0.00277552844413669720998850",
+    "beklenen": "0.002812",
+    "fark": "-0.00003647155586330279001150",
+    "gecti": true
+   },
+   {
+    "ad": "4.15 Kasım-Ekim birim maliyet farkı = fiyat etkisi 03.99.004",
+    "api": "0.00349432099563122190166231",
+    "beklenen": "0.003541",
+    "fark": "-0.00004667900436877809833769",
+    "gecti": true
+   },
+   {
+    "ad": "4.15 Kasım-Ekim birim maliyet farkı = fiyat etkisi 03.99.003",
+    "api": "0.87008098298619110976199388",
+    "beklenen": "0.872676",
+    "fark": "-0.00259501701380889023800612",
+    "gecti": true
+   },
+   {
+    "ad": "4.15 Kasım-Ekim birim maliyet farkı = fiyat etkisi 03.99.007",
+    "api": "0.87140452428549754401328728",
+    "beklenen": "0.874015",
+    "fark": "-0.00261047571450245598671272",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 bütçe maliyeti 03.99.001",
+    "api": "24.53337900314301905906224999",
+    "beklenen": "24.533379",
+    "fark": "3.14301905906224999E-9",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 gerçekleşen maliyeti 03.99.001",
+    "api": "25.99433533768847360451679544",
+    "beklenen": "25.994335",
+    "fark": "3.3768847360451679544E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.001 fiyat",
+    "api": "5.84046266219391233766233767",
+    "beklenen": "5.840463",
+    "fark": "-3.3780608766233766233E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.001 recete",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.001 uretim",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.001 gider",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.001 kur",
+    "api": "0.00641088000000000000000000",
+    "beklenen": "0.006411",
+    "fark": "-1.2000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.001 enflasyon",
+    "api": "-4.38591720764845779220779222",
+    "beklenen": "-4.385917",
+    "fark": "-2.0764845779220779222E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.001 diger",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma toplamı = toplam fark 03.99.001",
+    "api": "1.46095633454545454545454545",
+    "beklenen": "1.46095633454545454545454545",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 reçete (fire) satırı yalnız 03.99.002'de dolu (03.99.001)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 üretim (adet) satırı yalnız 03.99.007'de dolu (03.99.001)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 gider ve diğer satırı 0 (03.99.001)",
+    "api": [
+     true,
+     true
+    ],
+    "beklenen": [
+     true,
+     true
+    ],
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: kur = 'Döviz kurları' satırı 03.99.001",
+    "api": "0.00641088000000000000000000",
+    "beklenen": "0.006411",
+    "fark": "-1.2000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: adet = 'Üretim bilgileri' satırı 03.99.001",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fire x 1,25 = 'Reçete' satırı 03.99.001",
+    "api": "0E-26",
+    "beklenen": "0E-8",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fiyat = fiyat + enflasyon + (reçete - fire) 03.99.001",
+    "api": "1.45454545454545454545454545",
+    "beklenen": "1.454545",
+    "fark": "4.5454545454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 bütçe maliyeti 03.99.002",
+    "api": "39.35098654302309342455200373",
+    "beklenen": "39.350987",
+    "fark": "-4.5697690657544799627E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 gerçekleşen maliyeti 03.99.002",
+    "api": "39.41624335866219116891290598",
+    "beklenen": "39.416243",
+    "fark": "3.5866219116891290598E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.002 fiyat",
+    "api": "5.99039502176002164502164504",
+    "beklenen": "5.990395",
+    "fark": "2.176002164502164504E-8",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.002 recete",
+    "api": "0.07612781954887218045112781",
+    "beklenen": "0.076128",
+    "fark": "-1.8045112781954887219E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.002 uretim",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.002 gider",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.002 kur",
+    "api": "0.00435456000000000000000000",
+    "beklenen": "0.004355",
+    "fark": "-4.4000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.002 enflasyon",
+    "api": "-6.00562058566979608111187060",
+    "beklenen": "-6.005621",
+    "fark": "4.1433020391888812940E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.002 diger",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma toplamı = toplam fark 03.99.002",
+    "api": "0.06525681563909774436090225",
+    "beklenen": "0.06525681563909774436090225",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 reçete (fire) satırı yalnız 03.99.002'de dolu (03.99.002)",
+    "api": true,
+    "beklenen": true,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 üretim (adet) satırı yalnız 03.99.007'de dolu (03.99.002)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 gider ve diğer satırı 0 (03.99.002)",
+    "api": [
+     true,
+     true
+    ],
+    "beklenen": [
+     true,
+     true
+    ],
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: kur = 'Döviz kurları' satırı 03.99.002",
+    "api": "0.00435456000000000000000000",
+    "beklenen": "0.004355",
+    "fark": "-4.4000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: adet = 'Üretim bilgileri' satırı 03.99.002",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fire x 1,25 = 'Reçete' satırı 03.99.002",
+    "api": "0.07612781954887218045112781",
+    "beklenen": "0.07612750",
+    "fark": "3.1954887218045112781E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fiyat = fiyat + enflasyon + (reçete - fire) 03.99.002",
+    "api": "2.5563909774436090225E-7",
+    "beklenen": "0.000000",
+    "fark": "2.5563909774436090225E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 bütçe maliyeti 03.99.003",
+    "api": "31.24748741634994942846401528",
+    "beklenen": "31.247487",
+    "fark": "4.1634994942846401528E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 gerçekleşen maliyeti 03.99.003",
+    "api": "31.65855461002583875652725638",
+    "beklenen": "31.658555",
+    "fark": "-3.8997416124347274362E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.003 fiyat",
+    "api": "4.96252011561006140598531904",
+    "beklenen": "4.962520",
+    "fark": "1.1561006140598531904E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.003 recete",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.003 uretim",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.003 gider",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.003 kur",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.003 enflasyon",
+    "api": "-4.55145292193417207792207794",
+    "beklenen": "-4.551453",
+    "fark": "7.806582792207792206E-8",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.003 diger",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma toplamı = toplam fark 03.99.003",
+    "api": "0.41106719367588932806324110",
+    "beklenen": "0.41106719367588932806324110",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 reçete (fire) satırı yalnız 03.99.002'de dolu (03.99.003)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 üretim (adet) satırı yalnız 03.99.007'de dolu (03.99.003)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 gider ve diğer satırı 0 (03.99.003)",
+    "api": [
+     true,
+     true
+    ],
+    "beklenen": [
+     true,
+     true
+    ],
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: kur = 'Döviz kurları' satırı 03.99.003",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: adet = 'Üretim bilgileri' satırı 03.99.003",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fire x 1,25 = 'Reçete' satırı 03.99.003",
+    "api": "0E-26",
+    "beklenen": "0E-8",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fiyat = fiyat + enflasyon + (reçete - fire) 03.99.003",
+    "api": "0.41106719367588932806324110",
+    "beklenen": "0.411067",
+    "fark": "1.9367588932806324110E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 bütçe maliyeti 03.99.004",
+    "api": "31.06607171124986057020929646",
+    "beklenen": "31.066072",
+    "fark": "-2.8875013942979070354E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 gerçekleşen maliyeti 03.99.004",
+    "api": "31.11433475124986057020929646",
+    "beklenen": "31.114335",
+    "fark": "-2.4875013942979070354E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.004 fiyat",
+    "api": "4.28995454531079545454545455",
+    "beklenen": "4.289955",
+    "fark": "-4.5468920454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.004 recete",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.004 uretim",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.004 gider",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.004 kur",
+    "api": "0.04826304000000000000000000",
+    "beklenen": "0.048263",
+    "fark": "4.000000000000000000E-8",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.004 enflasyon",
+    "api": "-4.28995454531079545454545455",
+    "beklenen": "-4.289955",
+    "fark": "4.5468920454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.004 diger",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma toplamı = toplam fark 03.99.004",
+    "api": "0.04826304000000000000000000",
+    "beklenen": "0.04826304000000000000000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 reçete (fire) satırı yalnız 03.99.002'de dolu (03.99.004)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 üretim (adet) satırı yalnız 03.99.007'de dolu (03.99.004)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 gider ve diğer satırı 0 (03.99.004)",
+    "api": [
+     true,
+     true
+    ],
+    "beklenen": [
+     true,
+     true
+    ],
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: kur = 'Döviz kurları' satırı 03.99.004",
+    "api": "0.04826304000000000000000000",
+    "beklenen": "0.048263",
+    "fark": "4.000000000000000000E-8",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: adet = 'Üretim bilgileri' satırı 03.99.004",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fire x 1,25 = 'Reçete' satırı 03.99.004",
+    "api": "0E-26",
+    "beklenen": "0E-8",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fiyat = fiyat + enflasyon + (reçete - fire) 03.99.004",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 bütçe maliyeti 03.99.005",
+    "api": "73.23849108107523482283251663",
+    "beklenen": "73.238491",
+    "fark": "8.107523482283251663E-8",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 gerçekleşen maliyeti 03.99.005",
+    "api": "73.24701588107523482283251663",
+    "beklenen": "73.247016",
+    "fark": "-1.1892476517716748337E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.005 fiyat",
+    "api": "1.89304267161410018552875695",
+    "beklenen": "1.893043",
+    "fark": "-3.2838589981447124305E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.005 recete",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.005 uretim",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.005 gider",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.005 kur",
+    "api": "0.00852480000000000000000000",
+    "beklenen": "0.008525",
+    "fark": "-2.0000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.005 enflasyon",
+    "api": "-1.89304267161410018552875695",
+    "beklenen": "-1.893043",
+    "fark": "3.2838589981447124305E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.005 diger",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma toplamı = toplam fark 03.99.005",
+    "api": "0.00852480000000000000000000",
+    "beklenen": "0.00852480000000000000000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 reçete (fire) satırı yalnız 03.99.002'de dolu (03.99.005)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 üretim (adet) satırı yalnız 03.99.007'de dolu (03.99.005)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 gider ve diğer satırı 0 (03.99.005)",
+    "api": [
+     true,
+     true
+    ],
+    "beklenen": [
+     true,
+     true
+    ],
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: kur = 'Döviz kurları' satırı 03.99.005",
+    "api": "0.00852480000000000000000000",
+    "beklenen": "0.008525",
+    "fark": "-2.0000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: adet = 'Üretim bilgileri' satırı 03.99.005",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fire x 1,25 = 'Reçete' satırı 03.99.005",
+    "api": "0E-26",
+    "beklenen": "0E-8",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fiyat = fiyat + enflasyon + (reçete - fire) 03.99.005",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 bütçe maliyeti 03.99.006",
+    "api": "83.61893711551606288448393711",
+    "beklenen": "83.618937",
+    "fark": "1.1551606288448393711E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 gerçekleşen maliyeti 03.99.006",
+    "api": "83.61893711551606288448393711",
+    "beklenen": "83.618937",
+    "fark": "1.1551606288448393711E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.006 fiyat",
+    "api": "11.29269480519480519480519482",
+    "beklenen": "11.292695",
+    "fark": "-1.9480519480519480518E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.006 recete",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.006 uretim",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.006 gider",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.006 kur",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.006 enflasyon",
+    "api": "-11.29269480519480519480519482",
+    "beklenen": "-11.292695",
+    "fark": "1.9480519480519480518E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.006 diger",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma toplamı = toplam fark 03.99.006",
+    "api": "0E-26",
+    "beklenen": "0E-26",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 reçete (fire) satırı yalnız 03.99.002'de dolu (03.99.006)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 üretim (adet) satırı yalnız 03.99.007'de dolu (03.99.006)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 gider ve diğer satırı 0 (03.99.006)",
+    "api": [
+     true,
+     true
+    ],
+    "beklenen": [
+     true,
+     true
+    ],
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: kur = 'Döviz kurları' satırı 03.99.006",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: adet = 'Üretim bilgileri' satırı 03.99.006",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fire x 1,25 = 'Reçete' satırı 03.99.006",
+    "api": "0E-26",
+    "beklenen": "0E-8",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fiyat = fiyat + enflasyon + (reçete - fire) 03.99.006",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 bütçe maliyeti 03.99.007",
+    "api": "26.60956180013550026206976879",
+    "beklenen": "26.609562",
+    "fark": "-1.9986449973793023121E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.2 gerçekleşen maliyeti 03.99.007",
+    "api": "28.52283873468095480752431425",
+    "beklenen": "28.522839",
+    "fark": "-2.6531904519247568575E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.007 fiyat",
+    "api": "5.83885551933676948051948053",
+    "beklenen": "5.838856",
+    "fark": "-4.8066323051948051947E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.007 recete",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.007 uretim",
+    "api": "0.43397500000000000000000001",
+    "beklenen": "0.433975",
+    "fark": "1E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.007 gider",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.007 kur",
+    "api": "0.02475648000000000000000000",
+    "beklenen": "0.024756",
+    "fark": "4.8000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.007 enflasyon",
+    "api": "-4.38431006479131493506493508",
+    "beklenen": "-4.384310",
+    "fark": "-6.479131493506493508E-8",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma 03.99.007 diger",
+    "api": "0E-26",
+    "beklenen": "0.000000",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 ayrıştırma toplamı = toplam fark 03.99.007",
+    "api": "1.91327693454545454545454546",
+    "beklenen": "1.91327693454545454545454546",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 reçete (fire) satırı yalnız 03.99.002'de dolu (03.99.007)",
+    "api": false,
+    "beklenen": false,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 üretim (adet) satırı yalnız 03.99.007'de dolu (03.99.007)",
+    "api": true,
+    "beklenen": true,
+    "gecti": true
+   },
+   {
+    "ad": "5.3 gider ve diğer satırı 0 (03.99.007)",
+    "api": [
+     true,
+     true
+    ],
+    "beklenen": [
+     true,
+     true
+    ],
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: kur = 'Döviz kurları' satırı 03.99.007",
+    "api": "0.02475648000000000000000000",
+    "beklenen": "0.024756",
+    "fark": "4.8000000000000000000E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: adet = 'Üretim bilgileri' satırı 03.99.007",
+    "api": "0.43397500000000000000000001",
+    "beklenen": "0.433975",
+    "fark": "1E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fire x 1,25 = 'Reçete' satırı 03.99.007",
+    "api": "0E-26",
+    "beklenen": "0E-8",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.3 iş: fiyat = fiyat + enflasyon + (reçete - fire) 03.99.007",
+    "api": "1.45454545454545454545454545",
+    "beklenen": "1.454545",
+    "fark": "4.5454545454545454545E-7",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 yıllık fiyat",
+    "api": "48543181.29746307531660885707",
+    "beklenen": "48543181.30",
+    "fark": "-0.00253692468339114293",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 yıllık recete",
+    "api": "109624.0601503759398496240464",
+    "beklenen": "109624.06",
+    "fark": "0.0001503759398496240464",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 yıllık uretim",
+    "api": "416616.0000000000000000000096",
+    "beklenen": "416616.00",
+    "fark": "9.6E-21",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 yıllık gider",
+    "api": "0E-26",
+    "beklenen": "0.00",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 yıllık kur",
+    "api": "120915.0720000000000000000000",
+    "beklenen": "120915.07",
+    "fark": "0.0020000000000000000000",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 yıllık enflasyon",
+    "api": "-41488426.26759591730299775423",
+    "beklenen": "-41488426.27",
+    "fark": "0.00240408269700224577",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 yıllık diger",
+    "api": "0E-26",
+    "beklenen": "0.00",
+    "fark": "0E-26",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 iş anlamında yıllık kur",
+    "api": "120915.0720000000000000000000",
+    "beklenen": "120915.07",
+    "fark": "0.0020000000000000000000",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 iş anlamında yıllık adet",
+    "api": "416616.0000000000000000000096",
+    "beklenen": "416616.00",
+    "fark": "9.6E-21",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 iş anlamında yıllık fire",
+    "api": "87699.24812030075187969923712",
+    "beklenen": "87699.25",
+    "fark": "-0.00187969924812030076288",
+    "gecti": true
+   },
+   {
+    "ad": "5.4 iş anlamında yıllık fiyat",
+    "api": "7076679.841897233201581027653",
+    "beklenen": "7076679.84",
+    "fark": "0.001897233201581027653",
+    "gecti": true
+   },
+   {
+    "ad": "5.5 gerçekleşen yıllık maliyet",
+    "api": "298175923.7647015389455417786",
+    "beklenen": "298175923.76",
+    "fark": "0.0047015389455417786",
+    "gecti": true
+   },
+   {
+    "ad": "5.5 şirket toplamı yıllık sapma",
+    "api": "7701910.1620175339534607270",
+    "beklenen": "7701910.16",
+    "fark": "0.0020175339534607270",
+    "gecti": true
+   },
+   {
+    "ad": "5.5 kaynaklar toplamı = şirket sapması",
+    "api": "7701910.162017533953460726900",
+    "beklenen": "7701910.1620175339534607270",
+    "fark": "-1.00E-19",
+    "gecti": true
+   },
+   {
+    "ad": "6.1 kilitli bütçe raporu KESİN",
+    "api": true,
+    "beklenen": true,
+    "gecti": true
+   },
+   {
+    "ad": "6.1 kilitli gerçekleşen raporu KESİN",
+    "api": true,
+    "beklenen": true,
+    "gecti": true
+   }
+  ]
+ },
+ "stok_mizani_ayari": {
+  "ekim": {
+   "150": "5918597.40",
+   "151": "92650.99",
+   "152": "3553385.45"
+  },
+  "kasim": {
+   "150": "6158479.73",
+   "151": "187785.61",
+   "152": "4776361.50"
+  }
+ },
+ "hatalar": []
+}

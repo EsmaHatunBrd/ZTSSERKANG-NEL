@@ -1,0 +1,620 @@
+{
+ "aciklama": "Üretici (test-dongusu/uret.py) bağımsız hesabı: Excel ürün sayfası formülleriyle (uygulama kodu kullanılmadan) birim maliyetler. 'ayristirma': uygulamanın 'Sapmanın kaynağı' satırları (zincirleme ikame sırası fiyat -> reçete -> üretim -> gider -> kur -> enflasyon -> diğer; uygulama gerçekleşende enflasyonu 0 alır). 'is_anlaminda': bilerek konan dört sapmanın (kur / fiyat / fire / adet) kapalı formdan etkisi; toplamı aynıdır. Tutarlar TL, finansman dahil birim maliyet; yıllık = birim x geçen yıl satış adedi.",
+ "kaynak_eslemesi": {
+  "kur": "kur",
+  "adet": "uretim",
+  "fire": "recete (uygulamada x1,25: fiilî fiyata bütçe enflasyonu da uygulanıyor)",
+  "fiyat": "fiyat + enflasyon + (recete - fire)"
+ },
+ "parametreler": {
+  "butce": {
+   "enflasyon": 0.25,
+   "kur": {
+    "USD": 42.0,
+    "EUR": 48.0,
+    "GBP": 55.0,
+    "CHF": 50.0
+   },
+   "satis_kar": 0.2,
+   "teklif_kar": [
+    0.2,
+    0.17,
+    0.14
+   ]
+  },
+  "guncel_sok_sonrasi": {
+   "kur": {
+    "USD": 45.36,
+    "EUR": 48.0,
+    "GBP": 55.0,
+    "CHF": 50.0
+   },
+   "kavanoz_fiyati": 7.36,
+   "gecerlilik_basi": "2026-11-01"
+  },
+  "gerceklesen": {
+   "kur": {
+    "USD": 45.36,
+    "EUR": 50.4,
+    "GBP": 55.0,
+    "CHF": 50.0
+   },
+   "enflasyon": 0,
+   "fiyat": {
+    "99.20.001": 9.2,
+    "99.10.003": 28.8
+   },
+   "not": "stoklu (S) TL malzemelerin fiilî fiyatı = bütçe fiyatı x 1,25 (öngörülen enflasyon gerçekleşti)",
+   "fire": {
+    "03.99.002 99.11.002": [
+     0.02,
+     0.05
+    ]
+   },
+   "vardiya_uretim_adedi": {
+    "03.99.007": [
+     18000,
+     14400
+    ]
+   }
+  }
+ },
+ "sapmalar": [
+  {
+   "id": "a",
+   "kaynak": "kur",
+   "ne": "USD +%8 (42,00 -> 45,36), EUR +%5 (48,00 -> 50,40)",
+   "uygulama_adimi": "Döviz kurları",
+   "yillik_tl": "120915.07"
+  },
+  {
+   "id": "b",
+   "kaynak": "fiyat",
+   "ne": "Test Kavanoz 370 ml +%15 (liste 6,40 -> 7,36; maliyete giren 8,00 -> 9,20); Test Kapya Biber −%10 (32,00 -> 28,80)",
+   "uygulama_adimi": "Malzeme fiyatları + Enflasyon (birlikte)",
+   "yillik_tl": "7076679.84"
+  },
+  {
+   "id": "c",
+   "kaynak": "fire",
+   "ne": "03.99.002'de Test Sirke firesi %2 -> %5",
+   "uygulama_adimi": "Reçete (miktar, fire, elle fiyat)",
+   "yillik_tl": "87699.25"
+  },
+  {
+   "id": "d",
+   "kaynak": "adet",
+   "ne": "03.99.007'de vardiya üretim adedi 18.000 -> 14.400 (hedefin %80'i)",
+   "uygulama_adimi": "Üretim bilgileri",
+   "yillik_tl": "416616.00"
+  }
+ ],
+ "urunler": {
+  "03.99.001": {
+   "ad": "Test Berrak Turşu 370 ml",
+   "yillik_adet": 3600000,
+   "gecen_yil_satis_fiyati": "28.95",
+   "butce": {
+    "maliyet_tl": "24.533379",
+    "satis_tl": "29.440055",
+    "toplam_birim_maliyet_tl": "19.417577",
+    "malzeme": "17.758593",
+    "iscilik": "0.645600",
+    "gug": "1.013383",
+    "diger": "1.026906",
+    "finansman": "4.088897"
+   },
+   "guncel_sok_sonrasi": {
+    "maliyet_tl": "25.994335",
+    "fark_tl": "1.460956",
+    "kavanoz_zammi_tl": "1.454545",
+    "usd_artisi_tl": "0.006411",
+    "tum_kurlar_yuzde8_tl": "0.006411"
+   },
+   "gerceklesen": {
+    "maliyet_tl": "25.994335"
+   },
+   "fark_tl": "1.460956",
+   "ayristirma": {
+    "fiyat": "5.840463",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.006411",
+    "enflasyon": "-4.385917",
+    "diger": "0.000000"
+   },
+   "is_anlaminda": {
+    "kur": "0.006411",
+    "fiyat": "1.454545",
+    "fire": "0.000000",
+    "adet": "0.000000"
+   },
+   "kalemler": [
+    {
+     "kaynak": "kur",
+     "malzeme": "99.11.009",
+     "ad": "Test Kalsiyum Klorür",
+     "aciklama": "USD 42.0 -> 45.36",
+     "tl": "0.002177"
+    },
+    {
+     "kaynak": "kur",
+     "malzeme": "99.11.003",
+     "ad": "Test Sitrik Asit",
+     "aciklama": "USD 42.0 -> 45.36",
+     "tl": "0.004234"
+    },
+    {
+     "kaynak": "fiyat",
+     "malzeme": "99.20.001",
+     "ad": "Test Kavanoz 370 ml",
+     "aciklama": "bütçede maliyete giren 8.0000 TL, fiilî 9.2 TL",
+     "tl": "1.454545"
+    }
+   ],
+   "yillik_fark_tl": "5259442.80"
+  },
+  "03.99.002": {
+   "ad": "Test Berrak Turşu 720 ml",
+   "yillik_adet": 1440000,
+   "gecen_yil_satis_fiyati": "42.50",
+   "butce": {
+    "maliyet_tl": "39.350987",
+    "satis_tl": "47.221184",
+    "toplam_birim_maliyet_tl": "31.149439",
+    "malzeme": "28.581764",
+    "iscilik": "1.021200",
+    "gug": "1.546475",
+    "diger": "1.643049",
+    "finansman": "6.558498"
+   },
+   "guncel_sok_sonrasi": {
+    "maliyet_tl": "39.355341",
+    "fark_tl": "0.004355",
+    "kavanoz_zammi_tl": "0.000000",
+    "usd_artisi_tl": "0.004355",
+    "tum_kurlar_yuzde8_tl": "0.004355"
+   },
+   "gerceklesen": {
+    "maliyet_tl": "39.416243"
+   },
+   "fark_tl": "0.065257",
+   "ayristirma": {
+    "fiyat": "5.990395",
+    "recete": "0.076128",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.004355",
+    "enflasyon": "-6.005621",
+    "diger": "0.000000"
+   },
+   "is_anlaminda": {
+    "kur": "0.004355",
+    "fiyat": "0.000000",
+    "fire": "0.060902",
+    "adet": "0.000000"
+   },
+   "kalemler": [
+    {
+     "kaynak": "kur",
+     "malzeme": "99.11.009",
+     "ad": "Test Kalsiyum Klorür",
+     "aciklama": "USD 42.0 -> 45.36",
+     "tl": "0.004355"
+    },
+    {
+     "kaynak": "recete",
+     "malzeme": "99.11.002",
+     "ad": "Test Sirke %10",
+     "aciklama": "fire 0.02 -> 0.05",
+     "tl": "0.060902"
+    }
+   ],
+   "yillik_fark_tl": "93969.81"
+  },
+  "03.99.003": {
+   "ad": "Test Közlenmiş Biber 370 ml",
+   "yillik_adet": 1080000,
+   "gecen_yil_satis_fiyati": "35.00",
+   "butce": {
+    "maliyet_tl": "31.247487",
+    "satis_tl": "37.496985",
+    "toplam_birim_maliyet_tl": "25.012667",
+    "malzeme": "22.945567",
+    "iscilik": "0.854400",
+    "gug": "1.212700",
+    "diger": "1.026906",
+    "finansman": "5.207915"
+   },
+   "guncel_sok_sonrasi": {
+    "maliyet_tl": "32.702033",
+    "fark_tl": "1.454545",
+    "kavanoz_zammi_tl": "1.454545",
+    "usd_artisi_tl": "0.000000",
+    "tum_kurlar_yuzde8_tl": "0.000000"
+   },
+   "gerceklesen": {
+    "maliyet_tl": "31.658555"
+   },
+   "fark_tl": "0.411067",
+   "ayristirma": {
+    "fiyat": "4.962520",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.000000",
+    "enflasyon": "-4.551453",
+    "diger": "0.000000"
+   },
+   "is_anlaminda": {
+    "kur": "0.000000",
+    "fiyat": "0.411067",
+    "fire": "0.000000",
+    "adet": "0.000000"
+   },
+   "kalemler": [
+    {
+     "kaynak": "fiyat",
+     "malzeme": "99.10.003",
+     "ad": "Test Kapya Biber",
+     "aciklama": "bütçede maliyete giren 32.0000 TL, fiilî 28.8 TL",
+     "tl": "-1.043478"
+    },
+    {
+     "kaynak": "fiyat",
+     "malzeme": "99.20.001",
+     "ad": "Test Kavanoz 370 ml",
+     "aciklama": "bütçede maliyete giren 8.0000 TL, fiilî 9.2 TL",
+     "tl": "1.454545"
+    }
+   ],
+   "yillik_fark_tl": "443952.57"
+  },
+  "03.99.004": {
+   "ad": "Test Domates Sos 340 g",
+   "yillik_adet": 1320000,
+   "gecen_yil_satis_fiyati": "29.50",
+   "butce": {
+    "maliyet_tl": "31.066072",
+    "satis_tl": "37.279286",
+    "toplam_birim_maliyet_tl": "24.964178",
+    "malzeme": "23.258678",
+    "iscilik": "0.682500",
+    "gug": "1.023000",
+    "diger": "0.924215",
+    "finansman": "5.177679"
+   },
+   "guncel_sok_sonrasi": {
+    "maliyet_tl": "31.071999",
+    "fark_tl": "0.005927",
+    "kavanoz_zammi_tl": "0.000000",
+    "usd_artisi_tl": "0.005927",
+    "tum_kurlar_yuzde8_tl": "0.073665"
+   },
+   "gerceklesen": {
+    "maliyet_tl": "31.114335"
+   },
+   "fark_tl": "0.048263",
+   "ayristirma": {
+    "fiyat": "4.289955",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.048263",
+    "enflasyon": "-4.289955",
+    "diger": "0.000000"
+   },
+   "is_anlaminda": {
+    "kur": "0.048263",
+    "fiyat": "0.000000",
+    "fire": "0.000000",
+    "adet": "0.000000"
+   },
+   "kalemler": [
+    {
+     "kaynak": "kur",
+     "malzeme": "99.11.003",
+     "ad": "Test Sitrik Asit",
+     "aciklama": "USD 42.0 -> 45.36",
+     "tl": "0.005927"
+    },
+    {
+     "kaynak": "kur",
+     "malzeme": "99.11.005",
+     "ad": "Test Baharat Karışımı",
+     "aciklama": "EUR 48.0 -> 50.4",
+     "tl": "0.042336"
+    }
+   ],
+   "yillik_fark_tl": "63707.21"
+  },
+  "03.99.005": {
+   "ad": "Test Siyah Zeytin 500 g",
+   "yillik_adet": 480000,
+   "gecen_yil_satis_fiyati": "95.20",
+   "butce": {
+    "maliyet_tl": "73.238491",
+    "satis_tl": "87.886189",
+    "toplam_birim_maliyet_tl": "59.799789",
+    "malzeme": "56.802222",
+    "iscilik": "0.951600",
+    "gug": "2.045967",
+    "diger": "1.232287",
+    "finansman": "12.206415"
+   },
+   "guncel_sok_sonrasi": {
+    "maliyet_tl": "73.238491",
+    "fark_tl": "0.000000",
+    "kavanoz_zammi_tl": "0.000000",
+    "usd_artisi_tl": "0.000000",
+    "tum_kurlar_yuzde8_tl": "0.013640"
+   },
+   "gerceklesen": {
+    "maliyet_tl": "73.247016"
+   },
+   "fark_tl": "0.008525",
+   "ayristirma": {
+    "fiyat": "1.893043",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.008525",
+    "enflasyon": "-1.893043",
+    "diger": "0.000000"
+   },
+   "is_anlaminda": {
+    "kur": "0.008525",
+    "fiyat": "0.000000",
+    "fire": "0.000000",
+    "adet": "0.000000"
+   },
+   "kalemler": [
+    {
+     "kaynak": "kur",
+     "malzeme": "99.11.008",
+     "ad": "Test Potasyum Sorbat",
+     "aciklama": "EUR 48.0 -> 50.4",
+     "tl": "0.008525"
+    }
+   ],
+   "yillik_fark_tl": "4091.90"
+  },
+  "03.99.006": {
+   "ad": "Test Karışık Turşu 2,5 kg",
+   "yillik_adet": 120000,
+   "gecen_yil_satis_fiyati": "88.65",
+   "butce": {
+    "maliyet_tl": "83.618937",
+    "satis_tl": "100.342725",
+    "toplam_birim_maliyet_tl": "69.682448",
+    "malzeme": "60.194948",
+    "iscilik": "2.226000",
+    "gug": "7.261500",
+    "diger": "0.000000",
+    "finansman": "13.936490"
+   },
+   "guncel_sok_sonrasi": {
+    "maliyet_tl": "83.618937",
+    "fark_tl": "0.000000",
+    "kavanoz_zammi_tl": "0.000000",
+    "usd_artisi_tl": "0.000000",
+    "tum_kurlar_yuzde8_tl": "0.000000"
+   },
+   "gerceklesen": {
+    "maliyet_tl": "83.618937"
+   },
+   "fark_tl": "0.000000",
+   "ayristirma": {
+    "fiyat": "11.292695",
+    "recete": "0.000000",
+    "uretim": "0.000000",
+    "gider": "0.000000",
+    "kur": "0.000000",
+    "enflasyon": "-11.292695",
+    "diger": "0.000000"
+   },
+   "is_anlaminda": {
+    "kur": "0.000000",
+    "fiyat": "0.000000",
+    "fire": "0.000000",
+    "adet": "0.000000"
+   },
+   "kalemler": [],
+   "yillik_fark_tl": "0.00"
+  },
+  "03.99.007": {
+   "ad": "Test Berrak Kornişon 370 ml",
+   "yillik_adet": 960000,
+   "gecen_yil_satis_fiyati": "30.60",
+   "butce": {
+    "maliyet_tl": "26.609562",
+    "satis_tl": "31.931474",
+    "toplam_birim_maliyet_tl": "21.147729",
+    "malzeme": "19.488746",
+    "iscilik": "0.645600",
+    "gug": "1.013383",
+    "diger": "1.026906",
+    "finansman": "4.434927"
+   },
+   "guncel_sok_sonrasi": {
+    "maliyet_tl": "28.066285",
+    "fark_tl": "1.456723",
+    "kavanoz_zammi_tl": "1.454545",
+    "usd_artisi_tl": "0.002177",
+    "tum_kurlar_yuzde8_tl": "0.038304"
+   },
+   "gerceklesen": {
+    "maliyet_tl": "28.522839"
+   },
+   "fark_tl": "1.913277",
+   "ayristirma": {
+    "fiyat": "5.838856",
+    "recete": "0.000000",
+    "uretim": "0.433975",
+    "gider": "0.000000",
+    "kur": "0.024756",
+    "enflasyon": "-4.384310",
+    "diger": "0.000000"
+   },
+   "is_anlaminda": {
+    "kur": "0.024756",
+    "fiyat": "1.454545",
+    "fire": "0.000000",
+    "adet": "0.433975"
+   },
+   "kalemler": [
+    {
+     "kaynak": "kur",
+     "malzeme": "99.11.009",
+     "ad": "Test Kalsiyum Klorür",
+     "aciklama": "USD 42.0 -> 45.36",
+     "tl": "0.002177"
+    },
+    {
+     "kaynak": "kur",
+     "malzeme": "99.11.005",
+     "ad": "Test Baharat Karışımı",
+     "aciklama": "EUR 48.0 -> 50.4",
+     "tl": "0.022579"
+    },
+    {
+     "kaynak": "fiyat",
+     "malzeme": "99.20.001",
+     "ad": "Test Kavanoz 370 ml",
+     "aciklama": "bütçede maliyete giren 8.0000 TL, fiilî 9.2 TL",
+     "tl": "1.454545"
+    }
+   ],
+   "yillik_fark_tl": "1836745.86"
+  }
+ },
+ "toplam": {
+  "butce_yillik_maliyet_tl": "290474013.60",
+  "gerceklesen_yillik_maliyet_tl": "298175923.76",
+  "yillik_sapma_tl": "7701910.16",
+  "kaynaga_gore_yillik_tl": {
+   "fiyat": "48543181.30",
+   "recete": "109624.06",
+   "uretim": "416616.00",
+   "gider": "0.00",
+   "kur": "120915.07",
+   "enflasyon": "-41488426.27",
+   "diger": "0.00"
+  },
+  "is_anlaminda_yillik_tl": {
+   "kur": "120915.07",
+   "fiyat": "7076679.84",
+   "fire": "87699.25",
+   "adet": "416616.00"
+  },
+  "guncel_yillik_maliyet_tl": "298716913.58"
+ },
+ "sok": {
+  "kavanoz_yillik_tl": "8203636.36",
+  "usd_yillik_tl": "39263.62",
+  "toplam_yillik_tl": "8242899.98",
+  "karlilik_yillik_kar_butce_tl": "37395986.40",
+  "karlilik_yillik_kar_guncel_tl": "29153086.42"
+ },
+ "smm": {
+  "uretim_ay": {
+   "03.99.001": 300000,
+   "03.99.002": 120000,
+   "03.99.003": 90000,
+   "03.99.004": 110000,
+   "03.99.007": 80000
+  },
+  "mizan": {
+   "710": "0",
+   "720": "520000",
+   "730": "792000",
+   "760": "427000",
+   "770": "355000"
+  },
+  "havuz": {
+   "20_stok": "0",
+   "20_uretim": "74000",
+   "40_stok_iscilik": "0",
+   "40_iscilik": "296000",
+   "40_stok_gug": "0",
+   "40_gug": "752000",
+   "50_stok": "0",
+   "50_uretim": "124000"
+  },
+  "dagitilan": "1246000",
+  "dagitilmayan": "66000",
+  "dagitilmayan_orani": "0.0503",
+  "sayim_farki": {
+   "kod": "99.10.001",
+   "miktar_kg": 3000,
+   "tutar_tl": "55500.00"
+  },
+  "ekim_alim_fiyati": {
+   "99.10.001": "18.5000",
+   "99.10.002": "26.0000",
+   "99.10.003": "32.0000",
+   "99.10.004": "14.0000",
+   "99.11.001": "5.2500",
+   "99.11.002": "26.2500",
+   "99.11.003": "88.2000",
+   "99.11.004": "85.0000",
+   "99.11.005": "470.4000",
+   "99.11.006": "47.5000",
+   "99.11.007": "90.0000",
+   "99.11.008": "355.2000",
+   "99.11.009": "56.7000",
+   "99.20.001": "8.0000",
+   "99.20.002": "11.3750",
+   "99.20.003": "2.6875",
+   "99.20.004": "3.6250",
+   "99.20.005": "0.5250",
+   "99.20.006": "0.6875",
+   "99.20.007": "14.3750",
+   "99.20.008": "11.5000",
+   "99.20.010": "7.2500",
+   "99.20.011": "118.7500"
+  },
+  "kasim_alim_fiyati": {
+   "99.11.003": "95.2560",
+   "99.11.009": "61.2360",
+   "99.20.001": "9.2000"
+  },
+  "kavanoz_ortalama_fiyat": {
+   "ekim": "8.000000",
+   "kasim": "8.861451"
+  },
+  "kasim_fiyat_etkisi": {
+   "03.99.001": {
+    "kavanoz_tl": "0.872676",
+    "usd_tl": "0.003959",
+    "fiyat_etkisi_tl": "0.876634",
+    "butce_toplam_birim_maliyet_tl": "19.417577"
+   },
+   "03.99.002": {
+    "kavanoz_tl": "0.000000",
+    "usd_tl": "0.002812",
+    "fiyat_etkisi_tl": "0.002812",
+    "butce_toplam_birim_maliyet_tl": "31.149439"
+   },
+   "03.99.003": {
+    "kavanoz_tl": "0.872676",
+    "usd_tl": "0.000000",
+    "fiyat_etkisi_tl": "0.872676",
+    "butce_toplam_birim_maliyet_tl": "25.012667"
+   },
+   "03.99.004": {
+    "kavanoz_tl": "0.000000",
+    "usd_tl": "0.003541",
+    "fiyat_etkisi_tl": "0.003541",
+    "butce_toplam_birim_maliyet_tl": "24.964178"
+   },
+   "03.99.007": {
+    "kavanoz_tl": "0.872676",
+    "usd_tl": "0.001339",
+    "fiyat_etkisi_tl": "0.874015",
+    "butce_toplam_birim_maliyet_tl": "21.147729"
+   }
+  }
+ }
+}

@@ -4,6 +4,8 @@
 // Çalıştırma (proje kökünden):
 //   npm install --prefix <geçici-klasör> marked        (projeye bağımlılık eklenmez)
 //   MARKED_DIR=<geçici-klasör> node docs/test-dongusu/pdf-uret.mjs [ad-süzgeci]
+// MARKED_DIR verilmezse aşağıdaki küçük yerleşik dönüştürücü kullanılır (başlık, paragraf, kalın, kod, liste ve iç içe liste,
+// GFM tablo, alıntı, yatay çizgi; görüntü yok). Sezon senaryosu (11-16-2026-sezon-senaryosu.md) bununla basıldı.
 // Playwright (chromium) frontend/node_modules içinden kullanılır.
 import { createRequire } from "node:module";
 import fs from "node:fs";
@@ -14,8 +16,92 @@ const BURASI = path.dirname(fileURLToPath(import.meta.url));
 const KOK = path.resolve(BURASI, "../..");
 const { chromium } = createRequire(path.join(KOK, "frontend/package.json"))("@playwright/test");
 const markedKok = process.env.MARKED_DIR;
-if (!markedKok) throw new Error("MARKED_DIR ortam değişkeni gerekli (içinde node_modules/marked olan klasör)");
-const { marked } = createRequire(path.join(path.resolve(markedKok), "package.json"))("marked");
+const marked = markedKok
+  ? createRequire(path.join(path.resolve(markedKok), "package.json"))("marked").marked
+  : { parse: (md) => basitMarkdown(md) };
+
+// ---------------------------------------------------------------- yerleşik basit Markdown -> HTML
+function satirIci(s) {
+  return s
+    .split(/(`[^`]*`)/)
+    .map((p) =>
+      p.startsWith("`") && p.endsWith("`") && p.length > 1
+        ? `<code>${kacis(p.slice(1, -1))}</code>`
+        : kacis(p).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"),
+    )
+    .join("");
+}
+
+function tabloHucreleri(satir) {
+  return satir.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((h) => h.trim());
+}
+
+function basitMarkdown(md) {
+  return bloklar(md.replace(/\r\n/g, "\n").split("\n"));
+}
+
+function bloklar(satirlar) {
+  const out = [];
+  let i = 0;
+  const bos = (s) => s.trim() === "";
+  const liste = (s) => /^([-*]|\d+\.) /.exec(s);
+  while (i < satirlar.length) {
+    const s = satirlar[i];
+    if (bos(s)) { i++; continue; }
+    let e;
+    if ((e = /^(#{1,6}) (.*)$/.exec(s))) {
+      out.push(`<h${e[1].length}>${satirIci(e[2])}</h${e[1].length}>`); i++; continue;
+    }
+    if (/^-{3,}\s*$/.test(s)) { out.push("<hr>"); i++; continue; }
+    if (s.startsWith("|") && i + 1 < satirlar.length && /^\|[\s:|-]+\|\s*$/.test(satirlar[i + 1])) {
+      const bas = tabloHucreleri(s);
+      i += 2;
+      const govde = [];
+      while (i < satirlar.length && satirlar[i].trim().startsWith("|")) govde.push(tabloHucreleri(satirlar[i++]));
+      out.push(`<table><thead><tr>${bas.map((h) => `<th>${satirIci(h)}</th>`).join("")}</tr></thead><tbody>${govde
+        .map((r) => `<tr>${r.map((h) => `<td>${satirIci(h)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+      continue;
+    }
+    if (s.startsWith(">")) {
+      const ic = [];
+      while (i < satirlar.length && satirlar[i].startsWith(">")) ic.push(satirlar[i++].replace(/^> ?/, ""));
+      out.push(`<blockquote>${bloklar(ic)}</blockquote>`);
+      continue;
+    }
+    if ((e = liste(s))) {
+      const sirali = /\d/.test(e[1]);
+      const ogeler = [];
+      while (i < satirlar.length) {
+        const m = liste(satirlar[i]);
+        if (!m || /\d/.test(m[1]) !== sirali) break;
+        const genislik = m[0].length;
+        const ic = [satirlar[i].slice(genislik)];
+        i++;
+        while (i < satirlar.length) {
+          const t = satirlar[i];
+          if (bos(t)) {
+            let j = i;
+            while (j < satirlar.length && bos(satirlar[j])) j++;
+            if (j < satirlar.length && satirlar[j].startsWith(" ".repeat(2))) { while (i < j) { ic.push(""); i++; } continue; }
+            break;
+          }
+          if (t.startsWith(" ".repeat(2))) { ic.push(t.replace(new RegExp(`^ {1,${genislik}}`), "")); i++; continue; }
+          if (liste(t)) break;
+          ic.push(t); i++;   // tembel devam satırı
+        }
+        const sikiMi = !ic.some(bos) && ic.slice(1).every((t) => !/^([-*]|\d+\.) |^\|/.test(t));
+        ogeler.push(sikiMi ? satirIci(ic.join(" ")) : bloklar(ic));
+      }
+      const et = sirali ? "ol" : "ul";
+      out.push(`<${et}>${ogeler.map((o) => `<li>${o}</li>`).join("")}</${et}>`);
+      continue;
+    }
+    const p = [];
+    while (i < satirlar.length && !bos(satirlar[i]) && !/^(#{1,6} |>|\||-{3,}\s*$)/.test(satirlar[i]) && !liste(satirlar[i])) p.push(satirlar[i++]);
+    out.push(`<p>${satirIci(p.join(" "))}</p>`);
+  }
+  return out.join("\n");
+}
 
 const TARIH = "16.11.2026";
 const YATAY = new Set([]);
@@ -64,6 +150,9 @@ const STIL = `
   li.gorev { list-style: none; position: relative; }
   li.gorev .kutu { position: absolute; left: -5.2mm; top: 0.75mm; width: 3.1mm; height: 3.1mm; border: 0.8pt solid #45541f; border-radius: 0.4mm; background: #fff; }
   .ust { font-size: 8.5pt; color: #6a7055; margin: 0 0 3mm; }
+  blockquote { margin: 0 0 3mm; padding: 2mm 3.5mm; border-left: 1.4pt solid #5b6e2b; background: #f4f5ec; break-inside: avoid; }
+  blockquote p:last-child, blockquote ul:last-child { margin-bottom: 0; }
+  hr { border: 0; border-top: 0.5pt solid #c3c9ae; margin: 5mm 0; }
 `;
 
 function htmlUret(md, ad) {
