@@ -157,7 +157,7 @@ describe("OnayCiktisiDiyalogu", () => {
 
   it("Fiyat: şablon yoksa Müşavir Excel'i en üstte pasif, nedeni ve Veri Aktar bağlantısı görünür", async () => {
     render(<OnayCiktisiDiyalogu kapsam={FIYAT} onKapat={() => {}} />);
-    const musavir = screen.getByRole("radio", { name: /Müşavir Excel'i \(kendi kitabınızın düzeninde\)/ });
+    const musavir = screen.getByRole("radio", { name: /Fiyat Çalışması Excel'i \(kendi kitabınızın düzeninde\)/ });
     expect(screen.getAllByRole("radio")[0]).toBe(musavir);
     await waitFor(() => expect(screen.getByText(/Bu çalışma için şablon yok/)).toBeInTheDocument());
     expect(musavir).toBeDisabled();
@@ -204,7 +204,7 @@ describe("OnayCiktisiDiyalogu", () => {
       render(<OnayCiktisiDiyalogu kapsam={FIYAT} onKapat={kapat} />);
       expect(await screen.findByTestId("musavir-sablon")).toHaveTextContent("Şablon: Fiyat Çalışma - Test.xl" + "sx, 16.11.2026");
       expect(screen.getByText(/Excel açıldığında toplamlar hesaplanır/)).toBeInTheDocument();
-      const musavir = screen.getByRole("radio", { name: /Müşavir Excel'i/ });
+      const musavir = screen.getByRole("radio", { name: /Fiyat Çalışması Excel'i/ });
       expect(musavir).toBeEnabled();
       await userEvent.click(musavir);
       await userEvent.click(screen.getByRole("button", { name: "Kitaba yazılamayan değerleri göster" }));

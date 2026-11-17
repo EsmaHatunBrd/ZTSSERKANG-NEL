@@ -224,7 +224,7 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
                   onChange={() => setIcerik("musavir")}
                 />
                 <span>
-                  Müşavir Excel&apos;i (kendi kitabınızın düzeninde)
+                  Fiyat Çalışması Excel&apos;i (kendi kitabınızın düzeninde)
                   <span id={`${id}-musavir`} className="block text-xs text-muted-foreground">
                     {sablon === undefined ? (
                       "Şablon denetleniyor…"

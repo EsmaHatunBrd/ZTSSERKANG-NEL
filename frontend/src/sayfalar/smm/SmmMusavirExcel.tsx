@@ -19,7 +19,7 @@ export function sablonMetni(d: SmmMusavirExcelDurumu): string | null {
 }
 
 /**
- * SMM Özeti başlığında "Müşavir Excel'i": müşavire giden SMM Excel'inin aynısı (kendi Excel'iniz şablon), rakamlar uygulamadan.
+ * SMM Özeti başlığında "SMM Excel'i": müşavire giden SMM Excel'inin aynısı (kendi Excel'iniz şablon), rakamlar uygulamadan.
  * Şablon yoksa pasif düğme; nedeni başlık ipucunda ve sayfadaki bilgi satırında.
  */
 export function MusavirExcelDugmesi({ donemId }: { donemId: number }) {
@@ -34,7 +34,7 @@ export function MusavirExcelDugmesi({ donemId }: { donemId: number }) {
         className={`${sinif} cursor-not-allowed opacity-50`}
         title={q.isPending ? "Şablon denetleniyor…" : q.error ? hataMetni(q.error) : SABLON_YOK_NEDENI}
       >
-        <FileSpreadsheet className="size-3.5" /> Müşavir Excel'i
+        <FileSpreadsheet className="size-3.5" /> SMM Excel'i
       </button>
     );
   }
@@ -45,7 +45,7 @@ export function MusavirExcelDugmesi({ donemId }: { donemId: number }) {
       className={`${sinif} hover:bg-accent`}
       title={`${sablonMetni(d)}. Excel açıldığında toplamlar yeniden hesaplanır.`}
     >
-      <FileSpreadsheet className="size-3.5" /> Müşavir Excel'i
+      <FileSpreadsheet className="size-3.5" /> SMM Excel'i
     </a>
   );
 }
@@ -56,16 +56,16 @@ export function MusavirExcelBilgisi({ donemId }: { donemId: number }) {
   const d = q.data;
   if (!d) return null;
   return (
-    <p role="note" aria-label="Müşavir Excel'i" className="flex items-start gap-2 text-xs text-muted-foreground">
+    <p role="note" aria-label="SMM Excel'i" className="flex items-start gap-2 text-xs text-muted-foreground">
       <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
       {d.sablon ? (
         <span>
-          Müşavir Excel'i: {sablonMetni(d)}. Formüller ve biçim sizin dosyanızdaki gibi kalır, rakamlar uygulamadan; Excel açıldığında
-          toplamlar yeniden hesaplanır.
+          SMM Excel'i: {sablonMetni(d)}. Formüller ve biçim sizin dosyanızdaki gibi kalır, rakamlar uygulamadan; Excel açıldığında toplamlar
+          yeniden hesaplanır.
           {d.taslak && <b className="text-foreground"> TASLAK — dönem kapatılmadı.</b>}
         </span>
       ) : (
-        <span>Müşavir Excel'i indirilemez. {SABLON_YOK_NEDENI} (ya da Dönemler'de "Müşavir şablonu olarak yalnız sakla").</span>
+        <span>SMM Excel'i indirilemez. {SABLON_YOK_NEDENI} (ya da Dönemler'de "Excel şablonu olarak yalnız sakla").</span>
       )}
     </p>
   );
@@ -88,17 +88,17 @@ export function MusavirSablonKarti({ liste }: { liste: SmmDonem[] }) {
   if (donemId === null) return null;
   const d = durum.data;
   return (
-    <section aria-label="Müşavir Excel'i şablonu" className="flex flex-col gap-3 rounded-2xl border bg-card p-5 shadow-xs">
+    <section aria-label="SMM Excel şablonu" className="flex flex-col gap-3 rounded-2xl border bg-card p-5 shadow-xs">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-kart-yesil text-primary" aria-hidden>
           <FileSpreadsheet className="size-5" />
         </span>
         <div>
-          <h2 className="text-base font-semibold">Müşavir Excel'i şablonu</h2>
+          <h2 className="text-base font-semibold">SMM Excel şablonu</h2>
           <p className="text-sm text-muted-foreground">
-            Müşavire giden SMM Excel'i sizin dosyanızın düzeninde üretilir: SMM Excel'inden yüklediğiniz dosya şablon olarak saklanır,
-            rakamlar uygulamadan yazılır. Excel'i zaten yüklediyseniz ya da dönemi aylık kaynaklardan kurduysanız, dosyayı burada dönem
-            verisine dokunmadan yalnız şablon olarak saklayabilirsiniz. Şablonu olmayan ay, en yakın önceki ayın şablonunu kullanır.
+            SMM Excel'i sizin dosyanızın düzeninde üretilir: SMM Excel'inden yüklediğiniz dosya şablon olarak saklanır, rakamlar uygulamadan
+            yazılır. Excel'i zaten yüklediyseniz ya da dönemi aylık kaynaklardan kurduysanız, dosyayı burada dönem verisine dokunmadan
+            yalnız şablon olarak saklayabilirsiniz. Şablonu olmayan ay, en yakın önceki ayın şablonunu kullanır.
           </p>
         </div>
       </div>
@@ -128,7 +128,7 @@ export function MusavirSablonKarti({ liste }: { liste: SmmDonem[] }) {
             ref={dosyaRef}
             type="file"
             accept=".xlsx"
-            aria-label="Müşavir şablonu dosyası"
+            aria-label="Excel şablonu dosyası"
             onChange={(e) => {
               setDosya(e.target.files?.[0] ?? null);
               onizle.reset();
@@ -146,9 +146,7 @@ export function MusavirSablonKarti({ liste }: { liste: SmmDonem[] }) {
         </Button>
       </div>
       {d && (
-        <p className="text-sm text-muted-foreground">
-          {d.sablon ? sablonMetni(d) : "Bu dönem için şablon yok; Müşavir Excel'i indirilemez."}
-        </p>
+        <p className="text-sm text-muted-foreground">{d.sablon ? sablonMetni(d) : "Bu dönem için şablon yok; SMM Excel'i indirilemez."}</p>
       )}
       {(onizle.error || sakla.error) && (
         <p role="alert" className="text-sm text-destructive">
@@ -158,7 +156,7 @@ export function MusavirSablonKarti({ liste }: { liste: SmmDonem[] }) {
       {on && dosya && !sakla.data && (
         <div role="region" aria-label="Şablon önizlemesi" className="flex flex-col gap-2 rounded-xl border bg-muted/40 px-4 py-3 text-sm">
           <p>
-            <b>{on.dosya_adi}</b> {on.donem} için müşavir şablonu olarak saklanacak; dönemin verileri değişmez.
+            <b>{on.dosya_adi}</b> {on.donem} için Excel şablonu olarak saklanacak; dönemin verileri değişmez.
             {on.mevcut ? ` Mevcut şablonun (${on.mevcut.dosya_adi}) yerine geçer.` : ""}
           </p>
           <p className="text-xs text-muted-foreground">Sayfalar: {on.sayfalar.join(", ")}</p>

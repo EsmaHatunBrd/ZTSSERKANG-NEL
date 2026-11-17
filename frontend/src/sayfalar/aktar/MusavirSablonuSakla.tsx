@@ -34,11 +34,11 @@ export function MusavirSablonuSakla() {
   return (
     <section aria-labelledby="musavir-sablon-baslik" className="flex max-w-2xl flex-col gap-3 border-t pt-6">
       <h2 id="musavir-sablon-baslik" className="text-base font-semibold">
-        Müşavir şablonu olarak yalnız sakla
+        Excel şablonu olarak yalnız sakla
       </h2>
       <p className="text-sm text-muted-foreground">
-        Kitabınızı daha önce yüklediyseniz veriyi yeniden aktarmadan yalnız şablon olarak saklayın. İndir › &quot;Müşavir Excel&apos;i&quot;
-        bu kitabın düzeninde, rakamları uygulamadan alarak üretilir. Çalışmanın verisi değişmez.
+        Kitabınızı daha önce yüklediyseniz veriyi yeniden aktarmadan yalnız şablon olarak saklayın. İndir › &quot;Fiyat Çalışması
+        Excel&apos;i&quot; bu kitabın düzeninde, rakamları uygulamadan alarak üretilir. Çalışmanın verisi değişmez.
       </p>
       {senaryoId === null ? (
         <p className="text-sm text-muted-foreground">Önce üst çubuktan bir çalışma seçin.</p>
@@ -100,7 +100,7 @@ export function MusavirSablonuSakla() {
           )}
           {sakla.data && (
             <p role="status" className="text-sm">
-              Saklandı: {sakla.data.sablon.dosya_adi}. İndir › Müşavir Excel&apos;i artık bu kitabın düzeninde üretilir.
+              Saklandı: {sakla.data.sablon.dosya_adi}. İndir › Fiyat Çalışması Excel&apos;i artık bu kitabın düzeninde üretilir.
             </p>
           )}
           {hata && (

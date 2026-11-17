@@ -265,7 +265,7 @@ export function TamKitapFormu() {
 
       {aktar.data?.musavir_sablonu_saklandi && (
         <p className="max-w-2xl text-sm text-muted-foreground" data-testid="musavir-sablon-saklandi">
-          Kitap, bu çalışmanın Müşavir Excel&apos;i şablonu olarak da saklandı (İndir › Müşavir Excel&apos;i).
+          Kitap, bu çalışmanın Excel şablonu olarak da saklandı (İndir › Fiyat Çalışması Excel&apos;i).
         </p>
       )}
       {aktar.data && <ImportOzetiKartlari ozet={aktar.data} />}

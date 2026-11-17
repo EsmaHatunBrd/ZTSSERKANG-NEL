@@ -51,10 +51,10 @@ describe("SMM müşavir Excel'i", () => {
   it("şablon varsa SMM Özeti'nde indirme bağlantısı ve şablon bilgisi (önceki ayın dosyası, taslak)", async () => {
     ozetIsleyicileri(sablonlu);
     kurSayfa(<SmmOzet />);
-    const baglanti = await screen.findByRole("link", { name: "Müşavir Excel'i" });
+    const baglanti = await screen.findByRole("link", { name: "SMM Excel'i" });
     expect(baglanti).toHaveAttribute("href", "/api/v1/smm/donemler/8/musavir-excel.xlsx");
     expect(baglanti).toHaveAttribute("download");
-    const not = screen.getByRole("note", { name: "Müşavir Excel'i" });
+    const not = screen.getByRole("note", { name: "SMM Excel'i" });
     expect(not).toHaveTextContent("Şablon: 10-2026 SMM v1.xlsx, 17.11.2026 (Ekim 2026 dosyası; bu ayın Excel'i yüklenmedi)");
     expect(not).toHaveTextContent("TASLAK — dönem kapatılmadı");
     expect(not).toHaveTextContent("Excel açıldığında toplamlar yeniden hesaplanır");
@@ -63,12 +63,12 @@ describe("SMM müşavir Excel'i", () => {
   it("şablon yoksa düğme pasif ve nedeni yazılı", async () => {
     ozetIsleyicileri(sablonsuz);
     kurSayfa(<SmmOzet />);
-    const not = await screen.findByRole("note", { name: "Müşavir Excel'i" });
+    const not = await screen.findByRole("note", { name: "SMM Excel'i" });
     expect(not).toHaveTextContent("Şablon yok: Dönemler › SMM Excel'inden yükle");
-    const dugme = screen.getByRole("button", { name: "Müşavir Excel'i" });
+    const dugme = screen.getByRole("button", { name: "SMM Excel'i" });
     expect(dugme).toBeDisabled();
     expect(dugme).toHaveAttribute("title", expect.stringContaining("Şablon yok"));
-    expect(screen.queryByRole("link", { name: "Müşavir Excel'i" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "SMM Excel'i" })).not.toBeInTheDocument();
   });
 
   it("Dönemler'de yalnız şablon olarak saklanır: önce önizleme, sonra sakla", async () => {
@@ -91,12 +91,12 @@ describe("SMM müşavir Excel'i", () => {
       }),
     );
     kurSayfa(<SmmDonemler />);
-    const kart = await screen.findByRole("region", { name: "Müşavir Excel'i şablonu" });
+    const kart = await screen.findByRole("region", { name: "SMM Excel şablonu" });
     expect(await within(kart).findByText(/Bu dönem için şablon yok/)).toBeInTheDocument();
-    await userEvent.upload(within(kart).getByLabelText("Müşavir şablonu dosyası"), new File(["x"], "11-2026 SMM.xlsx"));
+    await userEvent.upload(within(kart).getByLabelText("Excel şablonu dosyası"), new File(["x"], "11-2026 SMM.xlsx"));
     await userEvent.click(within(kart).getByRole("button", { name: "Şablonu önizle" }));
     const on = await within(kart).findByRole("region", { name: "Şablon önizlemesi" });
-    expect(on).toHaveTextContent("11-2026 SMM.xlsx Kasım 2026 için müşavir şablonu olarak saklanacak; dönemin verileri değişmez.");
+    expect(on).toHaveTextContent("11-2026 SMM.xlsx Kasım 2026 için Excel şablonu olarak saklanacak; dönemin verileri değişmez.");
     expect(on).toHaveTextContent("Sayfalar: ENVANTER, DBS, TABLO");
     await userEvent.click(within(on).getByRole("button", { name: "Yalnız şablon olarak sakla" }));
     expect(await within(kart).findByRole("status")).toHaveTextContent("Şablon saklandı. Şablon: 11-2026 SMM.xlsx, 17.11.2026");
@@ -120,8 +120,8 @@ describe("SMM müşavir Excel'i", () => {
       ),
     );
     kurSayfa(<SmmDonemler />);
-    const kart = await screen.findByRole("region", { name: "Müşavir Excel'i şablonu" });
-    await userEvent.upload(within(kart).getByLabelText("Müşavir şablonu dosyası"), new File(["x"], "sayim.xlsx"));
+    const kart = await screen.findByRole("region", { name: "SMM Excel şablonu" });
+    await userEvent.upload(within(kart).getByLabelText("Excel şablonu dosyası"), new File(["x"], "sayim.xlsx"));
     await userEvent.click(within(kart).getByRole("button", { name: "Şablonu önizle" }));
     expect(await within(kart).findByRole("alert")).toHaveTextContent("SMM dönem Excel'i değil");
     expect(within(kart).queryByRole("button", { name: "Yalnız şablon olarak sakla" })).not.toBeInTheDocument();
