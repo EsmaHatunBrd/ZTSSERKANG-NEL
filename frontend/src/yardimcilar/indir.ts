@@ -1,5 +1,14 @@
-/** `Content-Disposition: attachment; filename="..."` başlığından dosya adı; yoksa null. */
+/** `Content-Disposition: attachment; filename="..."` başlığından dosya adı; yoksa null. Türkçe adlar için
+ * `filename*=UTF-8''...` (RFC 5987) varsa o önceliklidir. */
 export function dosyaAdi(baslik: string | null): string | null {
+  const utf = /filename\*=UTF-8''([^;]+)/i.exec(baslik ?? "");
+  if (utf) {
+    try {
+      return decodeURIComponent(utf[1].trim());
+    } catch {
+      /* bozuk kodlama: düz ada düş */
+    }
+  }
   const m = /filename="?([^";]+)"?/i.exec(baslik ?? "");
   return m ? m[1] : null;
 }

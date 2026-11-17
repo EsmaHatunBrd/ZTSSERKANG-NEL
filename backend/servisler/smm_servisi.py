@@ -171,6 +171,8 @@ def donem_sil(s: Session, donem_id: int, kullanici: str = "sistem") -> None:
     d = donem_getir(s, donem_id)
     kilit_denetle(d)
     _temizle(s, d.id)
+    from . import excel_sablon_deposu as esd
+    esd.sil(s, "smm_donem", str(d.id))   # müşavir Excel'i şablonu dönemle gider (kimlik yeni döneme verilirse eskisi kullanılmasın)
     # dönemin yükleme yedekleri artık geri alınamaz (silinen dönemin kimliği yeni bir döneme verilirse eski yedek ona uygulanmasın)
     yedekleri_kapat(s, [YEDEK_ALANI], str(d.id))
     donem_yedeklerini_kapat(s, d.id)
@@ -593,6 +595,9 @@ def yukle(s: Session, icerik: bytes, dosya_adi: str, yil: int | None = None, ay:
                             yeni={"donem": donem_adi(d), "dosya": d.kaynak_dosya, "kalem": len(kalemler), "recete_satiri": len(veri["receteler"]),
                                   "uzerine_yazildi": not yeni, **({"sorunlu": len(veri["sorunlu"])} if veri["sorunlu"] else {}),
                                   **({"onayli_kayip": mevcut_kalem - len(kalemler)} if onay and len(kalemler) < mevcut_kalem else {})}))
+    # Müşavir Excel'i için şablon: yüklenen dosyanın olduğu gibi kopyası (bkz. smm_musavir_excel_servisi)
+    from . import excel_sablon_deposu as esd
+    esd.kaydet(s, "smm_donem", str(d.id), dosya_adi, icerik, kullanici)
     s.flush()
     return donem_cikis(d, len(kalemler))
 

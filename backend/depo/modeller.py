@@ -1,7 +1,7 @@
 """ORM tabloları. Para/oran alanları ParaTipi; fiyat, parametre değeri ve fire kuralı append-only."""
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Integer, LargeBinary, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .veritabani import Base, ParaTipi
 
@@ -459,6 +459,18 @@ class YuklemeYedegi(Base, Ortak):
     kaynak_dosya: Mapped[str | None] = mapped_column(String(200))
     veri: Mapped[dict] = mapped_column(JSON)
     geri_alindi: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
+
+class ExcelSablonu(Base, Ortak):
+    """Müşavir Excel'i için şablon: muhasebenin yüklediği kendi Excel'inin olduğu gibi kopyası. `tur`: "fiyat_kitabi" | "smm_donem";
+    `kapsam`: senaryo/dönem kimliği metni. Kapsam başına yalnız en son yüklenen tutulur. Uygulama dışa aktarırken bu kopyaya
+    güncel rakamları yazar; formül, biçim ve sayfa adlarına dokunmaz."""
+    __tablename__ = "excel_sablonu"
+    tur: Mapped[str] = mapped_column(String(32), index=True)
+    kapsam: Mapped[str] = mapped_column(String(64), default="")
+    dosya_adi: Mapped[str] = mapped_column(String(200))
+    boyut: Mapped[int] = mapped_column(Integer, default=0)
+    icerik: Mapped[bytes] = mapped_column(LargeBinary)
 
 
 class SmmAlternatifSecimi(Base, Ortak):

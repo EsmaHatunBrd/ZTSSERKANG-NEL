@@ -7,13 +7,13 @@ from pathlib import Path
 from typing import Literal
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from openpyxl.utils.exceptions import InvalidFileException
-from ..servisler import hesap_servisi as hs, import_servisi as imp, yukleme_guvenligi as yg
+from ..servisler import hesap_servisi as hs, import_servisi as imp, musavir_excel_servisi as mx, yukleme_guvenligi as yg
 from ..servisler.donusum import decimal_str
 from ..servisler.hatalar import DogrulamaHatasi
 from .bagimliliklar import OturumDep, kullanici_ver
 
-from .semalar import (FiyatListesiOnizleme, FiyatListesiUygulama, GeriAlSonucu, HATA_404_409_422, HATA_404_422, ImportOzeti,
-                      SonYuklemeYaniti)
+from .semalar import (FiyatKitabiSablonKaydi, FiyatKitabiSablonOnizleme, FiyatListesiOnizleme, FiyatListesiUygulama, GeriAlSonucu,
+                      HATA_404_409_422, HATA_404_422, ImportOzeti, SonYuklemeYaniti)
 
 router = APIRouter(tags=["import"])
 
@@ -51,8 +51,34 @@ def excel_tam(s: OturumDep, dosya: UploadFile = File(...), sezon_ad: str | None 
     if senaryo_id is not None:   # tamamla modu mevcut senaryoya yazar: kilitliyse 409
         hs.kilit_denetle(hs.senaryo_getir(s, senaryo_id))
     with _gecici(dosya) as yol:
-        return decimal_str(imp.excel_tam_yukle(s, yol, sezon_ad or "", senaryo_ad or "", tur, k, kartlari_guncelle, senaryo_id,
-                                               kaynak_dosya=hs.dosya_adi_temizle(dosya.filename)))
+        ozet = imp.excel_tam_yukle(s, yol, sezon_ad or "", senaryo_ad or "", tur, k, kartlari_guncelle, senaryo_id,
+                                   kaynak_dosya=hs.dosya_adi_temizle(dosya.filename))
+        # Müşavir Excel'i için kitabın kendisi şablon olarak saklanır (aktarım başarıyla yazıldıktan sonra; aynı işlemde).
+        mx.sablon_sakla(s, ozet["senaryo_id"], hs.dosya_adi_temizle(dosya.filename), yol.read_bytes(), k)
+        ozet["musavir_sablonu_saklandi"] = True
+        return decimal_str(ozet)
+
+
+@router.post("/import/excel-tam/musavir-sablonu/onizle", response_model=FiyatKitabiSablonOnizleme, responses=HATA_404_422,
+             summary="Müşavir şablonu: yalnız saklamadan önce kitap mı denetle")
+def musavir_sablonu_onizle(s: OturumDep, dosya: UploadFile = File(...), senaryo: int = Form(...)):
+    """Aktarım yapılmaz. Dosya Fiyat Çalışması kitabı değilse 422 (eksik_sayfa / yanlis_sablon / desteklenmeyen_dosya)."""
+    sen = hs.senaryo_getir(s, senaryo)
+    with _gecici(dosya) as yol:
+        on = mx.sablon_onizle(yol)
+    return {"dosya_adi": hs.dosya_adi_temizle(dosya.filename) or "fiyat-calismasi.xlsx", **on, "mevcut": mx.sablon_ozeti(s, sen.id)}
+
+
+@router.post("/import/excel-tam/musavir-sablonu", response_model=FiyatKitabiSablonKaydi, responses=HATA_404_422,
+             summary="Müşavir şablonu olarak yalnız sakla (aktarım yapmadan)")
+def musavir_sablonu_sakla(s: OturumDep, dosya: UploadFile = File(...), senaryo: int = Form(...), k: str = Depends(kullanici_ver)):
+    """Kitabı zaten yüklemiş kullanıcılar için: dosya yalnız şablon olarak saklanır (senaryo verisine dokunulmaz; kilitli çalışmada da
+    olur). Önce önizlemeyle aynı denetim yapılır. Çalışma başına yalnız son şablon tutulur."""
+    sen = hs.senaryo_getir(s, senaryo)
+    with _gecici(dosya) as yol:
+        mx.sablon_onizle(yol)
+        oz = mx.sablon_sakla(s, sen.id, hs.dosya_adi_temizle(dosya.filename), yol.read_bytes(), k)
+    return {"sablon": oz}
 
 
 @router.post("/import/fiyat-listesi", response_model=FiyatListesiOnizleme, responses=HATA_404_422)

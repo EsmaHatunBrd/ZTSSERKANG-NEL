@@ -216,3 +216,14 @@ export type SonYuklemeYaniti = Sema["SonYuklemeYaniti"];
 export type GeriAlSonucu = Sema["GeriAlSonucu"];
 export type SatisOnizleme = Sema["SatisOnizleme"];
 export type ListeOnizleme = Sema["ListeOnizleme"];
+
+// SMM müşavir Excel'i (17.11.2026): kendi SMM Excel'i şablon, rakamlar uygulamadan
+export type SmmMusavirExcelDurumu = Sema["SmmMusavirExcelDurumu"];
+export type SmmMusavirSablonOzeti = Sema["SmmMusavirSablonOzeti"];
+export type SmmMusavirSablonOnizleme = Sema["SmmMusavirSablonOnizleme"];
+
+// Fiyat Çalışması müşavir Excel'i (17.11.2026): kendi Fiyat Çalışması kitabı şablon, rakamlar uygulamadan
+export type FiyatKitabiDurumu = Sema["FiyatKitabiDurumu"];
+export type FiyatKitabiSablonOzeti = Sema["FiyatKitabiSablonOzeti"];
+export type FiyatKitabiUyariOzeti = Sema["FiyatKitabiUyariOzeti"];
+export type FiyatKitabiSablonOnizleme = Sema["FiyatKitabiSablonOnizleme"];

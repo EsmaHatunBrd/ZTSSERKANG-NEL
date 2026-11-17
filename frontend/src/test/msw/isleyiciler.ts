@@ -198,6 +198,14 @@ export const isleyiciler = [
     HttpResponse.json({ yeni: [{ kod: "M-050", yeni: "3.5" }], degisen: [{ kod: "M-001", eski: "5.9", yeni: "6" }], ayni: 4, hatali: [] }),
   ),
   http.post(`${T}/import/excel-tam`, () => HttpResponse.json({ urun_sayisi: 3, kart_farklari: [], yeniden_adlandirilan: [] })),
+  // Müşavir Excel'i: varsayılan şablon yok (testler `sunucu.use` ile şablonlu durumu verir)
+  http.get(`${T}/disa-aktar/musavir/fiyat-kitabi/durum`, () => HttpResponse.json({ sablon: null, uyarilar_ozeti: null })),
+  http.post(`${T}/import/excel-tam/musavir-sablonu/onizle`, () =>
+    HttpResponse.json({ dosya_adi: "kitap.xlsx", sayfalar: ["S.ALMA BF", "Gider Dağıtım", "001"], urun_sayfasi: 1, mevcut: null }),
+  ),
+  http.post(`${T}/import/excel-tam/musavir-sablonu`, () =>
+    HttpResponse.json({ sablon: { dosya_adi: "kitap.xlsx", zaman: "2026-11-17T09:00:00", olusturan: "t", boyut: 1000 } }),
+  ),
 
   // Parametreler
   http.get(`${T}/parametreler/tanimlar`, () => liste(parametreTanimlari)),

@@ -312,3 +312,40 @@ def fis_xlsx(s: OturumDep, donem_id: int):
     icerik, ad = sv.fis_excel(s, donem_id)
     return Response(icerik, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(ad)}"})
+
+
+# ---------------------------------------------------------------- müşavir Excel'i (kendi SMM Excel'i şablon, rakamlar uygulamadan)
+from ..servisler import smm_musavir_excel_servisi as sme  # noqa: E402
+from .semalar import SmmMusavirExcelDurumu, SmmMusavirSablonOnizleme  # noqa: E402
+
+
+@router.get("/smm/donemler/{donem_id}/musavir-excel/durum", response_model=SmmMusavirExcelDurumu, responses=HATA_404_422)
+def musavir_excel_durum(s: OturumDep, donem_id: int):
+    """Müşavir Excel'i için kullanılacak şablon: dönemin kendi SMM Excel'i, yoksa en yakın önceki dönemin; hiç yoksa `sablon: null`."""
+    return sme.durum(s, donem_id)
+
+
+@router.get("/smm/donemler/{donem_id}/musavir-excel.xlsx", responses=HATA_404_422)
+def musavir_excel(s: OturumDep, donem_id: int):
+    """Müşavirin alıştığı SMM Excel'i: saklı şablon (kendi SMM Excel'iniz) formül ve biçimiyle, girdi hücrelerinde dönemin güncel
+    verisi. Şablon yoksa 404 `sablon_yok`. Kapanmamış dönemde de iner; dosya özelliklerinde "TASLAK — dönem kapatılmadı" yazar.
+    Uyarılar (formül olduğu için yazılamayan hücre, yetmeyen satır …) `X-Musavir-Uyarilar` başlığında (URL kodlu JSON listesi)."""
+    import json
+    from urllib.parse import quote
+    icerik, ad, uyarilar = sme.smm_donem_excel_uret(s, donem_id)
+    return Response(icerik, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(ad)}",
+                             "X-Musavir-Uyarilar": quote(json.dumps(uyarilar[:30], ensure_ascii=False)),
+                             "Access-Control-Expose-Headers": "Content-Disposition, X-Musavir-Uyarilar"})
+
+
+@router.post("/smm/donemler/{donem_id}/musavir-excel/sablon/onizle", response_model=SmmMusavirSablonOnizleme, responses=HATA_404_422)
+def musavir_sablon_onizle(s: OturumDep, donem_id: int, dosya: UploadFile = File(...)):
+    """"Müşavir şablonu olarak yalnız sakla" önizlemesi (yazmaz): sayfa adları. SMM dönem Excel'i değilse 422 `smm_excel_degil`."""
+    return sme.sablon_onizle(s, donem_id, dosya.file.read(ss.MAKS_BAYT + 1), dosya.filename or "")
+
+
+@router.post("/smm/donemler/{donem_id}/musavir-excel/sablon", response_model=SmmMusavirExcelDurumu, responses=HATA_404_422)
+def musavir_sablon_sakla(s: OturumDep, donem_id: int, dosya: UploadFile = File(...), k: str = Depends(kullanici_ver)):
+    """Dönem verisine dokunmadan yalnız müşavir şablonunu saklar (dönemin önceki şablonunun yerine geçer). SMM Excel'i değilse 422."""
+    return sme.sablon_sakla(s, donem_id, dosya.file.read(ss.MAKS_BAYT + 1), dosya.filename or "", k)

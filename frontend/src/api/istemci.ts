@@ -36,7 +36,12 @@ export const api = createClient<paths>({
 });
 
 /** Yazma sayılmayan POST uçları (hesaplama / önizleme): kullanıcı adı olmadan da çalışır. */
-const YAZMA_DEGIL = [/\/hesapla$/, /\/import\/fiyat-listesi$/, /\/onay-ciktisi\/(fiyat|smm)$/];
+const YAZMA_DEGIL = [
+  /\/hesapla$/,
+  /\/import\/fiyat-listesi$/,
+  /\/onay-ciktisi\/(fiyat|smm)$/,
+  /\/import\/excel-tam\/musavir-sablonu\/onizle$/,
+];
 
 export const KULLANICI_YOK_MESAJI = "Önce üst bardan adınızı girin";
 

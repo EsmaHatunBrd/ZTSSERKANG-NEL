@@ -18,6 +18,7 @@ export const importOzeti: ExcelTamYaniti = {
   mod: "yeni",
   satis_notu: 1,
   revize: 23,
+  musavir_sablonu_saklandi: true,
 };
 
 /** "Mevcut senaryoyu tamamla" sonucu: yalnız eklenenler sayılır. */
@@ -39,6 +40,7 @@ export const tamamlaOzeti: ExcelTamYaniti = {
   mod: "tamamla",
   satis_notu: 1,
   revize: 0,
+  musavir_sablonu_saklandi: false,
 };
 
 /** Ürün koduna göre kayıtlı hesaplar (URUN-003'ün hesabı yok). */

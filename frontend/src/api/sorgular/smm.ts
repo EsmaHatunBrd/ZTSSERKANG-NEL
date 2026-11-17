@@ -562,3 +562,46 @@ export function useSmmSarfOzeti(donemId: number | null, ilk = 20) {
       ),
   });
 }
+
+// ---------------------------------------------------------------- müşavir Excel'i (kendi SMM Excel'i şablon, rakamlar uygulamadan)
+export const smmMusavirExcelAdresi = (donemId: number) => `/api/v1/smm/donemler/${donemId}/musavir-excel.xlsx`;
+
+/** Müşavir Excel'inin şablonu: dönemin kendi SMM Excel'i ya da en yakın önceki dönemin; yoksa `sablon: null`. */
+export function useSmmMusavirDurum(donemId: number | null) {
+  return useQuery({
+    queryKey: ["smm", "musavir-excel", donemId],
+    enabled: donemId !== null,
+    queryFn: () =>
+      cagir(api.GET("/api/v1/smm/donemler/{donem_id}/musavir-excel/durum", { params: { path: { donem_id: donemId as number } } })),
+  });
+}
+
+/** "Müşavir şablonu olarak yalnız sakla" önizlemesi (yazmaz): sayfa adları; SMM Excel'i değilse 422. */
+export function useSmmMusavirSablonOnizle() {
+  return useMutation({
+    mutationFn: ({ donemId, dosya }: { donemId: number; dosya: File }) =>
+      cagir(
+        api.POST("/api/v1/smm/donemler/{donem_id}/musavir-excel/sablon/onizle", {
+          params: { path: { donem_id: donemId } },
+          body: {} as never,
+          bodySerializer: () => formVerisi({ dosya }),
+        }),
+      ),
+  });
+}
+
+/** Dönem verisine dokunmadan yalnız müşavir şablonunu saklar. */
+export function useSmmMusavirSablonSakla() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ donemId, dosya }: { donemId: number; dosya: File }) =>
+      cagir(
+        api.POST("/api/v1/smm/donemler/{donem_id}/musavir-excel/sablon", {
+          params: { path: { donem_id: donemId } },
+          body: {} as never,
+          bodySerializer: () => formVerisi({ dosya }),
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["smm", "musavir-excel"] }),
+  });
+}

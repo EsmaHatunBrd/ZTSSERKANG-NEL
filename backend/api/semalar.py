@@ -461,6 +461,33 @@ class SmmDonemExcelOnizleme(YuklemeOzeti):
     sayfalar: list[str]       # okunan sayfalar
 
 
+# ---------------------------------------------------------------- SMM müşavir Excel'i (kendi SMM Excel'i şablon, rakamlar uygulamadan)
+class SmmMusavirSablonOzeti(BaseModel):
+    """Saklı şablon: arayüzde "Şablon: <dosya_adi>, <zaman>"."""
+    dosya_adi: str
+    zaman: str | None = None    # ISO 8601
+    olusturan: str | None = None
+    boyut: int = 0              # bayt
+
+
+class SmmMusavirExcelDurumu(BaseModel):
+    """`sablon` null: indirilemez (Dönemler › SMM Excel'inden yükle ile bir ayın Excel'ini yükleyin). `kendi` false ise en yakın önceki
+    dönemin şablonu kullanılır (`kaynak_donem`). `taslak`: dönem kapatılmadı (dosya özelliklerinde de yazar)."""
+    sablon: SmmMusavirSablonOzeti | None = None
+    kaynak_donem: str | None = None      # "Ekim 2026"
+    kaynak_donem_id: int | None = None
+    kendi: bool = False
+    taslak: bool = True
+
+
+class SmmMusavirSablonOnizleme(BaseModel):
+    """"Müşavir şablonu olarak yalnız sakla" önizlemesi (yazmaz): dosyanın sayfa adları; `mevcut` doluysa onun yerine geçer."""
+    dosya_adi: str
+    sayfalar: list[str]
+    donem: str
+    mevcut: SmmMusavirSablonOzeti | None = None
+
+
 class DashboardSatiri(BaseModel):
     id: int
     kod: str
@@ -1032,6 +1059,7 @@ class ImportOzeti(BaseModel):
     mod: Literal["yeni", "tamamla"] = "yeni"   # tamamla: yalnız mevcut senaryodaki eksikler eklendi (sayımlar = eklenenler)
     satis_notu: int = 0   # satış fiyatı notu eklendiyse 1
     revize: int = 0   # S.ALMA BF I sütunundan (revize fiyat) yazılan ek fiyat kaydı sayısı
+    musavir_sablonu_saklandi: bool = False   # yüklenen kitap bu çalışmanın müşavir Excel'i şablonu olarak saklandı
 
 
 class FiyatYeni(BaseModel):
@@ -2880,3 +2908,36 @@ class SmmSarfOzeti(BaseModel):
     kalem_sayisi: int                       # farkı olan, birimi uyumlu kalem sayısı
     kalemler: list[SmmSarfOzetKalemi]
     ozet: SmmSarfOzetToplami
+
+
+# ---------------------------------------------------------------- Müşavir Excel'i: Fiyat Çalışması kitabı (şablon + dışa aktarım)
+class FiyatKitabiSablonOzeti(BaseModel):
+    """Saklanan şablon (muhasebenin yüklediği kendi kitabı): arayüzde "Şablon: <ad>, <tarih>"."""
+    dosya_adi: str
+    zaman: str | None = None       # ISO 8601 (yükleme zamanı)
+    olusturan: str | None = None
+    boyut: int = 0                 # bayt
+
+
+class FiyatKitabiUyariOzeti(BaseModel):
+    sayi: int                      # toplam uyarı sayısı
+    uyarilar: list[str]            # ilk 100 uyarı (ör. "Excel'de formül var; dokunulmadı")
+    degisen_hucre: int             # şablona göre değişen hücre sayısı
+    urun_sayfasi: int              # kitaptaki ürün sayfası sayısı ('(2)' hariç)
+    yazilan_urun: int              # uygulamadan değeri yazılan ürün sayfası sayısı
+
+
+class FiyatKitabiDurumu(BaseModel):
+    sablon: FiyatKitabiSablonOzeti | None = None   # yoksa müşavir Excel'i üretilemez (indirme 404 `sablon_yok`)
+    uyarilar_ozeti: FiyatKitabiUyariOzeti | None = None   # yalnız ?uyarilar=true ile (kitap üretilir, birkaç saniye sürebilir)
+
+
+class FiyatKitabiSablonOnizleme(BaseModel):
+    dosya_adi: str
+    sayfalar: list[str]
+    urun_sayfasi: int
+    mevcut: FiyatKitabiSablonOzeti | None = None    # bu çalışmada şu an saklı olan (üzerine yazılacak)
+
+
+class FiyatKitabiSablonKaydi(BaseModel):
+    sablon: FiyatKitabiSablonOzeti

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Kart } from "@/sayfalar/dashboard/UstKartlar";
 import { D, paraBicimle } from "@/yardimcilar/para";
 import { DonemSecici, DonemYok, milyon, useSmmDonemSecimi } from "./ortak";
+import { MusavirExcelBilgisi, MusavirExcelDugmesi } from "./SmmMusavirExcel";
 
 const tl = (x: string | null | undefined) => (x === null || x === undefined ? "—" : paraBicimle(x, "TL", 2));
 
@@ -89,6 +90,7 @@ export default function SmmOzet() {
                 <Download className="size-3.5" /> Fişi indir (.xlsx)
               </a>
             )}
+            {secim.donemId !== null && <MusavirExcelDugmesi donemId={secim.donemId} />}
             <DonemSecici secim={secim} />
           </span>
         }
@@ -98,6 +100,7 @@ export default function SmmOzet() {
           {hataMetni(q.error)}
         </p>
       )}
+      {secim.donemId !== null && <MusavirExcelBilgisi donemId={secim.donemId} />}
       {q.isPending && secim.donemId !== null && <p className="text-sm text-muted-foreground">Hesaplanıyor…</p>}
 
       {v?.donem.kilitli && (

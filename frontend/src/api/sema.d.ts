@@ -749,6 +749,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/import/excel-tam/musavir-sablonu/onizle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Müşavir şablonu: yalnız saklamadan önce kitap mı denetle
+         * @description Aktarım yapılmaz. Dosya Fiyat Çalışması kitabı değilse 422 (eksik_sayfa / yanlis_sablon / desteklenmeyen_dosya).
+         */
+        post: operations["musavir_sablonu_onizle_api_v1_import_excel_tam_musavir_sablonu_onizle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/import/excel-tam/musavir-sablonu": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Müşavir şablonu olarak yalnız sakla (aktarım yapmadan)
+         * @description Kitabı zaten yüklemiş kullanıcılar için: dosya yalnız şablon olarak saklanır (senaryo verisine dokunulmaz; kilitli çalışmada da
+         *     olur). Önce önizlemeyle aynı denetim yapılır. Çalışma başına yalnız son şablon tutulur.
+         */
+        post: operations["musavir_sablonu_sakla_api_v1_import_excel_tam_musavir_sablonu_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/import/fiyat-listesi": {
         parameters: {
             query?: never;
@@ -2870,6 +2911,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/smm/donemler/{donem_id}/musavir-excel/durum": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Musavir Excel Durum
+         * @description Müşavir Excel'i için kullanılacak şablon: dönemin kendi SMM Excel'i, yoksa en yakın önceki dönemin; hiç yoksa `sablon: null`.
+         */
+        get: operations["musavir_excel_durum_api_v1_smm_donemler__donem_id__musavir_excel_durum_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/donemler/{donem_id}/musavir-excel.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Musavir Excel
+         * @description Müşavirin alıştığı SMM Excel'i: saklı şablon (kendi SMM Excel'iniz) formül ve biçimiyle, girdi hücrelerinde dönemin güncel
+         *     verisi. Şablon yoksa 404 `sablon_yok`. Kapanmamış dönemde de iner; dosya özelliklerinde "TASLAK — dönem kapatılmadı" yazar.
+         *     Uyarılar (formül olduğu için yazılamayan hücre, yetmeyen satır …) `X-Musavir-Uyarilar` başlığında (URL kodlu JSON listesi).
+         */
+        get: operations["musavir_excel_api_v1_smm_donemler__donem_id__musavir_excel_xlsx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/donemler/{donem_id}/musavir-excel/sablon/onizle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Musavir Sablon Onizle
+         * @description "Müşavir şablonu olarak yalnız sakla" önizlemesi (yazmaz): sayfa adları. SMM dönem Excel'i değilse 422 `smm_excel_degil`.
+         */
+        post: operations["musavir_sablon_onizle_api_v1_smm_donemler__donem_id__musavir_excel_sablon_onizle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/smm/donemler/{donem_id}/musavir-excel/sablon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Musavir Sablon Sakla
+         * @description Dönem verisine dokunmadan yalnız müşavir şablonunu saklar (dönemin önceki şablonunun yerine geçer). SMM Excel'i değilse 422.
+         */
+        post: operations["musavir_sablon_sakla_api_v1_smm_donemler__donem_id__musavir_excel_sablon_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/smm/donemler/{donem_id}/stok/elle": {
         parameters: {
             query?: never;
@@ -3325,6 +3448,44 @@ export interface paths {
         };
         /** Sablon Indir */
         get: operations["sablon_indir_api_v1_sablonlar__kimlik__xlsx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disa-aktar/musavir/fiyat-kitabi.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Müşavir Excel'i (Fiyat Çalışması kitabının düzeninde)
+         * @description Şablon yoksa 404 `sablon_yok`. Formüller, biçimler ve sayfa düzeni şablondaki gibi kalır; Excel açılınca toplamlar yeniden hesaplanır.
+         *     `X-Uyari-Sayisi` başlığı: dokunulmayan/yazılamayan hücre uyarılarının sayısı (ayrıntı: .../fiyat-kitabi/durum?uyarilar=true).
+         */
+        get: operations["fiyat_kitabi_xlsx_api_v1_disa_aktar_musavir_fiyat_kitabi_xlsx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disa-aktar/musavir/fiyat-kitabi/durum": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Müşavir Excel'i: şablon var mı, (istenirse) uyarılar */
+        get: operations["fiyat_kitabi_durum_api_v1_disa_aktar_musavir_fiyat_kitabi_durum_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4157,6 +4318,30 @@ export interface components {
              */
             onay: boolean;
         };
+        /** Body_musavir_sablon_onizle_api_v1_smm_donemler__donem_id__musavir_excel_sablon_onizle_post */
+        Body_musavir_sablon_onizle_api_v1_smm_donemler__donem_id__musavir_excel_sablon_onizle_post: {
+            /** Dosya */
+            dosya: string;
+        };
+        /** Body_musavir_sablon_sakla_api_v1_smm_donemler__donem_id__musavir_excel_sablon_post */
+        Body_musavir_sablon_sakla_api_v1_smm_donemler__donem_id__musavir_excel_sablon_post: {
+            /** Dosya */
+            dosya: string;
+        };
+        /** Body_musavir_sablonu_onizle_api_v1_import_excel_tam_musavir_sablonu_onizle_post */
+        Body_musavir_sablonu_onizle_api_v1_import_excel_tam_musavir_sablonu_onizle_post: {
+            /** Dosya */
+            dosya: string;
+            /** Senaryo */
+            senaryo: number;
+        };
+        /** Body_musavir_sablonu_sakla_api_v1_import_excel_tam_musavir_sablonu_post */
+        Body_musavir_sablonu_sakla_api_v1_import_excel_tam_musavir_sablonu_post: {
+            /** Dosya */
+            dosya: string;
+            /** Senaryo */
+            senaryo: number;
+        };
         /** Body_onizle_api_v1_aktarim_stok_devri_onizle_post */
         Body_onizle_api_v1_aktarim_stok_devri_onizle_post: {
             /** Dosya */
@@ -4658,6 +4843,55 @@ export interface components {
             olusturan: string;
             /** Olusturma Zamani */
             olusturma_zamani: string | null;
+        };
+        /** FiyatKitabiDurumu */
+        FiyatKitabiDurumu: {
+            sablon?: components["schemas"]["FiyatKitabiSablonOzeti"] | null;
+            uyarilar_ozeti?: components["schemas"]["FiyatKitabiUyariOzeti"] | null;
+        };
+        /** FiyatKitabiSablonKaydi */
+        FiyatKitabiSablonKaydi: {
+            sablon: components["schemas"]["FiyatKitabiSablonOzeti"];
+        };
+        /** FiyatKitabiSablonOnizleme */
+        FiyatKitabiSablonOnizleme: {
+            /** Dosya Adi */
+            dosya_adi: string;
+            /** Sayfalar */
+            sayfalar: string[];
+            /** Urun Sayfasi */
+            urun_sayfasi: number;
+            mevcut?: components["schemas"]["FiyatKitabiSablonOzeti"] | null;
+        };
+        /**
+         * FiyatKitabiSablonOzeti
+         * @description Saklanan şablon (muhasebenin yüklediği kendi kitabı): arayüzde "Şablon: <ad>, <tarih>".
+         */
+        FiyatKitabiSablonOzeti: {
+            /** Dosya Adi */
+            dosya_adi: string;
+            /** Zaman */
+            zaman?: string | null;
+            /** Olusturan */
+            olusturan?: string | null;
+            /**
+             * Boyut
+             * @default 0
+             */
+            boyut: number;
+        };
+        /** FiyatKitabiUyariOzeti */
+        FiyatKitabiUyariOzeti: {
+            /** Sayi */
+            sayi: number;
+            /** Uyarilar */
+            uyarilar: string[];
+            /** Degisen Hucre */
+            degisen_hucre: number;
+            /** Urun Sayfasi */
+            urun_sayfasi: number;
+            /** Yazilan Urun */
+            yazilan_urun: number;
         };
         /** FiyatListesiElle */
         FiyatListesiElle: {
@@ -5315,6 +5549,11 @@ export interface components {
              * @default 0
              */
             revize: number;
+            /**
+             * Musavir Sablonu Saklandi
+             * @default false
+             */
+            musavir_sablonu_saklandi: boolean;
         };
         /** KapakOzeti */
         KapakOzeti: {
@@ -8021,6 +8260,58 @@ export interface components {
             bakiye: string;
             /** Elle */
             elle: boolean;
+        };
+        /**
+         * SmmMusavirExcelDurumu
+         * @description `sablon` null: indirilemez (Dönemler › SMM Excel'inden yükle ile bir ayın Excel'ini yükleyin). `kendi` false ise en yakın önceki
+         *     dönemin şablonu kullanılır (`kaynak_donem`). `taslak`: dönem kapatılmadı (dosya özelliklerinde de yazar).
+         */
+        SmmMusavirExcelDurumu: {
+            sablon?: components["schemas"]["SmmMusavirSablonOzeti"] | null;
+            /** Kaynak Donem */
+            kaynak_donem?: string | null;
+            /** Kaynak Donem Id */
+            kaynak_donem_id?: number | null;
+            /**
+             * Kendi
+             * @default false
+             */
+            kendi: boolean;
+            /**
+             * Taslak
+             * @default true
+             */
+            taslak: boolean;
+        };
+        /**
+         * SmmMusavirSablonOnizleme
+         * @description "Müşavir şablonu olarak yalnız sakla" önizlemesi (yazmaz): dosyanın sayfa adları; `mevcut` doluysa onun yerine geçer.
+         */
+        SmmMusavirSablonOnizleme: {
+            /** Dosya Adi */
+            dosya_adi: string;
+            /** Sayfalar */
+            sayfalar: string[];
+            /** Donem */
+            donem: string;
+            mevcut?: components["schemas"]["SmmMusavirSablonOzeti"] | null;
+        };
+        /**
+         * SmmMusavirSablonOzeti
+         * @description Saklı şablon: arayüzde "Şablon: <dosya_adi>, <zaman>".
+         */
+        SmmMusavirSablonOzeti: {
+            /** Dosya Adi */
+            dosya_adi: string;
+            /** Zaman */
+            zaman?: string | null;
+            /** Olusturan */
+            olusturan?: string | null;
+            /**
+             * Boyut
+             * @default 0
+             */
+            boyut: number;
         };
         /** SmmOzeti */
         SmmOzeti: {
@@ -12306,6 +12597,92 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    musavir_sablonu_onizle_api_v1_import_excel_tam_musavir_sablonu_onizle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_musavir_sablonu_onizle_api_v1_import_excel_tam_musavir_sablonu_onizle_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiyatKitabiSablonOnizleme"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    musavir_sablonu_sakla_api_v1_import_excel_tam_musavir_sablonu_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_musavir_sablonu_sakla_api_v1_import_excel_tam_musavir_sablonu_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiyatKitabiSablonKaydi"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17831,6 +18208,176 @@ export interface operations {
             };
         };
     };
+    musavir_excel_durum_api_v1_smm_donemler__donem_id__musavir_excel_durum_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                donem_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmMusavirExcelDurumu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    musavir_excel_api_v1_smm_donemler__donem_id__musavir_excel_xlsx_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                donem_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    musavir_sablon_onizle_api_v1_smm_donemler__donem_id__musavir_excel_sablon_onizle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                donem_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_musavir_sablon_onizle_api_v1_smm_donemler__donem_id__musavir_excel_sablon_onizle_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmMusavirSablonOnizleme"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    musavir_sablon_sakla_api_v1_smm_donemler__donem_id__musavir_excel_sablon_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kullanici"?: string | null;
+            };
+            path: {
+                donem_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_musavir_sablon_sakla_api_v1_smm_donemler__donem_id__musavir_excel_sablon_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmmMusavirExcelDurumu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
     elle_degisenler_api_v1_smm_donemler__donem_id__stok_elle_get: {
         parameters: {
             query?: never;
@@ -19038,6 +19585,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fiyat_kitabi_xlsx_api_v1_disa_aktar_musavir_fiyat_kitabi_xlsx_get: {
+        parameters: {
+            query: {
+                senaryo_id: number;
+                tarih?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Şablon kitap, girdi hücreleri uygulamanın güncel değerleriyle (.xlsx) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+        };
+    };
+    fiyat_kitabi_durum_api_v1_disa_aktar_musavir_fiyat_kitabi_durum_get: {
+        parameters: {
+            query: {
+                senaryo_id: number;
+                uyarilar?: boolean;
+                tarih?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiyatKitabiDurumu"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HataGovdesi"];
                 };
             };
         };

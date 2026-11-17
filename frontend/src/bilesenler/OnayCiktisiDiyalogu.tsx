@@ -1,6 +1,15 @@
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
-import type { OnayCiktisiEkleri, OnayCiktisiFiyatGiris, OnayCiktisiImzalari, OnayCiktisiSmmGiris } from "@/api/tipler";
+import type {
+  FiyatKitabiSablonOzeti,
+  FiyatKitabiUyariOzeti,
+  OnayCiktisiEkleri,
+  OnayCiktisiFiyatGiris,
+  OnayCiktisiImzalari,
+  OnayCiktisiSmmGiris,
+} from "@/api/tipler";
+import { api, cagir } from "@/api/istemci";
+import { goster as tarihGoster } from "@/yardimcilar/tarih";
 import { Button } from "@/bilesenler/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/bilesenler/ui/dialog";
 import { Girdi } from "@/bilesenler/Girdi";
@@ -38,8 +47,13 @@ const IMZALAR: { alan: keyof OnayCiktisiImzalari; etiket: string }[] = [
 
 type Ekler = Required<OnayCiktisiEkleri>;
 
-/** Fiyat Çalışması'nda ne indirileceği: Genel Bakış tablosu, tüm maliyet kartları ya da kapaklı/ekli tam rapor. */
-type Icerik = "tablo" | "kartlar" | "rapor";
+/** Fiyat Çalışması'nda ne indirileceği: müşavir Excel'i (kullanıcının kendi kitabının düzeninde), Genel Bakış tablosu, tüm maliyet
+ * kartları ya da kapaklı/ekli tam rapor. */
+type Icerik = "musavir" | "tablo" | "kartlar" | "rapor";
+
+/** Veri Aktar sayfası (varsayılan sekme: Tüm çalışma kitabı). */
+export const VERI_AKTAR_YOLU = "/recete-aktar";
+export const SABLON_YOK_METNI = "Bu çalışma için şablon yok: Veri Aktar › Tüm çalışma kitabı ile kitabınızı yükleyin.";
 const ICERIKLER: { deger: Icerik; etiket: string; aciklama: string }[] = [
   { deger: "tablo", etiket: "Genel Bakış tablosu", aciklama: "Ekrandaki ürün listesi, tek sayfa Excel" },
   { deger: "kartlar", etiket: "Tüm maliyet kartları", aciklama: "Her ürün ayrı sayfada, tek Excel" },
@@ -89,6 +103,35 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
   const [imzalar, setImzalar] = useState<Record<string, string>>({});
   const [hazirlaniyor, setHazirlaniyor] = useState(false);
   const [hata, setHata] = useState<string | null>(null);
+  // Müşavir Excel'i şablonu: undefined = denetleniyor, null = yok.
+  const fiyatSenaryo = kapsam.modul === "fiyat" ? kapsam.senaryoId : null;
+  const [sablon, setSablon] = useState<FiyatKitabiSablonOzeti | null | undefined>(undefined);
+  const [uyarilar, setUyarilar] = useState<FiyatKitabiUyariOzeti | "yukleniyor" | null>(null);
+
+  useEffect(() => {
+    if (fiyatSenaryo === null) return;
+    let iptal = false;
+    cagir(api.GET("/api/v1/disa-aktar/musavir/fiyat-kitabi/durum", { params: { query: { senaryo_id: fiyatSenaryo } } }))
+      .then((d) => !iptal && setSablon(d.sablon ?? null))
+      .catch(() => !iptal && setSablon(null));
+    return () => {
+      iptal = true;
+    };
+  }, [fiyatSenaryo]);
+
+  async function uyarilariGetir() {
+    if (fiyatSenaryo === null) return;
+    setUyarilar("yukleniyor");
+    try {
+      const d = await cagir(
+        api.GET("/api/v1/disa-aktar/musavir/fiyat-kitabi/durum", { params: { query: { senaryo_id: fiyatSenaryo, uyarilar: true } } }),
+      );
+      setUyarilar(d.uyarilar_ozeti ?? null);
+    } catch (e) {
+      setUyarilar(null);
+      setHata(e instanceof Error ? e.message : "Uyarılar alınamadı");
+    }
+  }
 
   const kesin = kapsam.modul === "fiyat" ? kapsam.kilitli : (kapsam.donemler.find((d) => d.id === donemId)?.kilitli ?? false);
   const nesne = kapsam.modul === "fiyat" ? "çalışma" : "dönem";
@@ -122,6 +165,14 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
     const ad = kullanici.al();
     if (kullanici.adGecerli(ad)) basliklar["X-Kullanici"] = encodeURIComponent(ad);
     try {
+      if (kapsam.modul === "fiyat" && icerik === "musavir") {
+        await dosyaIndir(
+          `/api/v1/disa-aktar/musavir/fiyat-kitabi.xl` + `sx?senaryo_id=${kapsam.senaryoId}`,
+          "musavir-fiyat-calismasi.xl" + "sx",
+        );
+        onKapat();
+        return;
+      }
       if (kapsam.modul === "fiyat" && icerik === "tablo") {
         await dosyaIndir(`/api/v1/disa-aktar/urunler.xl` + `sx?senaryo=${kapsam.senaryoId}`, "genel-bakis.xl" + "sx");
         onKapat();
@@ -162,6 +213,69 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
           {kapsam.modul === "fiyat" && (
             <fieldset className="flex flex-col gap-1.5">
               <legend className="mb-1 font-medium">Ne indirilsin?</legend>
+              <label className={cn("flex items-start gap-2", sablon == null && "text-muted-foreground")}>
+                <input
+                  type="radio"
+                  className="mt-1"
+                  name={`${id}-icerik`}
+                  checked={icerik === "musavir"}
+                  disabled={sablon == null}
+                  aria-describedby={`${id}-musavir`}
+                  onChange={() => setIcerik("musavir")}
+                />
+                <span>
+                  Müşavir Excel&apos;i (kendi kitabınızın düzeninde)
+                  <span id={`${id}-musavir`} className="block text-xs text-muted-foreground">
+                    {sablon === undefined ? (
+                      "Şablon denetleniyor…"
+                    ) : sablon === null ? (
+                      <>
+                        {SABLON_YOK_METNI}{" "}
+                        <a href={VERI_AKTAR_YOLU} className="text-primary underline underline-offset-2">
+                          Veri Aktar&apos;a git
+                        </a>
+                      </>
+                    ) : (
+                      <>
+                        <span data-testid="musavir-sablon" className="block">
+                          Şablon: {sablon.dosya_adi}
+                          {sablon.zaman ? `, ${tarihGoster(sablon.zaman)}` : ""}
+                        </span>
+                        <span className="block">
+                          Yüklediğiniz Fiyat Çalışması kitabının aynısı; girdi hücrelerine uygulamadaki güncel değerler yazılır, formüllere
+                          dokunulmaz. Excel açıldığında toplamlar hesaplanır.
+                        </span>
+                      </>
+                    )}
+                  </span>
+                </span>
+              </label>
+              {icerik === "musavir" && sablon && (
+                <div className="ml-6 flex flex-col gap-1 text-xs">
+                  {uyarilar === null && (
+                    <button type="button" className="self-start text-primary underline underline-offset-2" onClick={uyarilariGetir}>
+                      Kitaba yazılamayan değerleri göster
+                    </button>
+                  )}
+                  {uyarilar === "yukleniyor" && <span className="text-muted-foreground">Denetleniyor…</span>}
+                  {uyarilar !== null && uyarilar !== "yukleniyor" && (
+                    <div data-testid="musavir-uyarilar" className="rounded-lg border p-2">
+                      {uyarilar.sayi === 0 ? (
+                        <p>Tüm değerler kitaba yazılabiliyor.</p>
+                      ) : (
+                        <>
+                          <p className="font-medium">{uyarilar.sayi} değer kitaba yazılamıyor (formül ya da kitapta olmayan satır):</p>
+                          <ul className="mt-1 max-h-40 list-disc overflow-y-auto pl-4">
+                            {uyarilar.uyarilar.map((u) => (
+                              <li key={u}>{u}</li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               {ICERIKLER.map((c) => (
                 <label key={c.deger} className="flex items-start gap-2">
                   <input

@@ -86,3 +86,29 @@ export function useImportExcelTam() {
     onSuccess: () => qc.invalidateQueries(),
   });
 }
+
+/** Müşavir Excel'i şablonu: aktarım yapmadan yalnız kitabı saklamadan önceki denetim (sayfa adları, ürün sayfası sayısı). */
+export function useMusavirSablonuOnizle() {
+  return useMutation({
+    mutationFn: ({ dosya, senaryo }: { dosya: File; senaryo: number }) =>
+      cagir(
+        api.POST("/api/v1/import/excel-tam/musavir-sablonu/onizle", {
+          body: {} as never,
+          bodySerializer: () => formVerisi({ dosya, senaryo }),
+        }),
+      ),
+  });
+}
+
+/** Kitabı yalnız müşavir şablonu olarak saklar (senaryo verisine dokunmaz). */
+export function useMusavirSablonuSakla() {
+  return useMutation({
+    mutationFn: ({ dosya, senaryo }: { dosya: File; senaryo: number }) =>
+      cagir(
+        api.POST("/api/v1/import/excel-tam/musavir-sablonu", {
+          body: {} as never,
+          bodySerializer: () => formVerisi({ dosya, senaryo }),
+        }),
+      ),
+  });
+}

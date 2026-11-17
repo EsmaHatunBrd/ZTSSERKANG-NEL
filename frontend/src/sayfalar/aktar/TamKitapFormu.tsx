@@ -14,6 +14,7 @@ import { Girdi as Input } from "@/bilesenler/Girdi";
 import { YuklemeYardimi } from "@/bilesenler/SablonIndir";
 import { SonYuklemeSeridi } from "@/bilesenler/SonYuklemeSeridi";
 import { ImportOzetiKartlari } from "./ImportOzetiKartlari";
+import { MusavirSablonuSakla } from "./MusavirSablonuSakla";
 
 const AZAMI_BOYUT = 25 * 1024 * 1024;
 
@@ -262,7 +263,14 @@ export function TamKitapFormu() {
         </div>
       )}
 
+      {aktar.data?.musavir_sablonu_saklandi && (
+        <p className="max-w-2xl text-sm text-muted-foreground" data-testid="musavir-sablon-saklandi">
+          Kitap, bu çalışmanın Müşavir Excel&apos;i şablonu olarak da saklandı (İndir › Müşavir Excel&apos;i).
+        </p>
+      )}
       {aktar.data && <ImportOzetiKartlari ozet={aktar.data} />}
+
+      <MusavirSablonuSakla />
     </div>
   );
 }

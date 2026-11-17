@@ -13,6 +13,7 @@ import { Input } from "@/bilesenler/ui/input";
 import { paraBicimle } from "@/yardimcilar/para";
 import { kilitTarihi } from "./SmmDevirKilit";
 import { SmmDuzenlemeKilidi, useSmmYazmaKilidi } from "./SmmDuzenlemeKilidi";
+import { MusavirSablonKarti } from "./SmmMusavirExcel";
 import { SmmOnizlemeKutusu, SmmYuklemeYardimi } from "./SmmYukleme";
 
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
@@ -414,6 +415,8 @@ export default function SmmDonemler() {
           )}
         </section>
       </div>
+
+      {liste.length > 0 && <MusavirSablonKarti liste={liste} />}
 
       {ustuneYazOnayi && dosya && !kilitli && (
         <OnayDiyalogu

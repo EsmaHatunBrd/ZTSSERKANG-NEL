@@ -15,6 +15,7 @@ from .api import fiyat_egilimi, yonetim, smm_rapor
 from .api import duzenleme_kilidi
 from .api import onay_ciktisi
 from .api import sablonlar
+from .api import musavir_excel
 from .api.bagimliliklar import kimlik_denetle
 
 
@@ -62,6 +63,7 @@ def uygulama_olustur(oturum_bagimliligi=None, giris_zorunlu: bool | None = None)
     app.include_router(duzenleme_kilidi.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
     app.include_router(onay_ciktisi.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
     app.include_router(sablonlar.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
+    app.include_router(musavir_excel.router, prefix="/api/v1", dependencies=[Depends(kimlik_denetle)])
     if oturum_bagimliligi is not None:
         app.dependency_overrides[oturum_ver] = oturum_bagimliligi
 

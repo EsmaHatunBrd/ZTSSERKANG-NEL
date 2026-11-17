@@ -155,6 +155,78 @@ describe("OnayCiktisiDiyalogu", () => {
     }
   });
 
+  it("Fiyat: şablon yoksa Müşavir Excel'i en üstte pasif, nedeni ve Veri Aktar bağlantısı görünür", async () => {
+    render(<OnayCiktisiDiyalogu kapsam={FIYAT} onKapat={() => {}} />);
+    const musavir = screen.getByRole("radio", { name: /Müşavir Excel'i \(kendi kitabınızın düzeninde\)/ });
+    expect(screen.getAllByRole("radio")[0]).toBe(musavir);
+    await waitFor(() => expect(screen.getByText(/Bu çalışma için şablon yok/)).toBeInTheDocument());
+    expect(musavir).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Veri Aktar'a git" })).toHaveAttribute("href", "/recete-aktar");
+    expect(screen.getByRole("radio", { name: /Genel Bakış tablosu/ })).toBeChecked();
+  });
+
+  it("Fiyat: şablon varsa adı ve tarihi görünür; seçilince müşavir Excel'i indirilir, uyarılar istenirse listelenir", async () => {
+    const istekler: string[] = [];
+    sunucu.use(
+      http.get("*/api/v1/disa-aktar/musavir/fiyat-kitabi/durum", ({ request }) => {
+        const u = new URL(request.url);
+        istekler.push(u.pathname + u.search);
+        return HttpResponse.json({
+          sablon: { dosya_adi: "Fiyat Çalışma - Test.xl" + "sx", zaman: "2026-11-16T10:00:00", olusturan: "esma", boyut: 1234 },
+          uyarilar_ozeti:
+            u.searchParams.get("uyarilar") === "true"
+              ? {
+                  sayi: 1,
+                  uyarilar: ["001!M9 (99.20.003 birim fiyat): uygulamada 2,5, Excel'de formül var"],
+                  degisen_hucre: 3,
+                  urun_sayfasi: 7,
+                  yazilan_urun: 7,
+                }
+              : null,
+        });
+      }),
+      http.get("*/api/v1/disa-aktar/musavir/fiyat-kitabi.xl" + "sx", ({ request }) => {
+        const u = new URL(request.url);
+        istekler.push(u.pathname + u.search);
+        return new HttpResponse(new Uint8Array([80, 75, 3, 4]), {
+          headers: {
+            "Content-Disposition":
+              'attachment; filename="Fiyat Calisma - Test - uygulama 17.11.2026.xl' +
+              "sx\"; filename*=UTF-8''Fiyat%20%C3%87al%C4%B1%C5%9Fma%20-%20Test%20-%20uygulama%2017.11.2026.xl" +
+              "sx",
+          },
+        });
+      }),
+    );
+    const ind = indirmeyiYakala();
+    const kapat = vi.fn();
+    try {
+      render(<OnayCiktisiDiyalogu kapsam={FIYAT} onKapat={kapat} />);
+      expect(await screen.findByTestId("musavir-sablon")).toHaveTextContent("Şablon: Fiyat Çalışma - Test.xl" + "sx, 16.11.2026");
+      expect(screen.getByText(/Excel açıldığında toplamlar hesaplanır/)).toBeInTheDocument();
+      const musavir = screen.getByRole("radio", { name: /Müşavir Excel'i/ });
+      expect(musavir).toBeEnabled();
+      await userEvent.click(musavir);
+      await userEvent.click(screen.getByRole("button", { name: "Kitaba yazılamayan değerleri göster" }));
+      expect(await screen.findByTestId("musavir-uyarilar")).toHaveTextContent("1 değer kitaba yazılamıyor");
+      await userEvent.click(screen.getByRole("button", { name: "İndir" }));
+      await waitFor(() => expect(kapat).toHaveBeenCalled());
+      expect(istekler).toEqual([
+        "/api/v1/disa-aktar/musavir/fiyat-kitabi/durum?senaryo_id=7",
+        "/api/v1/disa-aktar/musavir/fiyat-kitabi/durum?senaryo_id=7&uyarilar=true",
+        "/api/v1/disa-aktar/musavir/fiyat-kitabi.xl" + "sx?senaryo_id=7",
+      ]);
+      expect(ind.indirilen).toEqual(["Fiyat Çalışma - Test - uygulama 17.11.2026.xl" + "sx"]);
+    } finally {
+      ind.geriAl();
+    }
+  });
+
+  it("SMM: Müşavir Excel'i (fiyat kitabı) seçeneği yok", () => {
+    render(<OnayCiktisiDiyalogu kapsam={SMM} onKapat={() => {}} />);
+    expect(screen.queryByRole("radio", { name: /kendi kitabınızın düzeninde/ })).not.toBeInTheDocument();
+  });
+
   it("SMM: tüm seçimlerle gövde; sunucu hatası role=alert ile gösterilir", async () => {
     const govdeler = yakala("smm", 404);
     render(<OnayCiktisiDiyalogu kapsam={SMM} onKapat={() => {}} />);

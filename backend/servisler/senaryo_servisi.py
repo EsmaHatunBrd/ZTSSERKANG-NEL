@@ -249,6 +249,8 @@ def sil(s: Session, senaryo_id: int, yedek_url: str | None = None, kullanici: st
     silinen["recete_satiri"] = s.execute(delete(m.ReceteSatiri).where(m.ReceteSatiri.recete_id.in_(recete_idleri))).rowcount
     for tablo in (m.GiderHavuzu, m.Recete, m.ParametreDegeri, m.MalzemeFiyati, m.AmbalajSinifi, m.UretimHedefi, m.FireKurali, m.MetinParametre, m.UretimKapasitesi, m.StokDevri):
         silinen[tablo.__tablename__] = s.execute(delete(tablo).where(tablo.senaryo_id == sen.id)).rowcount
+    from . import excel_sablon_deposu   # müşavir Excel'i şablonu (yüklenen kitabın kopyası) senaryoyla birlikte gider; yedekte kalır
+    excel_sablon_deposu.sil(s, "fiyat_kitabi", str(sen.id))
     kimlik = {"ad": sen.ad, "sezon_ad": sen.sezon.ad, "tur": sen.tur, "aciklama": sen.aciklama}
     s.delete(sen)
     s.flush()
