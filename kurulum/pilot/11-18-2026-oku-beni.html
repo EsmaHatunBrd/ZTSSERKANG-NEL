@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Fiyat Çalışması · Pilot kurulum</title>
+<style>
+  @page { size: A4; margin: 16mm 16mm 14mm; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10.5pt; color: #1f2a1c; line-height: 1.45; margin: 0; }
+  h1 { font-size: 17pt; margin: 0 0 2px; color: #3b5a2a; }
+  .alt { color: #5c6b55; margin: 0 0 12px; }
+  h2 { font-size: 11.5pt; margin: 14px 0 4px; color: #3b5a2a; border-bottom: 1px solid #d8e2cf; padding-bottom: 2px; }
+  ol, ul { margin: 4px 0 0 18px; padding: 0; }
+  li { margin: 2px 0; }
+  code, .dosya { font-family: Consolas, monospace; font-size: 9.5pt; background: #f1f5ec; padding: 0 3px; border-radius: 3px; }
+  .kutu { border: 1px solid #d8e2cf; background: #f7faf3; border-radius: 6px; padding: 6px 10px; margin-top: 6px; }
+  .dikkat { border-left: 3px solid #b7791f; background: #fdf8ec; padding: 6px 10px; margin-top: 6px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 4px; }
+  td { border-bottom: 1px solid #e3eadb; padding: 3px 6px; vertical-align: top; }
+  td:first-child { white-space: nowrap; width: 38%; }
+</style>
+</head>
+<body>
+<h1>Fiyat Çalışması · Pilot kurulum</h1>
+<p class="alt">Tek bilgisayarda (yalnız bu bilgisayardan) kullanım için. Kurulum için yönetici yetkisi ve internet gerekmez.</p>
+
+<h2>1. Kurulum (bir kez)</h2>
+<ol>
+  <li>Bu klasörü bilgisayarınızda kalıcı bir yere kopyalayın, örn. <span class="dosya">C:\FiyatCalismasi</span>. Masaüstünde ya da İndirilenler'de bırakmayın.</li>
+  <li><span class="dosya">11-18-2026-1-kur.bat</span> dosyasına çift tıklayın. Windows "bilinmeyen yayımcı" uyarısı verirse <b>Ek bilgi › Yine de çalıştır</b>.</li>
+  <li>Kurulum birkaç dakika sürer. Python bilgisayarda yoksa kendisi kurar.</li>
+  <li>Sonunda ekranda <b>kullanıcı adı</b> (<code>direktor</code>) ve <b>geçici şifre</b> yazar. Bunu not edin; başka yerde saklanmaz.</li>
+  <li>Tarayıcı açılır. Kullanıcı adı ve geçici şifreyle girin, kendi şifrenizi belirleyin.</li>
+</ol>
+<div class="kutu">Masaüstüne <b>Fiyat Çalışması</b> kısayolu eklenir. Bundan sonra uygulamayı her zaman bu kısayolla açın.</div>
+
+<h2>2. Gerçek veriyle başlamak (isteğe bağlı)</h2>
+<ol>
+  <li>Önce <span class="dosya">11-18-2026-4-durdur.bat</span> ile uygulamayı kapatın.</li>
+  <li>Size verilen <span class="dosya">fiyat.db</span> dosyasını klasördeki <span class="dosya">veri\</span> içine koyun. Var olanın üzerine yazılacağını onaylayın.</li>
+  <li>Kısayolla yeniden açın. Gerçek veride zaten kullanıcılar varsa kendi kullanıcı adı ve şifrenizle girin.</li>
+</ol>
+
+<h2>3. Günlük kullanım</h2>
+<table>
+  <tr><td><span class="dosya">Fiyat Çalışması</span> (masaüstü)</td><td>Uygulamayı açar. Zaten açıksa yalnız tarayıcıyı getirir. Adres: <code>http://127.0.0.1:8000</code></td></tr>
+  <tr><td><span class="dosya">11-18-2026-3-yedek-al.bat</span></td><td>Verinin tarihli yedeğini alır (<span class="dosya">veri\yedek</span>). Haftada en az bir kez çalıştırın.</td></tr>
+  <tr><td><span class="dosya">11-18-2026-4-durdur.bat</span></td><td>Arka planda çalışan uygulamayı kapatır. Bilgisayar kapanınca zaten kapanır.</td></tr>
+  <tr><td><span class="dosya">docs\</span></td><td>Kullanım rehberi (ekran ekran anlatım) ve Excel şablonları rehberi.</td></tr>
+  <tr><td><span class="dosya">sablonlar\</span></td><td>Veri Aktar'da yüklenecek Excel dosyalarının boş şablonları.</td></tr>
+</table>
+
+<h2>4. Sorun olursa</h2>
+<ul>
+  <li><b>Tarayıcı "bağlanılamıyor" diyor:</b> masaüstü kısayoluna yeniden tıklayın. Geçmezse <span class="dosya">11-18-2026-1-kur.bat</span>'ı yeniden çalıştırın. Verinize dokunmaz.</li>
+  <li><b>Şifrenizi unuttunuz:</b> Esma Akbulut'a haber verin.</li>
+  <li><b>Kurulum hata verdi:</b> ekrandaki mesajın fotoğrafını ve <span class="dosya">kurulum\kurulum-pip.log</span> dosyasını iletin.</li>
+</ul>
+<div class="dikkat"><b>Önemli:</b> <span class="dosya">veri\</span> klasörü tüm verinizdir. Klasörü silmeyin; yedekleri ayrıca (USB ya da ağ klasörü) saklamanız önerilir.</div>
+</body>
+</html>
