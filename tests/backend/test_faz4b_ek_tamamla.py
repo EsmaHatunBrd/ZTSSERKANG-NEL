@@ -106,7 +106,7 @@ def test_api_tamamla_veya_yeni_zorunlu_alan(istemci, tmp_path):
     yol = _xlsx_alakasiz(tmp_path)
     with open(yol, "rb") as f:
         r = istemci.post("/api/v1/import/excel-tam", data={}, files={"dosya": ("a.xlsx", f)})
-    assert r.status_code == 422 and "senaryo_id" in r.json()["mesaj"]
+    assert r.status_code == 422 and "var olan bir çalışmayı seçin" in r.json()["mesaj"]
     with open(yol, "rb") as f:
         r = istemci.post("/api/v1/import/excel-tam", data={"senaryo_id": "999"}, files={"dosya": ("a.xlsx", f)})
     assert r.status_code in (404, 422)   # alakasız kitap/olmayan senaryo: hata, yeni kayıt yok

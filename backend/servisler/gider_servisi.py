@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from fiyat_motoru.gider_dagitim import oranlari_hesapla
 from fiyat_motoru.modeller import AmbalajSinifi, GiderHavuzlari, GiderOranlari
 from ..depo import modeller as m
-from .hatalar import DogrulamaHatasi
+from .hatalar import DogrulamaHatasi, liste_metni
 
 HAVUZ_KODLARI = ("dolum_iscilik", "mal_kabul_iscilik", "etiket_iscilik", "endirekt_iscilik", "mal_kabul_gug", "diger_gug",
                  "elektrik", "dogalgaz", "amortisman", "yonetim", "pazarlama")
@@ -17,11 +17,11 @@ BAZ_TIPLERI = ("saniye", "kg", "adet")
 def toplam_hesapla(taban_tutar: Decimal, carpanlar: list[tuple[str, Decimal]] | None) -> Decimal:
     """Gider toplamı = taban × Π çarpan (Excel'deki "taban × 1,35 × 1,30" düzeni). Çarpan > 0 olmalı."""
     if taban_tutar < 0:
-        raise DogrulamaHatasi("taban_tutar negatif olamaz", {"taban_tutar": str(taban_tutar)})
+        raise DogrulamaHatasi("Taban tutar eksi olamaz.", {"taban_tutar": str(taban_tutar)})
     toplam = taban_tutar
     for ad, deger in carpanlar or []:
         if deger <= 0:
-            raise DogrulamaHatasi(f"çarpan 0'dan büyük olmalı: {ad or '(adsız)'}", {"carpan": ad, "deger": str(deger)})
+            raise DogrulamaHatasi(f"Çarpan 0'dan büyük olmalı ({ad or 'adsız çarpan'}).", {"carpan": ad, "deger": str(deger)})
         toplam = toplam * deger
     return toplam
 
@@ -65,11 +65,11 @@ def _pay_cozumle(anahtarlar: list[tuple], toplam: Decimal) -> list[tuple[str, De
         tutar = a[3] if len(a) > 3 else None
         if pay is None:
             if tutar is None:
-                raise DogrulamaHatasi(f"anahtar için pay_orani ya da tutar verilmeli: {alt_kalem}", {"alt_kalem": alt_kalem})
+                raise DogrulamaHatasi(f"{alt_kalem} dağıtım anahtarı için pay oranı ya da tutar girin.", {"alt_kalem": alt_kalem})
             if tutar < 0:
-                raise DogrulamaHatasi(f"tutar negatif olamaz: {alt_kalem}", {"alt_kalem": alt_kalem})
+                raise DogrulamaHatasi(f"{alt_kalem} tutarı eksi olamaz.", {"alt_kalem": alt_kalem})
             if toplam <= 0:
-                raise DogrulamaHatasi("tutarla pay hesaplamak için havuz toplamı 0'dan büyük olmalı", {"alt_kalem": alt_kalem})
+                raise DogrulamaHatasi("Tutarla pay hesaplamak için havuz toplamı 0'dan büyük olmalı.", {"alt_kalem": alt_kalem})
             pay = tutar / toplam
         out.append((alt_kalem, pay, baz))
     return out
@@ -81,19 +81,19 @@ def havuz_kaydet(s: Session, senaryo_id: int, kod: str, ad: str, toplam_tutar: D
     """Havuzu yazar. `taban_tutar` verilmişse toplam = taban × Π çarpan (toplam_tutar yok sayılır); verilmemişse toplam doğrudan girilir
     ve eski taban/çarpanlar temizlenir (artık toplamı açıklamazlar). Anahtar: (alt_kalem, pay_orani | None, baz_miktar[, tutar])."""
     if kod not in HAVUZ_KODLARI:
-        raise DogrulamaHatasi(f"bilinmeyen havuz: {kod}", {"kod": kod})
+        raise DogrulamaHatasi(f"{kod} adlı bir gider havuzu yok.", {"kod": kod})
     if baz_tipi not in BAZ_TIPLERI:
-        raise DogrulamaHatasi("baz_tipi saniye|kg|adet olmalı", {"baz_tipi": baz_tipi})
+        raise DogrulamaHatasi("Dağıtım bazı saniye, kg ya da adet olmalı.", {"baz_tipi": baz_tipi})
     if baz_tipi in ("saniye", "adet") and not anahtarlar and kod not in AMBALAJ_BAZLI and (baz_miktar is None or baz_miktar <= 0):
-        raise DogrulamaHatasi("anahtarsız saniye/adet havuzunda baz_miktar > 0 olmalı", {"kod": kod})
+        raise DogrulamaHatasi("Dağıtım anahtarı olmayan saniye/adet havuzunda baz miktar 0'dan büyük olmalı.", {"kod": kod})
     if taban_tutar is not None:
         toplam_tutar = toplam_hesapla(taban_tutar, carpanlar)
     elif toplam_tutar is None:
-        raise DogrulamaHatasi("toplam_tutar ya da taban_tutar verilmeli", {"kod": kod})
+        raise DogrulamaHatasi("Toplam tutar ya da taban tutar girin.", {"kod": kod})
     else:
         carpanlar = None
     if toplam_tutar < 0:
-        raise DogrulamaHatasi("toplam_tutar negatif olamaz", {"kod": kod})
+        raise DogrulamaHatasi("Toplam tutar eksi olamaz.", {"kod": kod})
     anahtarlar = _pay_cozumle(anahtarlar, toplam_tutar)
     carpan_json = _carpan_json(carpanlar)
     h = s.scalar(select(m.GiderHavuzu).where(m.GiderHavuzu.senaryo_id == senaryo_id, m.GiderHavuzu.kod == kod))
@@ -121,7 +121,7 @@ def havuz_kaydet(s: Session, senaryo_id: int, kod: str, ad: str, toplam_tutar: D
 def ambalaj_kaydet(s: Session, senaryo_id: int, siniflar: list[tuple[str, Decimal, Decimal, Decimal]], kullanici: str = "sistem",
                    neden: str | None = None) -> list[m.AmbalajSinifi]:
     if not siniflar:
-        raise DogrulamaHatasi("ambalaj sınıfı listesi boş olamaz")
+        raise DogrulamaHatasi("Ambalaj sınıfı listesi boş olamaz; en az bir sınıf girin.")
     mevcut = ambalajlar(s, senaryo_id)
     eski_liste = [[a.ad, str(a.hacim), str(a.uretim_adedi), str(a.katsayi)] for a in mevcut]
     yeni_liste = [[ad, str(h), str(u), str(k)] for ad, h, u, k in siniflar]
@@ -155,7 +155,7 @@ def havuzlari_getir(s: Session, senaryo_id: int) -> GiderHavuzlari:
     h = _havuzlar(s, senaryo_id)
     eksik = [k for k in HAVUZ_KODLARI if k not in h]
     if eksik:
-        raise DogrulamaHatasi("gider havuzu eksik", {"eksik": eksik})
+        raise DogrulamaHatasi(f"Bu çalışmada şu gider havuzları eksik: {liste_metni(eksik)}; Gider Dağıtım ekranından girin.", {"eksik": eksik})
     amb = s.scalars(select(m.AmbalajSinifi).where(m.AmbalajSinifi.senaryo_id == senaryo_id).order_by(m.AmbalajSinifi.id))
     return GiderHavuzlari(
         dolum_iscilik_toplam=h["dolum_iscilik"].toplam_tutar, dolum_iscilik_saniye=h["dolum_iscilik"].baz_miktar,

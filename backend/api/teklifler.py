@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from ..servisler import hesap_servisi as hs, teklif_servisi as ts
 from ..servisler.donusum import zaman_iso
+from ..servisler.hatalar import neden_zorunlu
 from .bagimliliklar import OturumDep, SenaryoDep, kullanici_ver
 from .semalar import DurumGiris, HATA_404_409_422, HATA_404_422, SenaryoTeklifListesi, TeklifCikis, TeklifGiris, TeklifListesi
 
@@ -53,9 +54,11 @@ def durum(s: OturumDep, teklif_id: int, g: DurumGiris):
 
 
 @router.delete("/teklifler/{teklif_id}", status_code=204, response_class=Response, responses=HATA_404_409_422)
-def sil(s: OturumDep, teklif_id: int, k: str = Depends(kullanici_ver)):
+def sil(s: OturumDep, teklif_id: int, neden: str = Query(..., max_length=300, description="Silme nedeni (zorunlu; boşsa 422 'Neden girin.')"),
+        k: str = Depends(kullanici_ver)):
+    neden = neden_zorunlu(neden)
     t = s.get(m.Teklif, teklif_id)
     if t is not None:   # yoksa servis 404 verir
         hs.kilit_denetle(hs.senaryo_getir(s, hs.getir(s, t.maliyet_hesabi_id).senaryo_id))
-    ts.sil(s, teklif_id, k)
+    ts.sil(s, teklif_id, k, neden=neden)
     return Response(status_code=204)

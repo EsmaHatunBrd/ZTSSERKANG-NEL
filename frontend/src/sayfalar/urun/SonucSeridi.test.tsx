@@ -25,4 +25,11 @@ describe("SonucSeridi", () => {
     expect(screen.getByRole("region", { name: "Hesap sonucu" })).toHaveClass("opacity-60");
     expect(screen.queryByText(/Firesiz:/)).not.toBeInTheDocument();
   });
+
+  it("satış ortalama maliyetten hesaplandıysa satış kutusunda not çıkar; yoksa çıkmaz", () => {
+    const { rerender } = render(<SonucSeridi toplamlar={toplamlar} toplamlarFiresiz={null} fiyatlar={fiyatlar} ortalamaMaliyet="40.21" />);
+    expect(screen.getByText("Ortalama maliyetten (stokta kalan dahil): 40,21 TL")).toBeInTheDocument();
+    rerender(<SonucSeridi toplamlar={toplamlar} toplamlarFiresiz={null} fiyatlar={fiyatlar} ortalamaMaliyet={null} />);
+    expect(screen.queryByText(/Ortalama maliyetten/)).not.toBeInTheDocument();
+  });
 });

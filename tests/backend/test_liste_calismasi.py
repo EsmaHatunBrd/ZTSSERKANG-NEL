@@ -72,7 +72,7 @@ def test_yalniz_berrak_varsayilanlar_ve_deneme(istemci, oturum):
     sid = _senaryo(istemci); _kur(istemci, sid, oturum)
     d = _calisma(istemci, sid)
     assert d["kayitlar"] == [] and d["berrak_disi"] == 1 and d["ozet"]["urun_sayisi"] == 0   # TEST Berrak değil
-    assert istemci.put(f"{A}/liste-fiyatlari", json={"urun_kodu": "TEST", "yil": 2025, "liste_fiyati": "1"}).status_code == 422
+    assert istemci.put(f"{A}/liste-fiyatlari", json={"neden": "test", "urun_kodu": "TEST", "yil": 2025, "liste_fiyati": "1"}).status_code == 422
     assert istemci.put(f"{A}/urunler/TEST", json={**URUN, "marka": "Berrak"}).status_code == 200
     d = _calisma(istemci, sid)
     assert (d["pazar"], d["bolen"], d["bolen_kayitli"], d["varsayilan_bolen"], d["yil"], d["berrak_disi"]) == ("yurtici", "0.63", False, "0.63", 2026, 0)
@@ -123,11 +123,11 @@ def test_elle_gecmis_iki_pazar_artis_ve_maliyet_kiyasi(istemci, oturum):
     yeni, maliyet = D_(r0["yeni_liste"]), D_(r0["maliyet_tl"])
     # 2025: liste yeni/1.4, maliyet maliyet/1.5 -> liste %40, maliyet %50 artmış; fark -10 puan
     liste25, mal25 = (yeni / D_("1.4")).quantize(D_("0.0001")), (maliyet / D_("1.5")).quantize(D_("0.0001"))
-    r = istemci.put(f"{A}/liste-fiyatlari?senaryo={sid}", json={"urun_kodu": "TEST", "yil": 2025, "liste_fiyati": str(liste25), "birim_maliyet": str(mal25)})
+    r = istemci.put(f"{A}/liste-fiyatlari?senaryo={sid}", json={"neden": "test", "urun_kodu": "TEST", "yil": 2025, "liste_fiyati": str(liste25), "birim_maliyet": str(mal25)})
     assert r.status_code == 200 and r.json()["pazar"] == "yurtici" and r.json()["bolen"] == "0.63"
-    assert istemci.put(f"{A}/liste-fiyatlari", json={"urun_kodu": "TEST", "yil": 2024, "liste_fiyati": str(liste25 / 2)}).json()["bolen"] == "0.63"
+    assert istemci.put(f"{A}/liste-fiyatlari", json={"neden": "test", "urun_kodu": "TEST", "yil": 2024, "liste_fiyati": str(liste25 / 2)}).json()["bolen"] == "0.63"
     # aynı yıl yurtdışı: ayrı kayıt, bölen girişten
-    ry = istemci.put(f"{A}/liste-fiyatlari", json={"urun_kodu": "TEST", "yil": 2025, "pazar": "yurtdisi", "liste_fiyati": "3", "bolen": "0.85"})
+    ry = istemci.put(f"{A}/liste-fiyatlari", json={"neden": "test", "urun_kodu": "TEST", "yil": 2025, "pazar": "yurtdisi", "liste_fiyati": "3", "bolen": "0.85"})
     assert ry.status_code == 200 and (ry.json()["pazar"], ry.json()["bolen"]) == ("yurtdisi", "0.85")
     d = _calisma(istemci, sid)
     r = d["kayitlar"][0]
@@ -139,18 +139,18 @@ def test_elle_gecmis_iki_pazar_artis_ve_maliyet_kiyasi(istemci, oturum):
     dy = _calisma(istemci, sid, pazar="yurtdisi")["kayitlar"][0]
     assert [(g["yil"], g["liste_fiyati"]) for g in dy["gecmis"]] == [(2025, "3")] and D_(dy["liste_artis"]) == D_(dy["yeni_liste"]) / 3 - 1
     # güncelleme + günlük; silme (pazara göre)
-    assert istemci.put(f"{A}/liste-fiyatlari", json={"urun_kodu": "TEST", "yil": 2025, "liste_fiyati": "1"}).status_code == 200
+    assert istemci.put(f"{A}/liste-fiyatlari", json={"neden": "test", "urun_kodu": "TEST", "yil": 2025, "liste_fiyati": "1"}).status_code == 200
     k = oturum.query(m.DegisiklikKaydi).filter_by(tablo="liste_fiyati", islem="guncelle").one()
     assert k.yeni["yil"] == 2025 and k.yeni["pazar"] == "yurtici" and k.eski["liste_fiyati"] == str(liste25)
-    assert istemci.delete(f"{A}/liste-fiyatlari/TEST/2025?pazar=yurtdisi").status_code == 204
-    assert istemci.delete(f"{A}/liste-fiyatlari/TEST/2025?pazar=yurtdisi").status_code == 404
+    assert istemci.delete(f"{A}/liste-fiyatlari/TEST/2025?pazar=yurtdisi&neden=test").status_code == 204
+    assert istemci.delete(f"{A}/liste-fiyatlari/TEST/2025?pazar=yurtdisi&neden=test").status_code == 404
     assert oturum.query(m.ListeFiyati).filter_by(yil=2025, pazar="yurtici").count() == 1
-    assert istemci.delete(f"{A}/liste-fiyatlari/TEST/2024").status_code == 204
+    assert istemci.delete(f"{A}/liste-fiyatlari/TEST/2024?neden=test").status_code == 204
     assert oturum.query(m.DegisiklikKaydi).filter_by(tablo="liste_fiyati", islem="sil").count() == 2
-    assert istemci.delete(f"{A}/liste-fiyatlari/TEST/2025?pazar=abd").status_code == 422
-    assert istemci.put(f"{A}/liste-fiyatlari", json={"urun_kodu": "YOK", "yil": 2025, "liste_fiyati": "1"}).status_code == 404
-    assert istemci.put(f"{A}/liste-fiyatlari", json={"urun_kodu": "TEST", "yil": 2025, "liste_fiyati": "0"}).status_code == 422
-    assert istemci.put(f"{A}/liste-fiyatlari", json={"urun_kodu": "TEST", "yil": 2025, "liste_fiyati": "1", "pazar": "abd"}).status_code == 422
+    assert istemci.delete(f"{A}/liste-fiyatlari/TEST/2025?pazar=abd&neden=test").status_code == 422
+    assert istemci.put(f"{A}/liste-fiyatlari", json={"neden": "test", "urun_kodu": "YOK", "yil": 2025, "liste_fiyati": "1"}).status_code == 404
+    assert istemci.put(f"{A}/liste-fiyatlari", json={"neden": "test", "urun_kodu": "TEST", "yil": 2025, "liste_fiyati": "0"}).status_code == 422
+    assert istemci.put(f"{A}/liste-fiyatlari", json={"neden": "test", "urun_kodu": "TEST", "yil": 2025, "liste_fiyati": "1", "pazar": "abd"}).status_code == 422
 
 
 def test_excel_yukleme_pazar_sutunu_tek_islem(istemci, oturum):
@@ -182,7 +182,7 @@ def test_excel_yukleme_pazar_sutunu_tek_islem(istemci, oturum):
 
 def test_ornek_veri_iki_pazar_uret_sil_gercegi_ezmez(istemci, oturum):
     sid = _senaryo(istemci); _berrak_kur(istemci, sid, oturum)
-    assert istemci.put(f"{A}/liste-fiyatlari", json={"urun_kodu": "TEST", "yil": 2024, "liste_fiyati": "7.77"}).status_code == 200
+    assert istemci.put(f"{A}/liste-fiyatlari", json={"neden": "test", "urun_kodu": "TEST", "yil": 2024, "liste_fiyati": "7.77"}).status_code == 200
     r = istemci.post(f"{A}/liste-calismasi/ornek?senaryo={sid}")
     assert r.status_code == 200 and r.json()["yazilan"] == 5   # yurtiçi 2025, 2023 (2024 gerçek); yurtdışı 2025, 2024, 2023
     d = _calisma(istemci, sid)
@@ -196,7 +196,7 @@ def test_ornek_veri_iki_pazar_uret_sil_gercegi_ezmez(istemci, oturum):
     istemci.post(f"{A}/liste-calismasi/ornek?senaryo={sid}")
     assert _calisma(istemci, sid)["kayitlar"][0]["liste_artis"] == d["kayitlar"][0]["liste_artis"]
     # örnek satıra elle yazılınca gerçek olur
-    assert istemci.put(f"{A}/liste-fiyatlari", json={"urun_kodu": "TEST", "yil": 2023, "liste_fiyati": "5"}).json()["ornek"] is False
+    assert istemci.put(f"{A}/liste-fiyatlari", json={"neden": "test", "urun_kodu": "TEST", "yil": 2023, "liste_fiyati": "5"}).json()["ornek"] is False
     assert istemci.delete(f"{A}/liste-calismasi/ornek").json()["yazilan"] == 4
     assert sorted(k.yil for k in oturum.query(m.ListeFiyati)) == [2023, 2024]
     assert oturum.query(m.DegisiklikKaydi).filter_by(tablo="liste_fiyati", islem="ornek_sil").count() == 1
@@ -301,3 +301,20 @@ def test_liste_fiyati_tablo_gocu(tmp_path):
     m.Urun.__table__.create(e2); m.ListeFiyati.__table__.create(e2)
     assert liste_fiyati_gocu(e2) is False
     e.dispose(); e2.dispose()
+
+
+def test_liste_fiyati_elle_neden_zorunlu_ve_gunlukte(istemci, oturum):
+    """D7: elle ekleme/güncelleme (gövde `neden`) ve silme (`?neden=`) nedensiz 422 'Neden girin.'; neden günlükte görünür."""
+    sid = _senaryo(istemci); _berrak_kur(istemci, sid, oturum)
+    govde = {"urun_kodu": "TEST", "yil": 2024, "liste_fiyati": "5"}
+    for g in (govde, {**govde, "neden": ""}):
+        r = istemci.put(f"{A}/liste-fiyatlari", json=g)
+        assert r.status_code == 422 and r.json()["mesaj"] == "Neden girin.", r.text
+    assert istemci.put(f"{A}/liste-fiyatlari", json={**govde, "neden": "eski liste"}).status_code == 200
+    r = istemci.delete(f"{A}/liste-fiyatlari/TEST/2024")
+    assert r.status_code == 422 and r.json()["mesaj"] == "Neden girin."
+    assert istemci.delete(f"{A}/liste-fiyatlari/TEST/2024?neden=yanl%C4%B1%C5%9F%20y%C4%B1l").status_code == 204
+    g = istemci.get(f"{A}/gunluk", params={"boyut": 50}).json()["kayitlar"]
+    sil = next(x for x in g if x["baslik"] == "Liste fiyatı silindi")
+    assert sil["neden"] == "yanlış yıl" and sil["urun_kodu"] == "TEST" and "Liste fiyatı: 5,00 TL" in sil["eski"] and "Pazar: Yurtiçi" in sil["eski"]
+    assert next(x for x in g if x["baslik"] == "Liste fiyatı eklendi")["neden"] == "eski liste"

@@ -39,7 +39,7 @@ function yakala(modul: "fiyat" | "smm", durum = 200) {
       await delay(300); // "Hazırlanıyor…" durumu yük altında da görülebilsin
       if (durum !== 200) return HttpResponse.json({ hata: "bulunamadi", mesaj: "dönem bulunamadı", alanlar: {} }, { status: durum });
       return new HttpResponse(new Uint8Array([37, 80, 68, 70]), {
-        headers: { "Content-Type": "application/pdf", "Content-Disposition": 'attachment; filename="onay-ciktisi-smm-2026-10.pdf"' },
+        headers: { "Content-Type": "application/pdf", "Content-Disposition": 'attachment; filename="rapor-smm-2026-10.pdf"' },
       });
     }),
   );
@@ -74,9 +74,9 @@ describe("OnayCiktisiDiyalogu", () => {
     expect(screen.queryByRole("radio", { name: "Excel" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("radio", { name: /^Rapor/ }));
     expect(screen.getByRole("radio", { name: "Excel" })).toBeChecked();
-    const formullu = screen.getByRole("radio", { name: /Excel \(formüllü\)/ });
-    expect(formullu).toBeDisabled();
-    expect(screen.getByText("Yakında")).toBeInTheDocument();
+    // bitmemiş "formüllü Excel" seçeneği gösterilmez
+    expect(screen.queryByRole("radio", { name: /formüllü/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("Yakında")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("radio", { name: "PDF" }));
     expect(screen.getByRole("radio", { name: "PDF" })).toBeChecked();
     // ekler varsayılan açık; Fiyat'ta mutabakat yok
@@ -123,7 +123,7 @@ describe("OnayCiktisiDiyalogu", () => {
           imzalar: { hazirlayan: "Ayşe Deneme" },
         },
       ]);
-      expect(ind.indirilen).toEqual(["onay-ciktisi-smm-2026-10.pdf"]);
+      expect(ind.indirilen).toEqual(["rapor-smm-2026-10.pdf"]);
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     } finally {
       ind.geriAl();

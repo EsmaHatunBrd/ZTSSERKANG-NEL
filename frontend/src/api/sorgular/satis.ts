@@ -31,7 +31,8 @@ function yenile(qc: ReturnType<typeof useQueryClient>) {
 export function useSatisEkle() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (govde: SatisGirisi) => cagir(api.POST("/api/v1/satis-gecmisi", { body: govde })),
+    // `neden`: Değişiklik Günlüğüne yazılan zorunlu gerekçe (gövdede).
+    mutationFn: (govde: SatisGirisi & { neden: string }) => cagir(api.POST("/api/v1/satis-gecmisi", { body: govde })),
     onSuccess: () => yenile(qc),
   });
 }
@@ -57,7 +58,8 @@ export function useSatisOnizle() {
 export function useSatisSil() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => cagir(api.DELETE("/api/v1/satis-gecmisi/{id}", { params: { path: { id } } })),
+    mutationFn: ({ id, neden }: { id: number; neden: string }) =>
+      cagir(api.DELETE("/api/v1/satis-gecmisi/{id}", { params: { path: { id }, query: { neden } } })),
     onSuccess: () => yenile(qc),
   });
 }

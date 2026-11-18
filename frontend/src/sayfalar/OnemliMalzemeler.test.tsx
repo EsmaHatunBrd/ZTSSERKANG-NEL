@@ -36,9 +36,9 @@ function satir(sira: number, kod: string, ad: string, ek: Partial<OnemliMalzemeS
 
 /** Toplam 1.000.000 TL: Salatalık %60, Kavanoz %25 (kümülatif %85), Kapak %10 (%95), Tuz %5 (%100), fiyatsız Etiket. */
 const HAM: [string, string, string, string, string, Partial<OnemliMalzemeSatiri>][] = [
-  ["M1", "Salatalık", "600000", "60.00", "60.00", { yillik_miktar: "120000.5", birim_fiyat: "5", kullanan_urun_sayisi: 12 }],
+  ["M1", "Salatalık", "600000", "60.00", "60.00", { yillik_miktar: "120000.5", birim_fiyat: "4.2", kullanan_urun_sayisi: 12 }],
   ["M2", "Kavanoz", "250000", "25.00", "85.00", { birim: "AD", para_birimi: "USD", birim_fiyat: "0.1234", kullanan_urun_sayisi: 8 }],
-  ["M3", "Kapak", "100000", "10.00", "95.00", { birim: "AD" }],
+  ["M3", "Kapak", "100000", "10.00", "95.00", { birim: "AD", yillik_miktar: "0" }],
   ["M4", "Tuz", "50000", "5.00", "100.00", {}],
   ["M5", "Etiket", "0", "0.00", "100.00", { birim_fiyat: null, para_birimi: null }],
 ];
@@ -98,7 +98,7 @@ const tablo = () => screen.findByRole("table", { name: "Önemli malzemeler" });
 const satirOf = (t: HTMLElement, ad: string) => within(t).getByText(ad).closest("tr") as HTMLElement;
 
 describe("Önemli malzemeler", () => {
-  it("başlık, özet şerit ve tablo: sıra, kod, birim fiyat, yıllık miktar/tutar, pay, kümülatif, kullanan ürün", async () => {
+  it("başlık, özet şerit ve tablo: sıra, kod, maliyete giren birim fiyat, yıllık miktar/tutar, pay, kümülatif, kullanan ürün", async () => {
     kur();
     ciz();
     const t = await tablo();
@@ -110,18 +110,25 @@ describe("Önemli malzemeler", () => {
     );
     const m1 = satirOf(t, "Salatalık");
     expect(m1).toHaveTextContent("M1");
+    // maliyete giren = yıllık tutar ÷ yıllık miktar (600.000 ÷ 120.000,5); altında liste fiyatı
+    expect(within(t).getByRole("columnheader", { name: "Maliyete giren birim fiyat (TL)" })).toBeInTheDocument();
     expect(m1).toHaveTextContent("5,0000 TL");
+    expect(m1).toHaveTextContent("liste 4,2000 TL");
     expect(m1).toHaveTextContent("120.001 KG");
     expect(m1).toHaveTextContent("600.000 TL");
     expect(m1).toHaveTextContent("%60,0");
     expect(within(m1).getAllByRole("cell").at(-1)).toHaveTextContent("12");
     const m2 = satirOf(t, "Kavanoz");
-    expect(m2).toHaveTextContent("0,1234 USD");
+    expect(m2).toHaveTextContent("250,0000 TL");
+    expect(m2).toHaveTextContent("liste 0,1234 USD");
+    // yıllık miktar 0: maliyete giren birim fiyat hesaplanmaz
+    expect(within(satirOf(t, "Kapak")).getByText("—")).toBeInTheDocument();
     expect(m2).toHaveTextContent("%25,0");
     expect(m2).toHaveTextContent("%85,0");
-    // fiyatsız: birim fiyat —, pay %0
+    // fiyatsız: birim fiyat —, liste fiyatı yok, pay %0
     const m5 = satirOf(t, "Etiket");
     expect(within(m5).getByText("—")).toBeInTheDocument();
+    expect(m5).not.toHaveTextContent("liste");
     expect(m5).toHaveTextContent("%0,0");
     expect(screen.getByText(/Tutarı 0 olan 1 kalem/)).toBeInTheDocument();
     // sunucu sırası korunur

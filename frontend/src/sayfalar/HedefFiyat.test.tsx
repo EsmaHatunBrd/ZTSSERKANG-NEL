@@ -120,18 +120,18 @@ describe("Marjı koruyan fiyat", () => {
     expect(indir()).toHaveAttribute("href", "/api/v1/disa-aktar/hedef-fiyat.xlsx?senaryo=1&marj=0.2&bolge=yuksek_adet_dusuk_marj");
   });
 
-  it("iki liste fiyatı sütunu: yurtiçi ve yurtdışı; Berrak olmayan üründe —", async () => {
+  it("liste fiyatı sütunu yurtiçi ve yurtdışını alt alta gösterir; Berrak olmayan üründe —", async () => {
     kur([]);
     ciz();
     const tablo = await screen.findByRole("table");
     expect(await within(tablo).findByText("Biber Turşusu")).toBeInTheDocument();
-    expect(within(tablo).getByRole("columnheader", { name: /Liste fiyatı yurtiçi/ })).toBeInTheDocument();
-    expect(within(tablo).getByRole("columnheader", { name: /Liste fiyatı yurtdışı/ })).toBeInTheDocument();
+    expect(within(tablo).getByRole("columnheader", { name: /Liste fiyatı \(yurtiçi \/ yurtdışı\)/ })).toBeInTheDocument();
     const biber = within(tablo).getByText("Biber Turşusu").closest("tr") as HTMLElement;
     expect(biber).toHaveTextContent("54,75 TL");
     expect(biber).toHaveTextContent("38,35 TL");
     const salca = within(tablo).getByText("Domates Salçası").closest("tr") as HTMLElement;
-    expect(within(salca).getAllByText("—").length).toBeGreaterThanOrEqual(2);
+    expect(within(salca).getAllByText("—").length).toBeGreaterThanOrEqual(1);
+    expect(salca).not.toHaveTextContent("Yİ");
   });
 
   it("varsayılan yalnız zam gerekenleri gösterir; kutu kaldırılınca hepsi görünür", async () => {

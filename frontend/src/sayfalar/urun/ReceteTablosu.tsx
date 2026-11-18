@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Trash2, Undo2 } from "lucide-react";
 import type { HesapSatiri, ReceteSatiri } from "@/api/tipler";
 import { useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { KaynakRozeti, ZS_ACIKLAMA, zsEtiketi } from "@/bilesenler/KaynakRozeti";
@@ -26,7 +26,8 @@ import {
   sayiGoster,
   MALZEME,
 } from "./yardimci";
-import type { SatirTaslagi, TaslakYamasi } from "./Taslak";
+import { SatirEklePaneli } from "./SatirEklePaneli";
+import { yeniSatirSeviyesi, type SatirTaslagi, type TaslakYamasi, type YeniSatir } from "./Taslak";
 
 interface Props {
   satirlar: HesapSatiri[] | undefined;
@@ -42,7 +43,17 @@ interface Props {
   saltOkunur?: boolean;
   /** Ürünün kodu: kodu buna eşit olan ara mamul satırı "Ürün" rozeti alır. */
   urunKodu?: string;
+  /** Taslakta eklenen satırlar (`Taslak.eklenen`); canlı hesapta sıraları n+1, n+2 ... */
+  eklenen?: YeniSatir[];
+  /** Taslakta silinecek satır sıraları (`Taslak.silinen`). */
+  silinen?: number[];
+  /** Satır ekle panelindeki malzeme araması için. */
+  senaryoId?: number | null;
 }
+
+/** Alt satırı olan satır silinemez: hesap ağacı bozulmasın diye önce alt satırlar silinir. */
+export const ALT_SATIRLI_SILINEMEZ = "Alt satırları olan satır silinemez: önce alt satırlarını silin";
+export const URUN_SATIRI_SILINEMEZ = "Ürün satırı silinemez";
 
 /** Tablo yoğunluğu tercihi ("siki" | "rahat"; yoksa rahat). */
 export const YOGUNLUK_ANAHTARI = "fiyat-calismasi.tablo-yogunluk";
@@ -106,7 +117,27 @@ function GecisDugmesi({
 
 const GRUP_BASLIGI = "h-7 border-b text-center text-[11px] font-semibold tracking-wider text-muted-foreground uppercase";
 
-export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, taslak, onTaslak, saltOkunur = false, urunKodu }: Props) {
+export function ReceteTablosu({
+  satirlar,
+  recete,
+  uyarilar,
+  yukleniyor,
+  hata,
+  taslak,
+  onTaslak,
+  saltOkunur = false,
+  urunKodu,
+  eklenen = [],
+  silinen = [],
+  senaryoId = null,
+}: Props) {
+  const yazmaAcik = useDuzenlemeKilidi().acik;
+  // Eklenen satırların canlı hesaptaki sırası: n + 1 + indeks (n = kayıtlı reçetenin en büyük sırası).
+  const sonSira = recete.reduce((n, r) => Math.max(n, r.sira), 0);
+  const silinenler = new Set(silinen);
+  const satirSil = (sira: number) => onTaslak({ silinen: [...silinen, sira] });
+  const silmeyiGeriAl = (sira: number) => onTaslak({ silinen: silinen.filter((x) => x !== sira) });
+  const ekleneniKaldir = (j: number) => onTaslak({ eklenen: eklenen.filter((_, i) => i !== j) });
   const [fireHata, setFireHata] = useState<{
     sira: number;
     mesaj: string;
@@ -151,14 +182,18 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
     const altVar = !m.urunSatiri && i + 1 < malzemeHam.length && malzemeHam[i + 1].derinlik > m.derinlik;
     const kapaliMi = altVar && kapali.has(m.anahtar);
     if (kapaliMi && !gizli) kapaliDerinlik = m.derinlik;
-    // Ürün satırı ve ara mamul satırları düzenlenmez; kayıtlı hesap görünümü tümüyle salt okunurdur.
-    const duzenlenir = !!m.r && !m.ara && !saltOkunur;
+    // Taslakta eklenen satır: kayıtlı reçetede karşılığı yok, sırası son sıradan büyük.
+    const yeniIndeks = !m.r && m.s.sira != null && m.s.sira > sonSira ? m.s.sira - sonSira - 1 : null;
+    // Silinmek üzere işaretlenen satır (hesap yenilenene kadar üstü çizili görünür).
+    const silinecek = !!m.r && silinenler.has(m.r.sira);
+    // Ürün satırı, ara mamul ve silinecek satırlar düzenlenmez; kayıtlı hesap görünümü tümüyle salt okunurdur.
+    const duzenlenir = !!m.r && !m.ara && !saltOkunur && !silinecek;
     const t = m.r ? taslak[m.r.sira] : undefined;
     const brutElle = m.r ? etkinBrutElle(m.r, t) : m.s.brut_miktar_elle;
     // Sunucudaki satır elle brüt ise, taslakta fire'e dönülse bile fire girilemez (backend 422).
     const sunucuElle = m.r ? m.r.brut_miktar_elle !== null : false;
     const fireKapali = brutElle !== null || sunucuElle;
-    return { ...m, t, gizli, altVar, kapaliMi, duzenlenir, brutElle, sunucuElle, fireKapali };
+    return { ...m, t, gizli, altVar, kapaliMi, duzenlenir, brutElle, sunucuElle, fireKapali, yeniIndeks, silinecek };
   });
   const gezinme: GezinmeSatiri[] = malzeme.map((m) => ({
     gorunur: !m.gizli,
@@ -219,7 +254,11 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
 
   const firesizToplam = topla(malzeme.map(({ s }) => s.tutar_firesiz ?? "0"));
   const fireliToplam = topla(malzeme.map(({ s }) => s.tutar));
-  const sutunSayisi = 15;
+  // Düzenlenebilir ekranda sonda satır işlemleri (Sil / Geri al / Kaldır) sütunu vardır.
+  const islemSutunu = !saltOkunur;
+  const sutunSayisi = islemSutunu ? 16 : 15;
+  // Silinen satırlar hesap yenilenince tablodan düşer: altta "Geri al" ile listelenir.
+  const silinenSatirlar = silinen.map((sira) => ({ sira, r: recete.find((x) => x.sira === sira) }));
 
   return (
     <div className="flex flex-col gap-2">
@@ -275,6 +314,7 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
                 Pay
               </th>
               <th className={GRUP_BASLIGI}>Kaynak</th>
+              {islemSutunu && <th className={GRUP_BASLIGI} />}
             </TableRow>
             <TableRow>
               <TableHead className={SABIT_SATIR}>Satır</TableHead>
@@ -298,6 +338,11 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
               <TableHead title="Miktar kaynağı (fire kuralı / elle brüt) · fiyat kaynağı (liste / elle)">
                 <KisaBaslik tam="Kaynak (miktar / fiyat)" kisa="Miktar · Fiyat" />
               </TableHead>
+              {islemSutunu && (
+                <TableHead>
+                  <span className="sr-only">İşlem</span>
+                </TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody onKeyDown={tusaBasildi} onFocus={odaklandi}>
@@ -323,8 +368,32 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
               </TableRow>
             ) : (
               malzeme.map((m, i) => {
-                const { s, r, ara, girinti, seviyeli, urunSatiri, anahtar, t, gizli, altVar, kapaliMi, duzenlenir, brutElle, sunucuElle } =
-                  m;
+                const {
+                  s,
+                  r,
+                  ara,
+                  girinti,
+                  seviyeli,
+                  urunSatiri,
+                  anahtar,
+                  t,
+                  gizli,
+                  altVar,
+                  kapaliMi,
+                  duzenlenir,
+                  brutElle,
+                  sunucuElle,
+                  yeniIndeks,
+                  silinecek,
+                } = m;
+                // Silme düğmesi: alt satırı olan üst satır ve ürün satırı silinemez (hesap ağacı bozulmasın).
+                const silmeEngeli = !yazmaAcik
+                  ? "Düzenleme kilitli"
+                  : urunSatiri
+                    ? URUN_SATIRI_SILINEMEZ
+                    : altVar
+                      ? ALT_SATIRLI_SILINEMEZ
+                      : null;
                 // Katlanmış ara mamulün altı: toplamlar ve hesap değişmez, yalnız satır çizilmez.
                 if (gizli) return null;
                 const fiyatElle = r ? etkinFiyatElle(r, t) : s.birim_fiyat_elle;
@@ -349,10 +418,13 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
                     data-seviye={seviyeli ? s.seviye : undefined}
                     data-ara={ara ? "true" : undefined}
                     data-kapali={kapaliMi ? "true" : undefined}
+                    data-taslak={yeniIndeks !== null ? "eklendi" : silinecek ? "silinecek" : undefined}
                     className={cn(
                       ara && "bg-muted/50 odd:bg-muted/50",
                       sifirTutar && !urunSatiri && "text-muted-foreground",
                       urunSatiri && "font-semibold",
+                      yeniIndeks !== null && "bg-green-50 odd:bg-green-50 dark:bg-green-950/30 dark:odd:bg-green-950/30",
+                      silinecek && "text-muted-foreground",
                     )}
                   >
                     <TableCell className={cn(SABIT_SATIR, "tabular-nums")}>{r?.sira ?? s.sira ?? "—"}</TableCell>
@@ -380,12 +452,17 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
                             └
                           </span>
                         )}
-                        <span className="block max-w-[14rem] truncate" title={s.kalem}>
+                        <span className={cn("block max-w-[14rem] truncate", silinecek && "line-through")} title={s.kalem}>
                           {s.kalem}
                         </span>
                         {ara && (
                           <Badge variant="outline" className="shrink-0">
                             {urunSatiri ? "Ürün" : "Ara mamul"}
+                          </Badge>
+                        )}
+                        {yeniIndeks !== null && (
+                          <Badge variant="outline" className="shrink-0 border-green-600/50 text-green-800 dark:text-green-300">
+                            Yeni
                           </Badge>
                         )}
                       </div>
@@ -567,6 +644,49 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
                         )}
                       </div>
                     </TableCell>
+                    {islemSutunu && (
+                      <TableCell className="text-right whitespace-nowrap">
+                        {yeniIndeks !== null ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            aria-label={`Eklenen satırı kaldır — ${s.kalem}`}
+                            title="Eklenen satırı kaldır"
+                            onClick={() => ekleneniKaldir(yeniIndeks)}
+                          >
+                            <Trash2 aria-hidden />
+                            Kaldır
+                          </Button>
+                        ) : r && silinecek ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            aria-label={`Silmeyi geri al — ${s.kalem}`}
+                            onClick={() => silmeyiGeriAl(r.sira)}
+                          >
+                            <Undo2 aria-hidden />
+                            Geri al
+                          </Button>
+                        ) : r ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            aria-label={`Satırı sil — ${s.kalem}`}
+                            title={silmeEngeli ?? "Satırı sil (Kaydet'e kadar geri alınabilir)"}
+                            aria-description={silmeEngeli ?? undefined}
+                            disabled={silmeEngeli !== null}
+                            onClick={() => satirSil(r.sira)}
+                          >
+                            <Trash2 aria-hidden />
+                            Sil
+                          </Button>
+                        ) : null}
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
@@ -582,7 +702,7 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
                 <TableCell className="text-right">
                   <ParaHucresi deger={firesizToplam.toFixed(6)} className="font-medium" />
                 </TableCell>
-                <TableCell colSpan={4} />
+                <TableCell colSpan={islemSutunu ? 5 : 4} />
               </TableRow>
               <TableRow>
                 <TableCell colSpan={3} className={cn(SABIT_CINSI, "left-0 font-medium")}>
@@ -592,12 +712,46 @@ export function ReceteTablosu({ satirlar, recete, uyarilar, yukleniyor, hata, ta
                 <TableCell className="text-right">
                   <ParaHucresi deger={fireliToplam.toFixed(6)} className="font-medium" />
                 </TableCell>
-                <TableCell colSpan={3} />
+                <TableCell colSpan={islemSutunu ? 4 : 3} />
               </TableRow>
             </TableFooter>
           )}
         </table>
       </div>
+      {islemSutunu && silinenSatirlar.length > 0 && (
+        <section
+          aria-label="Silinecek satırlar"
+          className="flex flex-col gap-1.5 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm"
+        >
+          <p className="font-medium">Silinecek satırlar (Kaydet'e kadar hesaptan çıkarıldı)</p>
+          <ul className="flex flex-col gap-1">
+            {silinenSatirlar.map(({ sira, r }) => (
+              <li key={sira} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="tabular-nums">{`Satır ${sira}`}</span>
+                <span className="text-muted-foreground tabular-nums">{r?.malzeme_kodu ?? "—"}</span>
+                <span className="line-through">{r?.ad ?? ""}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Silmeyi geri al — Satır ${sira}`}
+                  onClick={() => silmeyiGeriAl(sira)}
+                >
+                  <Undo2 aria-hidden />
+                  Geri al
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {islemSutunu && !hata && (
+        <SatirEklePaneli
+          senaryoId={senaryoId}
+          seviye={yeniSatirSeviyesi(recete, urunKodu)}
+          onEkle={(satir) => onTaslak({ eklenen: [...eklenen, satir] })}
+        />
+      )}
     </div>
   );
 }

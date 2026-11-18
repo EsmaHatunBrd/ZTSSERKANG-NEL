@@ -148,7 +148,7 @@ export default function Teklifler() {
           const s = row.original;
           return (
             <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-              <TeklifSilDugmesi teklifId={s.teklif_id} etiket={`${s.urun_kodu} Tur ${s.tur_no}`} />
+              <TeklifSilDugmesi teklifId={s.teklif_id} etiket={`${s.urun_kodu} Tur ${s.tur_no}`} durum={s.durum} />
             </span>
           );
         },

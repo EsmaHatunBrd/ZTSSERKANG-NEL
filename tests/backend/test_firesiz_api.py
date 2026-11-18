@@ -47,7 +47,7 @@ def test_elle_brut_ve_fiyat_satiri(istemci, oturum):
     assert rr["brut_miktar_elle"] == "1.5"
     # elle brütlü satıra fire override -> 422
     r = istemci.post(f"{A}/urunler/TEST/hesapla", json={"senaryo_id": sid, **BODY, "override": {"fire": {"1": "0.1"}}})
-    assert r.status_code == 422 and "elle brüt" in r.json()["mesaj"]
+    assert r.status_code == 422 and "brüt miktarı elle girilmiş" in r.json()["mesaj"]
 
 
 def test_kayitli_hesap_gorunumu_firesiz_bloklari(istemci, oturum):

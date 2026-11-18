@@ -86,10 +86,12 @@ function GecisEngeli({ aktif }: { aktif: boolean }) {
 function taslakOzeti(t: Taslak) {
   const satirlar = Object.values(t.satirlar);
   const satirAlan = satirlar.reduce((n, s) => n + Object.values(s).filter((v) => v !== undefined).length, 0);
+  // Eklenen ve silinen her satır bir "satırda değişiklik" sayılır.
+  const yapi = t.eklenen.length + t.silinen.length;
   return {
-    satirSayisi: satirlar.filter((s) => Object.values(s).some((v) => v !== undefined)).length,
+    satirSayisi: satirlar.filter((s) => Object.values(s).some((v) => v !== undefined)).length + yapi,
     fireSayisi: satirlar.filter((s) => s.fire !== undefined).length,
-    alanSayisi: taslakSayisi(t) - satirAlan,
+    alanSayisi: taslakSayisi(t) - satirAlan - yapi,
   };
 }
 
@@ -212,7 +214,11 @@ export default function UrunMaliyeti() {
     const onceki = oncekiSurum.current;
     oncekiSurum.current = receteSurumu;
     if (onceki === null || receteSurumu === null || onceki === receteSurumu) return;
-    setTaslak((t) => (Object.keys(t.satirlar).length === 0 ? t : { ...t, satirlar: {} }));
+    setTaslak((t) =>
+      Object.keys(t.satirlar).length === 0 && t.eklenen.length === 0 && t.silinen.length === 0
+        ? t
+        : { ...t, satirlar: {}, eklenen: [], silinen: [] },
+    );
   }, [receteSurumu]);
 
   // Hesap gövdesi içerik olarak aynıysa yeniden koşma: her başarılı hesap `taban`ı yeniler, `sunucu` ve dolayısıyla
@@ -382,6 +388,7 @@ export default function UrunMaliyeti() {
           toplamlarFiresiz={sonuc.toplamlar_firesiz ?? null}
           fiyatlar={sonuc.fiyatlar}
           bayat={bayat}
+          ortalamaMaliyet={sonuc.satis_ortalamadan ? (sonuc.stok_devri?.ortalama_maliyet ?? null) : null}
         />
       )}
 
@@ -494,6 +501,9 @@ export default function UrunMaliyeti() {
             taslak={taslak.satirlar}
             onTaslak={onTaslak}
             urunKodu={kod}
+            eklenen={taslak.eklenen}
+            silinen={taslak.silinen}
+            senaryoId={senaryoId}
           />
         </section>
       )}

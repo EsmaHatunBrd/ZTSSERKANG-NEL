@@ -64,7 +64,7 @@ def karsi_senaryo(s: Session, sen: m.Senaryo) -> m.Senaryo | None:
 
 def _senaryolar(s: Session, a: int, b: int) -> tuple[m.Senaryo, m.Senaryo]:
     if a == b:
-        raise DogrulamaHatasi("kıyas için iki farklı senaryo seçin", {"a": a, "b": b})
+        raise DogrulamaHatasi("Kıyas için iki farklı çalışma seçin.", {"a": a, "b": b})
     return hs.senaryo_getir(s, a), hs.senaryo_getir(s, b)
 
 

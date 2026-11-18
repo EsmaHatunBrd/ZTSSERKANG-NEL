@@ -28,12 +28,12 @@ describe("Arşiv", () => {
     const v = within(s26.getByRole("button", { name: "Senaryo Varsayılan" }));
     expect(v.getByText("Fiyat çalışması")).toBeInTheDocument();
     expect(v.getByText("02.06.2026 · Esma")).toBeInTheDocument();
-    expect(v.getByText("berrak-2026.xlsx")).toBeInTheDocument();
+    expect(v.getByText("Son yükleme: berrak-2026.xlsx")).toBeInTheDocument();
     expect(v.getByText("3 ürün · 2 hesap · 1 teklif")).toBeInTheDocument();
     expect(v.queryByLabelText("Kilitli")).not.toBeInTheDocument();
     const g = within(s26.getByRole("button", { name: "Senaryo Gerçekleşen" }));
     expect(g.getByLabelText("Kilitli")).toBeInTheDocument();
-    expect(g.getAllByText("Gerçekleşen")).toHaveLength(2);   // ad + tür rozeti
+    expect(g.getAllByText("Gerçekleşen")).toHaveLength(2); // ad + tür rozeti
     expect(agac.getByRole("group", { name: "Sezon 2025-26" })).toHaveTextContent("Senaryo yok");
   });
 
@@ -42,7 +42,7 @@ describe("Arşiv", () => {
     const tablo = within(await screen.findByRole("region", { name: "Kayıtlı hesaplar" }));
     await tablo.findByText("Kur revizyonu");
     const satirlar = tablo.getAllByRole("row");
-    expect(satirlar).toHaveLength(3);   // başlık + 2 kayıt
+    expect(satirlar).toHaveLength(3); // başlık + 2 kayıt
     expect(within(satirlar[1]).getByText("21.10.2026")).toBeInTheDocument();
     expect(within(satirlar[1]).getByText("Kur revizyonu")).toBeInTheDocument();
     expect(within(satirlar[1]).getByText("38,13 TL")).toBeInTheDocument();
@@ -74,7 +74,10 @@ describe("Arşiv", () => {
     expect(kiyasla).toBeEnabled();
     await u.click(kiyasla);
     const kart = within(await screen.findByRole("region", { name: "Kıyas" }));
-    expect(istek.kiyas[0]).toEqual({ hesap_a: "11", hesap_b: "10" });   // seçim sırası A, B
+    // önce yeni (#11) seçildi ama A = eski (#10), B = yeni (#11): seçim sırasından bağımsız
+    expect(istek.kiyas[0]).toEqual({ hesap_a: "10", hesap_b: "11" });
+    expect(kart.getByText(/A \(önce\): URUN-001/)).toBeInTheDocument();
+    expect(kart.getByText(/B \(sonra\): URUN-001/)).toBeInTheDocument();
     expect(await kart.findByText("Malzeme toplamı")).toBeInTheDocument();
     const mal = within(kart.getByRole("region", { name: "Toplamlar" }));
     expect(mal.getByText("1,7500 TL")).toBeInTheDocument();
@@ -82,17 +85,30 @@ describe("Arşiv", () => {
     const satirlar = within(kart.getByRole("region", { name: "Malzeme satırları" }));
     expect(satirlar.getByText("Yalnız B")).toBeInTheDocument();
     expect(satirlar.getByText("KAP-01")).toBeInTheDocument();
-    expect(kart.queryByRole("status")).not.toBeInTheDocument();   // uyarı yok
+    expect(kart.queryByRole("status")).not.toBeInTheDocument(); // uyarı yok
     // üçüncü seçim engellenir
-    expect(screen.queryAllByRole("checkbox").filter((c) => !(c as HTMLInputElement).checked).every((c) => (c as HTMLInputElement).disabled)).toBe(true);
+    expect(
+      screen
+        .queryAllByRole("checkbox")
+        .filter((c) => !(c as HTMLInputElement).checked)
+        .every((c) => (c as HTMLInputElement).disabled),
+    ).toBe(true);
+  });
+
+  it("eski kayıt önce seçilse de A = eski, B = yeni gider", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Arsiv />);
+    await u.click(await screen.findByLabelText("Kıyas için seç URUN-001 2026-09-15"));
+    await u.click(screen.getByLabelText("Kıyas için seç URUN-001 2026-10-21"));
+    await u.click(screen.getByRole("button", { name: "Kıyasla" }));
+    await screen.findByRole("region", { name: "Kıyas" });
+    await waitFor(() => expect(istek.kiyas[0]).toEqual({ hesap_a: "10", hesap_b: "11" }));
   });
 
   it("farklı ürün uyarısı kıyas kartında görünür", async () => {
     const u = userEvent.setup();
     sunucu.use(
-      http.get("*/api/v1/arsiv/kiyas", () =>
-        HttpResponse.json({ ...arsivKiyasi, uyari: "Farklı ürünler kıyaslanıyor: A ve B." }),
-      ),
+      http.get("*/api/v1/arsiv/kiyas", () => HttpResponse.json({ ...arsivKiyasi, uyari: "Farklı ürünler kıyaslanıyor: A ve B." })),
     );
     kurSayfa(<Arsiv />);
     await u.click(await screen.findByLabelText("Kıyas için seç URUN-001 2026-10-21"));
@@ -130,7 +146,11 @@ describe("Arşiv", () => {
 
   it("kilit hatasında diyalog açık kalır", async () => {
     const u = userEvent.setup();
-    sunucu.use(http.post("*/api/v1/senaryolar/:id/kilitle", () => HttpResponse.json({ hata: "dogrulama", mesaj: "senaryo zaten kilitli", alanlar: {} }, { status: 422 })));
+    sunucu.use(
+      http.post("*/api/v1/senaryolar/:id/kilitle", () =>
+        HttpResponse.json({ hata: "dogrulama", mesaj: "senaryo zaten kilitli", alanlar: {} }, { status: 422 }),
+      ),
+    );
     kurSayfa(<Arsiv />);
     await u.click(await screen.findByRole("button", { name: "Kilitle" }));
     const d = await screen.findByRole("dialog");

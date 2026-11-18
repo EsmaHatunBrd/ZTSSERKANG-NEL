@@ -145,13 +145,13 @@ def _satirlara(baslik: list, govde, basliklar: tuple = BASLIKLAR, satir_fn=None,
     sonuc = []
     for no, hucreler in govde:
         if no - 1 > MAKS_SATIR:   # no = dosyadaki satır (başlık 1); bellek şişmesin diye daha fazla ayrıştırılmaz
-            raise DogrulamaHatasi(f"en fazla {MAKS_SATIR} satır yüklenebilir", {"en_fazla_satir": MAKS_SATIR})
+            raise DogrulamaHatasi(f"En fazla {MAKS_SATIR} satır yüklenebilir.", {"en_fazla_satir": MAKS_SATIR})
         ham = {ad: (hucreler[i] if i < len(hucreler) else None) for i, ad in sutun.items()}
         if all(v is None or str(v).strip() == "" for v in ham.values()):
             continue
         sonuc.append(satir_fn(no, ham))
     if not sonuc:
-        raise DogrulamaHatasi("dosyada veri satırı yok; mevcut veri değiştirilmedi", kod="bos_dosya")
+        raise DogrulamaHatasi("Dosyada veri satırı yok; mevcut veri değiştirilmedi.", kod="bos_dosya")
     return sonuc
 
 
@@ -161,7 +161,7 @@ def _csv_oku(icerik: bytes, **bicim) -> list[dict]:
     except UnicodeDecodeError:
         metin = icerik.decode("cp1254", errors="replace")
     if not metin.strip():
-        raise DogrulamaHatasi("dosya boş")
+        raise DogrulamaHatasi("Dosya boş.")
     ilk = metin.splitlines()[0]
     ayirac = ";" if ilk.count(";") >= ilk.count(",") and ";" in ilk else ","
     okuyucu = csv.reader(io.StringIO(metin), delimiter=ayirac)
@@ -173,7 +173,7 @@ def _xlsx_oku(icerik: bytes, sablon: str = "satis_gecmisi", **bicim) -> list[dic
     try:
         wb = load_workbook(io.BytesIO(icerik), read_only=True, data_only=True)
     except (zipfile.BadZipFile, InvalidFileException, KeyError):
-        raise DogrulamaHatasi("dosya geçerli bir .xlsx değil")
+        raise DogrulamaHatasi("Dosya geçerli bir .xlsx değil.")
     try:
         from .excel_ortak import sablon_denetle
         from .yukleme_guvenligi import veri_sayfalari
@@ -182,7 +182,7 @@ def _xlsx_oku(icerik: bytes, sablon: str = "satis_gecmisi", **bicim) -> list[dic
         satirlar = (veri[0] if veri else wb.worksheets[0]).iter_rows(values_only=True)
         baslik = next(satirlar, None)
         if baslik is None:
-            raise DogrulamaHatasi("dosya boş")
+            raise DogrulamaHatasi("Dosya boş.")
         return _satirlara(list(baslik), ((i, list(r)) for i, r in enumerate(satirlar, start=2)), **bicim)
     finally:
         wb.close()
@@ -191,7 +191,7 @@ def _xlsx_oku(icerik: bytes, sablon: str = "satis_gecmisi", **bicim) -> list[dic
 def oku(icerik: bytes, dosya_adi: str = "", **bicim) -> list[dict]:
     """`bicim`: `_satirlara` seçenekleri (basliklar, satir_fn, istege_bagli); verilmezse satış geçmişi biçimi."""
     if len(icerik) > MAKS_BAYT:
-        raise DogrulamaHatasi("dosya 10 MB'den büyük")
+        raise DogrulamaHatasi("Dosya 10 MB'den büyük.")
     ad = (dosya_adi or "").lower()
     sablon = bicim.pop("sablon", "satis_gecmisi")   # şablon kimliği (yanlış ekrana yüklenen şablonu tanımak için)
     if ad.endswith(".csv") or (not ad.endswith(".xlsx") and not icerik.startswith(b"PK")):

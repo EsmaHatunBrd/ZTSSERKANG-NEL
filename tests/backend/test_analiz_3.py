@@ -98,7 +98,7 @@ def test_karlilik_cikisi_degismedi(istemci, oturum):
     sid = _hazirla(istemci, oturum)
     d = istemci.get(f"{A}/analiz/karlilik?senaryo={sid}").json()
     assert set(d) == {"esik_marj", "esik_adet", "adet_kaynagi", "ozet", "kayitlar"}
-    alanlar = {"kod", "ad", "aile", "adet", "maliyet", "satis_fiyati", "marj", "fiyat_kaynagi", "yillik_kar", "bolge", "hata", "maliyet_kaynagi"}
+    alanlar = {"kod", "ad", "aile", "aile_anahtari", "adet", "maliyet", "satis_fiyati", "marj", "fiyat_kaynagi", "yillik_kar", "bolge", "hata", "maliyet_kaynagi"}
     assert all(set(x) == alanlar for x in d["kayitlar"])   # iç alanlar (_gecen_yil_fiyat, _hesap_fiyati) sızmaz
     k = {x["kod"]: x for x in d["kayitlar"]}
     assert D_(k["T4"]["satis_fiyati"]) == 15 and k["T4"]["fiyat_kaynagi"] == "satis_gecmisi" and k["T3"]["fiyat_kaynagi"] == "hesap"

@@ -81,11 +81,11 @@ def durum(s: Session, donem_id: int) -> dict:
 def _sablon_denetle(icerik: bytes) -> list[str]:
     """SMM dönem Excel'i mi (zorunlu sayfalar var, aylık kaynak şablonu değil)? Sayfa adlarını döner; değilse 422."""
     if len(icerik) > MAKS_BAYT:
-        raise DogrulamaHatasi("dosya 60 MB'den büyük")
+        raise DogrulamaHatasi("Dosya 60 MB'den büyük.")
     try:
         wb = load_workbook(io.BytesIO(icerik), read_only=True)
     except Exception:   # bozuk / .xlsx olmayan dosya: hangi istisna olursa olsun anlaşılır red
-        raise DogrulamaHatasi("dosya geçerli bir .xlsx değil (Excel'de .xlsx olarak kaydedip yeniden deneyin)", kod="gecersiz_dosya")
+        raise DogrulamaHatasi("Dosya geçerli bir .xlsx değil (Excel'de .xlsx olarak kaydedip yeniden deneyin).", kod="gecersiz_dosya")
     try:
         _sablon_degil(wb)
         bul = _sayfa_bulucu(wb)

@@ -8,13 +8,24 @@ interface Props {
   children: ReactNode;
   onayMetni?: string;
   bekliyor?: boolean;
+  /** Onay düğmesini pasif tutar (ör. zorunlu neden boşken). */
+  onayPasif?: boolean;
   hata?: string | null;
   onOnayla: () => void;
   onVazgec: () => void;
 }
 
 /** Geri alınması zor yazma işlemleri için ortak onay penceresi; hata olursa açık kalır ve role=alert gösterir. */
-export function OnayDiyalogu({ baslik, children, onayMetni = "Onayla", bekliyor = false, hata = null, onOnayla, onVazgec }: Props) {
+export function OnayDiyalogu({
+  baslik,
+  children,
+  onayMetni = "Onayla",
+  bekliyor = false,
+  onayPasif = false,
+  hata = null,
+  onOnayla,
+  onVazgec,
+}: Props) {
   return (
     <Dialog open onOpenChange={(a) => !a && onVazgec()}>
       <DialogContent>
@@ -31,7 +42,7 @@ export function OnayDiyalogu({ baslik, children, onayMetni = "Onayla", bekliyor 
           <Button type="button" variant="outline" onClick={onVazgec}>
             Vazgeç
           </Button>
-          <Button type="button" disabled={bekliyor} onClick={onOnayla}>
+          <Button type="button" disabled={bekliyor || onayPasif} onClick={onOnayla}>
             {onayMetni}
           </Button>
         </DialogFooter>

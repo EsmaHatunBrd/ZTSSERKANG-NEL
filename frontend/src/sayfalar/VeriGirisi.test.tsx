@@ -10,6 +10,8 @@ import { kurSayfa } from "@/test/kur-ayarlar";
 import { MENU, MENU_GRUPLARI } from "@/bilesenler/Kabuk";
 import { rotalar } from "@/yonlendirme";
 import { bugunIso } from "@/yardimcilar/tarih";
+import { OturumSaglayici } from "@/bilesenler/GirisKapisi";
+import type { GirisKullanicisi } from "@/api/sorgular/kimlik";
 import VeriGirisi from "./VeriGirisi";
 
 beforeAll(() => sunucu.listen({ onUnhandledFrame: "error" }));
@@ -45,7 +47,7 @@ describe("VeriGirisi", () => {
     await u.selectOptions(secim, "kur.USD");
     expect(within(k).getByText(/Geçerli değer/)).toHaveTextContent("50 TL");
     await u.click(within(k).getByRole("button", { name: "Değeri değiştir" }));
-    const d = await screen.findByRole("dialog", { name: "Değiştir: kur.USD" });
+    const d = await screen.findByRole("dialog", { name: "Değiştir: USD/TL kuru" });
     const deger = within(d).getByLabelText(/Yeni değer/);
     await u.clear(deger);
     await u.type(deger, "55");
@@ -61,7 +63,7 @@ describe("VeriGirisi", () => {
         kapsam_tipi: "genel",
       },
     });
-    expect(await screen.findByRole("status")).toHaveTextContent("kur.USD değeri kaydedildi.");
+    expect(await screen.findByRole("status")).toHaveTextContent("USD/TL kuru değeri kaydedildi.");
     // Salt okunur dağıtım çarpanları seçenek olarak sunulmaz.
     expect(within(secim).queryByRole("option", { name: /dagitim_carpani/ })).not.toBeInTheDocument();
   });
@@ -392,5 +394,28 @@ describe("VeriGirisi — Yeni ürün kartı (Faz 5c)", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Ürünü kaydet" })).toBeEnabled());
     await waitFor(() => expect(havuz).toBeEnabled());
     expect(screen.getByRole("group", { name: "Düzenleme kilidi" })).toHaveTextContent("Düzenleme açık");
+  });
+
+  it("D9: satın alma rolünde yalnız Yeni malzeme ve Malzeme fiyatı kartları yazılabilir", async () => {
+    // Test kurulumu kilidi açık başlatır: rol kuralı açık kilide rağmen diğer kartları pasif tutmalı.
+    const satinAlma = {
+      id: 5,
+      kullanici_adi: "satinalma1",
+      ad: "Satın Alma Bir",
+      rol: "satin_alma",
+      aktif: true,
+      sifre_degismeli: false,
+    } as unknown as GirisKullanicisi;
+    kurSayfa(
+      <OturumSaglayici deger={{ girisZorunlu: true, kullanici: satinAlma }}>
+        <VeriGirisi />
+      </OturumSaglayici>,
+    );
+    await screen.findByRole("region", { name: "Gider havuzu" });
+    expect(screen.getByTestId("duzenleme-engel")).toHaveTextContent("yalnız Yeni malzeme ve Malzeme fiyatı");
+    await waitFor(() => expect(within(kart("Malzeme fiyatı")).getByLabelText("Malzeme ara")).toBeEnabled());
+    expect(within(kart("Gider havuzu")).getByLabelText("Havuz")).toBeDisabled();
+    expect(within(kart("Üretim bilgileri (ürün)")).getByLabelText("Ürün")).toBeDisabled();
+    expect(within(kart("Hat kapasitesi (Üretim Adetleri)")).getByLabelText("Kayıt")).toBeDisabled();
   });
 });

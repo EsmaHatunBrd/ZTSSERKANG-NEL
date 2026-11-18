@@ -87,7 +87,7 @@ _SAYILAR = {"alim": (("giris", "alim_miktar"), ("tutar", "alim_tutar"), ("cikis"
 
 def _gecerli_kaynak(kaynak: str) -> dict:
     if kaynak not in KAYNAKLAR:
-        raise DogrulamaHatasi("bilinmeyen veri kaynağı", {"kaynak": kaynak, "gecerli": list(KAYNAKLAR)})
+        raise DogrulamaHatasi(f"Bilinmeyen veri kaynağı: {kaynak}.", {"kaynak": kaynak, "gecerli": list(KAYNAKLAR)})
     return KAYNAKLAR[kaynak]
 
 
@@ -225,7 +225,7 @@ def _hazirla(s: Session, d: m.SmmDonem, kaynak: str, icerik: bytes) -> dict:
         mevcut = _mevcut_mizan(d, kaynak)
         _karsilastir(ozet, {h: {"b": v} for h, v in mevcut.items()}, {x["hesap"]: {"b": x["bakiye"]} for x in satirlar})
         if kaynak == "gider_mizan" and satirlar and not ({"720", "730"} & {x["hesap"] for x in satirlar}):
-            raise DogrulamaHatasi("gider mizanında 720 / 730 bulunamadı", {"hesaplar": [x["hesap"] for x in satirlar][:20]}, kod="mizan_hesap_yok")
+            raise DogrulamaHatasi("Gider mizanında 720 / 730 hesapları bulunamadı.", {"hesaplar": [x["hesap"] for x in satirlar][:20]}, kod="mizan_hesap_yok")
         elle = elle_sayisi(d, kaynak)
         if elle:
             ozet.uyarilar.append(f"{elle} elle girilmiş / düzeltilmiş mizan satırı var; yükleme bunları siler (eski değerler günlükte kalır).")
@@ -451,7 +451,7 @@ def ayarlar_guncelle(s: Session, donem_id: int, finansman: Decimal | None = None
     kilit_denetle(d)
     for ad, v in (("finansman", finansman), ("gider_720", gider_720), ("gider_730", gider_730)):
         if v is not None and v < 0:
-            raise DogrulamaHatasi("tutar eksi olamaz", {ad: str(v)})
+            raise DogrulamaHatasi("Tutar eksi olamaz.", {ad: str(v)})
     eski = {"finansman": str(d.finansman or SIFIR), **{f"gider_{h}": (d.gider_mizan or {}).get(h) for h in ("720", "730")}}
     if finansman is not None:
         d.finansman = finansman
@@ -504,14 +504,14 @@ def kilit(s: Session, donem_id: int, kilitli: bool, kullanici: str = "sistem", z
         if kilitli:
             eksikler = kapanis_eksikleri(s, donem_id)
             if eksikler and not zorla:
-                raise CatismaHatasi(f"{donem_adi(d)} kapatılmadan önce eksikler var", {"eksikler": eksikler}, kod="kapanis_eksik")
+                raise CatismaHatasi(f"{donem_adi(d)} kapatılmadan önce eksikler var: {'; '.join(eksikler)}.", {"eksikler": eksikler}, kod="kapanis_eksik")
             if eksikler:
                 kayit.update(zorla=True, eksikler=eksikler)
         else:
             sonrakiler = sonraki_donemler(s, d)
             kapali = next((x for x in sonrakiler if x.kilitli), None)
             if kapali is not None:
-                raise CatismaHatasi(f"önce {donem_adi(kapali)} kilidini açın; açılışı bu dönemden devralındı", {"donem_id": kapali.id},
+                raise CatismaHatasi(f"Önce {donem_adi(kapali)} kilidini açın; açılışı bu dönemden devralındı.", {"donem_id": kapali.id},
                                     kod="sonraki_kilitli")
             if sonrakiler:
                 uyari = f"{donem_adi(sonrakiler[0])} açılışı bu dönemden devralındı; değişiklik sonrası devri yenileyin"

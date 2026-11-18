@@ -17,6 +17,7 @@ import {
   kalanMetni,
   useDuzenlemeKilidi,
   useYazmaKilidi,
+  YazmaAlaniSaglayici,
 } from "./DuzenlemeKilidi";
 import { OturumSaglayici } from "./GirisKapisi";
 
@@ -114,21 +115,67 @@ describe("Düzenleme kilidi şeridi", () => {
         </OturumSaglayici>
       </MemoryRouter>,
     );
-    expect(screen.getByRole("group", { name: "Düzenleme kilidi" })).toHaveTextContent("İzleyici rolüyle değişiklik yapılamaz");
+    expect(screen.getByRole("group", { name: "Düzenleme kilidi" })).toHaveTextContent("Salt okunur: izleyici rolü değişiklik yapamaz");
     expect(screen.queryByRole("button", { name: "Düzenlemeyi aç" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Kilitle" })).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Miktar" })).toBeDisabled();
   });
 
-  it("satın alma rolü kilidi açabilir", () => {
-    render(
-      <MemoryRouter>
-        <OturumSaglayici deger={{ girisZorunlu: true, kullanici: kullanici("satin_alma") }}>
+  describe("D9: rol → yazma alanı", () => {
+    const ciz = (rol: Rol | null, alan?: "malzeme") => {
+      const icerik = alan ? (
+        <YazmaAlaniSaglayici alan={alan}>
           <Deneme />
-        </OturumSaglayici>
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("button", { name: "Düzenlemeyi aç" })).toBeEnabled();
+        </YazmaAlaniSaglayici>
+      ) : (
+        <Deneme />
+      );
+      return render(
+        <MemoryRouter>
+          <OturumSaglayici deger={{ girisZorunlu: rol !== null, kullanici: rol ? kullanici(rol) : null }}>{icerik}</OturumSaglayici>
+        </MemoryRouter>,
+      );
+    };
+    const acikKayit = () => sessionStorage.setItem(DUZENLEME_ANAHTARI, String(Date.now() + DUZENLEME_SURESI_MS));
+
+    it("satın alma: malzeme alanında kilidi açabilir; diğer sayfalarda salt okunur ve açık kilit de yazdırmaz", () => {
+      const { unmount } = ciz("satin_alma", "malzeme");
+      expect(screen.getByRole("button", { name: "Düzenlemeyi aç" })).toBeEnabled();
+      unmount();
+      acikKayit(); // Malzeme Fiyatları'nda açılmış kilit
+      const ikinci = ciz("satin_alma", "malzeme");
+      expect(screen.getByTestId("bayrak")).toHaveTextContent("acik");
+      ikinci.unmount();
+      ciz("satin_alma"); // ör. Parametreler
+      expect(screen.getByRole("group", { name: "Düzenleme kilidi" })).toHaveTextContent(
+        "Salt okunur: satın alma rolü bu sayfada değişiklik yapamaz",
+      );
+      expect(screen.queryByRole("button", { name: "Düzenlemeyi aç" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Kilitle" })).not.toBeInTheDocument();
+      expect(screen.getByTestId("bayrak")).toHaveTextContent("kilitli");
+      expect(screen.getByRole("textbox", { name: "Miktar" })).toBeDisabled();
+    });
+
+    it("izleyici malzeme alanında da salt okunurdur", () => {
+      acikKayit();
+      ciz("izleyici", "malzeme");
+      expect(screen.getByRole("group", { name: "Düzenleme kilidi" })).toHaveTextContent("Salt okunur: izleyici rolü değişiklik yapamaz");
+      expect(screen.queryByRole("button", { name: "Düzenlemeyi aç" })).not.toBeInTheDocument();
+      expect(screen.getByTestId("bayrak")).toHaveTextContent("kilitli");
+    });
+
+    it("muhasebe ve giriş kapalı kurulum her alanda değişmeden yazar", () => {
+      acikKayit();
+      const a = ciz("muhasebe");
+      expect(screen.getByTestId("bayrak")).toHaveTextContent("acik");
+      expect(screen.getByRole("button", { name: "Kilitle" })).toBeInTheDocument();
+      a.unmount();
+      const b = ciz("muhasebe", "malzeme");
+      expect(screen.getByTestId("bayrak")).toHaveTextContent("acik");
+      b.unmount();
+      ciz(null); // GIRIS_ZORUNLU=0
+      expect(screen.getByTestId("bayrak")).toHaveTextContent("acik");
+    });
   });
 
   it("senaryo kilitliyken açılamaz ve nedenini söyler", async () => {

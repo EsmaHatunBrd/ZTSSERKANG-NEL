@@ -683,7 +683,7 @@ describe("UrunMaliyeti son tur", () => {
     expect(JSON.stringify(son(istekler.hesapla))).not.toContain('"fire"');
   });
 
-  it("F5: sunucu hata mesajına alan ayrıntıları eklenir", async () => {
+  it("F5 → D6: sunucu hata mesajı teknik alan eki olmadan gösterilir", async () => {
     kur({
       hesaplaHatasi: (g) =>
         (g.override as { fire?: Record<string, string> } | undefined)?.fire?.["1"]
@@ -692,7 +692,9 @@ describe("UrunMaliyeti son tur", () => {
     });
     const tablo = await tabloHazir();
     await fireYaz(tablo, /Fire % .*Pet Şişe/, "9");
-    expect(await screen.findByRole("alert")).toHaveTextContent("İstek geçersiz — override.fire: çok büyük");
+    const uyari = await screen.findByRole("alert");
+    expect(uyari).toHaveTextContent("İstek geçersiz");
+    expect(uyari).not.toHaveTextContent("override.fire");
   });
 
   it("I1: fire sütunu 'Fire %' başlığı taşır", async () => {
@@ -1383,13 +1385,13 @@ describe("UrunMaliyeti — reçetesiz ürün (Faz 5c)", () => {
   /** `GET recete` boş yapı (versiyon 0) döner; reçete POST edilince gerçek reçeteye ve `senaryoda: true`ya geçer. */
   function recetesizIsleyiciler() {
     let kayitli = false;
-    const gonderilen: Record<string, unknown>[][] = [];
+    const gonderilen: unknown[] = [];
     const ek: RequestHandler[] = [
       http.get("*/api/v1/urunler/:kod/recete", () =>
         kayitli ? HttpResponse.json(urunReceteleri) : HttpResponse.json({ id: null, versiyon: 0, kaynak: "", satirlar: [] }),
       ),
       http.post("*/api/v1/urunler/:kod/recete", async ({ request }) => {
-        gonderilen.push((await request.json()) as Record<string, unknown>[]);
+        gonderilen.push(await request.json());
         kayitli = true;
         return HttpResponse.json({ id: 11, versiyon: 1, satir_sayisi: 1 }, { status: 201 });
       }),
@@ -1432,12 +1434,16 @@ describe("UrunMaliyeti — reçetesiz ürün (Faz 5c)", () => {
     await user.type(screen.getByLabelText("Malzeme kodu 1"), "M-001");
     await user.type(screen.getByLabelText("Ad 1"), "Pet Şişe 500 ml");
     await user.type(screen.getByLabelText("Miktar 1"), "1");
+    await user.type(screen.getByLabelText("Neden (zorunlu)"), "İlk reçete");
     await user.click(screen.getByRole("button", { name: "Reçeteyi kaydet" }));
     const onay = await screen.findByRole("dialog", { name: "İlk reçete kaydedilecek" });
     await waitFor(() => expect(onay).toHaveTextContent(/ilk reçete versiyonu 1 satırla açılır ve ürün çalışmaya dahil olur/));
     await user.click(within(onay).getByRole("button", { name: "Onayla ve kaydet" }));
     await waitFor(() => expect(gonderilen).toHaveLength(1));
-    expect(gonderilen[0]).toEqual([{ malzeme_kodu: "M-001", ad: "Pet Şişe 500 ml", miktar: "1", dugum_tipi: "yaprak" }]);
+    expect(gonderilen[0]).toEqual({
+      neden: "İlk reçete",
+      satirlar: [{ malzeme_kodu: "M-001", ad: "Pet Şişe 500 ml", miktar: "1", dugum_tipi: "yaprak" }],
+    });
 
     // Reçete oluşunca hesap koşar, tablo gelir, şerit kalkar.
     await tabloHazir();
@@ -1679,5 +1685,131 @@ describe("Düzenleme kilidi: ürün ekranı", () => {
     await user.click(await screen.findByRole("button", { name: "Evet, aç" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Kaydet" })).toBeEnabled());
     expect(screen.getByText("1 satırda değişiklik · 1 fire")).toBeInTheDocument();
+  });
+});
+
+describe("UrunMaliyeti — reçeteye satır ekle / sil (D3)", () => {
+  it("Sil ve Satır ekle taslağa girer: canlı hesap override'ı, sayaç, Kaydet listesi ve tek atomik Kaydet gövdesi", async () => {
+    const istekler = kur();
+    const tablo = await tabloHazir();
+    const user = userEvent.setup();
+
+    // Satır 3 (Kapak) silinir
+    await user.click(within(satir(tablo, "Kapak")).getByRole("button", { name: "Satırı sil — Kapak" }));
+    await waitFor(() => expect(son(istekler.hesapla).override).toMatchObject({ silinen_satirlar: [3] }));
+    expect(screen.getByText("1 satırda değişiklik")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Silinecek satırlar" })).toHaveTextContent("M-77");
+
+    // Satır ekle: malzeme araması ile seç, miktar ve fire gir
+    await user.click(screen.getByRole("button", { name: "Satır ekle" }));
+    const form = screen.getByRole("form", { name: "Reçeteye satır ekle" });
+    await user.type(within(form).getByLabelText("Malzeme kodu ya da adı"), "kapak");
+    await user.click(await within(form).findByRole("button", { name: /M-002/ }));
+    expect(within(form).getByLabelText("Cinsi (ad)")).toHaveValue("Kapak 38 mm");
+    expect(within(form).getByLabelText("Birim")).toHaveValue("adet");
+    await user.type(within(form).getByLabelText("Miktar"), "2");
+    await user.type(within(form).getByLabelText("Fire % (boşsa kural)"), "150");
+    await user.click(within(form).getByRole("button", { name: "Satırı ekle" }));
+    expect(within(form).getByText("Fire % 0 ile 100 arasında olmalı (100 hariç)")).toBeInTheDocument();
+    await user.clear(within(form).getByLabelText("Fire % (boşsa kural)"));
+    await user.type(within(form).getByLabelText("Fire % (boşsa kural)"), "1,5");
+    await user.click(within(form).getByRole("button", { name: "Satırı ekle" }));
+    expect(screen.queryByRole("form", { name: "Reçeteye satır ekle" })).not.toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(son(istekler.hesapla).override).toMatchObject({
+        silinen_satirlar: [3],
+        eklenen_satirlar: [
+          { malzeme_kodu: "M-002", ad: "Kapak 38 mm", miktar: "2", birim: "adet", dugum_tipi: "yaprak", fire_override: "0.015" },
+        ],
+      }),
+    );
+    expect(screen.getByText("2 satırda değişiklik")).toBeInTheDocument();
+
+    // Kaydet penceresi: "Satır silindi" / "Satır eklendi"
+    await user.click(screen.getByRole("button", { name: "Kaydet" }));
+    const diyalog = await screen.findByRole("dialog");
+    const liste = within(diyalog).getByRole("table", { name: "Değişiklik listesi" });
+    expect(liste.querySelector('[data-alan="silinen.3"]')).toHaveTextContent("Satır silindi: M-77 · Kapak");
+    expect(liste.querySelector('[data-alan="eklenen.0"]')).toHaveTextContent("Satır eklendi: M-002 · Kapak 38 mm");
+    expect(liste.querySelector('[data-alan="eklenen.0"]')).toHaveTextContent("fire 1,5 %");
+    const onay = within(diyalog).getByRole("button", { name: "Onayla ve kaydet" });
+    expect(onay).toBeDisabled(); // neden zorunlu
+    await user.type(within(diyalog).getByLabelText("Neden"), "Kapak değişti");
+    await user.click(onay);
+    await waitFor(() => expect(sonExcel.topluKaydet).toHaveLength(1));
+    const govde = sonExcel.topluKaydet[0].govde;
+    expect(govde).toMatchObject({ senaryo_id: 1, neden: "Kapak değişti", hesabi_kaydet: true });
+    const recete = govde.recete as Record<string, unknown>[];
+    expect(recete.map((r) => r.malzeme_kodu)).toEqual(["M-001", "M-050", "M-002"]);
+    expect(recete[1]).toMatchObject({ brut_miktar_elle: "0.38", birim_fiyat_elle: "12.4" }); // mevcut satır aynen korunur
+    expect(recete[2]).toEqual({
+      malzeme_kodu: "M-002",
+      ad: "Kapak 38 mm",
+      miktar: "2",
+      birim: "adet",
+      dugum_tipi: "yaprak",
+      fire_override: "0.015",
+    });
+    expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument();
+  });
+
+  it("Vazgeç eklenen ve silinen satırları da temizler; silmeyi geri al taslaktan düşürür", async () => {
+    const istekler = kur();
+    const tablo = await tabloHazir();
+    const user = userEvent.setup();
+    await user.click(within(satir(tablo, "Kapak")).getByRole("button", { name: "Satırı sil — Kapak" }));
+    await waitFor(() => expect(son(istekler.hesapla).override).toMatchObject({ silinen_satirlar: [3] }));
+    await user.click(screen.getByRole("button", { name: "Silmeyi geri al — Satır 3" }));
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument());
+    await waitFor(() => expect(son(istekler.hesapla).override).toBeUndefined());
+
+    await user.click(within(satir(tablo, "Kapak")).getByRole("button", { name: "Satırı sil — Kapak" }));
+    await user.click(screen.getByRole("button", { name: "Satır ekle" }));
+    const form = screen.getByRole("form", { name: "Reçeteye satır ekle" });
+    // Tam kod öneriden seçilmeden yazılsa da sistemde varsa seçilmiş sayılır.
+    await user.type(within(form).getByLabelText("Malzeme kodu ya da adı"), "m-002");
+    await user.type(within(form).getByLabelText("Miktar"), "1");
+    await user.click(within(form).getByRole("button", { name: "Satırı ekle" }));
+    expect(await screen.findByText("2 satırda değişiklik")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Vazgeç" }));
+    expect(screen.queryByRole("region", { name: "Kaydedilmemiş değişiklikler" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Silinecek satırlar" })).not.toBeInTheDocument();
+  });
+
+  it("D3b: sistemde olmayan kod eklenmez; alanın altında Veri Girişi yönlendirmesi çıkar", async () => {
+    const istekler = kur();
+    await tabloHazir();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Satır ekle" }));
+    const form = screen.getByRole("form", { name: "Reçeteye satır ekle" });
+    const kodAlani = within(form).getByLabelText("Malzeme kodu ya da adı");
+    await user.type(kodAlani, "Etiket 370");
+    await user.type(within(form).getByLabelText("Miktar"), "1");
+    await user.click(within(form).getByRole("button", { name: "Satırı ekle" }));
+    expect(await within(form).findByText("Bu kodda malzeme yok; önce Veri Girişi › Yeni malzeme ile açın.")).toBeInTheDocument();
+    expect(kodAlani).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("form", { name: "Reçeteye satır ekle" })).toBeInTheDocument();
+    expect(screen.queryByText(/satırda değişiklik/)).not.toBeInTheDocument();
+    expect(son(istekler.hesapla)?.override).toBeUndefined();
+
+    // Ad parçası ("kapak") öneri bulur ama tam kod değildir: yine eklenmez.
+    await user.clear(kodAlani);
+    expect(within(form).queryByText(/Bu kodda malzeme yok/)).not.toBeInTheDocument();
+    await user.type(kodAlani, "kapak");
+    await user.click(within(form).getByRole("button", { name: "Satırı ekle" }));
+    expect(await within(form).findByText("Bu kodda malzeme yok; önce Veri Girişi › Yeni malzeme ile açın.")).toBeInTheDocument();
+  });
+
+  it("satır ekle formu zorunlu alanları Türkçe hatayla gösterir", async () => {
+    kur();
+    await tabloHazir();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Satır ekle" }));
+    const form = screen.getByRole("form", { name: "Reçeteye satır ekle" });
+    await user.click(within(form).getByRole("button", { name: "Satırı ekle" }));
+    expect(within(form).getByText("Malzeme kodu zorunlu")).toBeInTheDocument();
+    expect(within(form).getByText("Miktar zorunlu")).toBeInTheDocument();
+    expect(within(form).getByLabelText("Miktar")).toHaveAttribute("aria-invalid", "true");
   });
 });

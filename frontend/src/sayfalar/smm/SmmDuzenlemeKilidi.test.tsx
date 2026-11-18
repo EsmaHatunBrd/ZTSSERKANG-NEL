@@ -365,6 +365,6 @@ describe("SMM düzenleme kilidi", () => {
     kurSayfa(oturumla("izleyici", <SmmSureler />));
     await screen.findByRole("button", { name: "Düzenle — 03-1" });
     expect(screen.queryByRole("button", { name: "Düzenlemeyi aç" })).not.toBeInTheDocument();
-    expect(screen.getByTestId("duzenleme-kilidi")).toHaveTextContent("İzleyici rolüyle değişiklik yapılamaz.");
+    expect(screen.getByTestId("duzenleme-kilidi")).toHaveTextContent("Salt okunur: izleyici rolü değişiklik yapamaz");
   });
 });

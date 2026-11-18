@@ -14,7 +14,7 @@ IZLENEN = ("ad", "tip", "birim", "para_birimi", "zs")   # aktif ayrı işlem: ma
 def _malzeme(s: Session, kod: str) -> m.Malzeme:
     mz = s.scalar(select(m.Malzeme).where(m.Malzeme.kod == kod))
     if mz is None:
-        raise BulunamadiHatasi(f"malzeme yok: {kod}", {"kod": kod})
+        raise BulunamadiHatasi(f"{kod} kodlu malzeme bulunamadı.", {"kod": kod})
     return mz
 
 

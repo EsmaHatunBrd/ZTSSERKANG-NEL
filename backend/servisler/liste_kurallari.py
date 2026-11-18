@@ -19,7 +19,7 @@ BERRAK = "Berrak"
 def pazar_dogrula(pazar: str | None) -> str:
     p = (pazar or "yurtici").strip()
     if p not in PAZARLAR:
-        raise DogrulamaHatasi("pazar 'yurtici' ya da 'yurtdisi' olmalı", {"pazar": pazar})
+        raise DogrulamaHatasi("Pazar Yurtiçi ya da Yurtdışı olmalı.", {"pazar": pazar})
     return p
 
 
@@ -27,9 +27,9 @@ def bolen_dogrula(b) -> Decimal:
     try:
         b = Decimal(str(b))
     except ArithmeticError:
-        raise DogrulamaHatasi("bölen sayı olmalı (ör. 0,63)", {"bolen": str(b)}) from None
+        raise DogrulamaHatasi("Bölen bir sayı olmalı (ör. 0,63).", {"bolen": str(b)}) from None
     if not b.is_finite() or not (Decimal(0) < b <= Decimal(1)):
-        raise DogrulamaHatasi("bölen 0'dan büyük, 1'den küçük ya da eşit olmalı (ör. 0,63)", {"bolen": str(b)})
+        raise DogrulamaHatasi(f"Bölen 0'dan büyük ve en fazla 1 olmalı (ör. 0,63); girilen değer {str(b).replace('.', ',')}.", {"bolen": str(b)})
     return b
 
 
@@ -42,7 +42,7 @@ def yuvarlama_dogrula(adim) -> Decimal:
     for sec in YUVARLAMA_SECENEKLERI:
         if a is not None and a.is_finite() and a == Decimal(sec):
             return Decimal(sec)
-    raise DogrulamaHatasi("yuvarlama adımı şunlardan biri olmalı: " + ", ".join(s.replace(".", ",") for s in YUVARLAMA_SECENEKLERI),
+    raise DogrulamaHatasi("Yuvarlama adımı şunlardan biri olmalı: " + ", ".join(s.replace(".", ",") for s in YUVARLAMA_SECENEKLERI) + ".",
                           {"yuvarlama": str(adim)})
 
 
@@ -79,5 +79,5 @@ def marka_normalle(marka: str | None) -> str:
     Berrak'ın yazımı kanonikleşir ("BERRAK" -> "Berrak")."""
     m = (marka or "").strip()
     if len(m) > 64:
-        raise DogrulamaHatasi("marka en fazla 64 karakter olabilir", {"marka": m[:64]})
+        raise DogrulamaHatasi("Marka en fazla 64 karakter olabilir.", {"marka": m[:64]})
     return BERRAK if berrak_mi(m) else m

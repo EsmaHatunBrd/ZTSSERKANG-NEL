@@ -26,7 +26,7 @@ export async function dosyaIndir(adres: string, varsayilanAd: string, secenek: R
     throw new Error("Sunucuya ulaşılamadı");
   }
   if (!yanit.ok) {
-    let mesaj = `Dosya hazırlanamadı (HTTP ${yanit.status})`;
+    let mesaj = `Dosya hazırlanamadı (hata kodu ${yanit.status})`;
     try {
       const g = (await yanit.json()) as { mesaj?: unknown };
       if (typeof g.mesaj === "string") mesaj = g.mesaj;

@@ -8,7 +8,9 @@ import { useParametreEkle, useParametreler, useParametreTanimlari } from "@/api/
 import type { GiderHavuzu, Malzeme, ParametreTanimi } from "@/api/tipler";
 import { useOnayliFiyatEkle } from "@/bilesenler/FiyatSapmaOnayi";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
-import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
+import { DuzenlemeKilidi, useYazmaKilidi, YazmaAlaniSaglayici } from "@/bilesenler/DuzenlemeKilidi";
+import { useOturum } from "@/bilesenler/GirisKapisi";
+import { alanaYazabilir } from "@/yardimcilar/rolYetkisi";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Badge } from "@/bilesenler/ui/badge";
@@ -20,10 +22,12 @@ import { DegerDiyalogu } from "./ayarlar/DegerDiyalogu";
 import { HavuzDiyalogu, havuzGovdesi } from "./ayarlar/HavuzDiyalogu";
 import { KAPASITE_ALANLARI, kapasiteSayisi, useKapasiteDuzenleme } from "./ayarlar/kapasiteDuzenleme";
 import { degerMetni, ParametreDiyalogu } from "./ayarlar/ParametreDiyalogu";
+import { okunurAd } from "./ayarlar/ortak";
 import { Alan, Kart, SELECT } from "./girdi/ortak";
 import { StokDevriKarti } from "./girdi/StokDevriKarti";
 import { UretimBilgileriKarti } from "./girdi/UretimBilgileriKarti";
 import { YeniUrunKarti } from "./girdi/YeniUrunKarti";
+import { YeniMalzemeKarti } from "./girdi/YeniMalzemeKarti";
 
 /** Tek sayfada arama/seçim için üst sınır (API `boyut` en çok 500). */
 const LISTE_BOYUTU = 500;
@@ -34,13 +38,47 @@ const malzemeBirimi = (m: Malzeme): ParaBirimi => m.para_birimi?.trim() || "TL";
 
 /* ------------------------------------------------------------------ Gider havuzu */
 
+/** Sunucudaki sabit gider havuzu kodları (backend/servisler/gider_servisi.HAVUZ_KODLARI) ve görünen adları. */
+const HAVUZ_ADLARI: Record<string, string> = {
+  dolum_iscilik: "Dolum doğrudan işçilik",
+  mal_kabul_iscilik: "Mal kabul doğrudan işçilik",
+  etiket_iscilik: "Etiketleme doğrudan işçilik",
+  endirekt_iscilik: "Endirekt işçilik",
+  mal_kabul_gug: "Mal kabul genel üretim gideri",
+  diger_gug: "Diğer genel üretim giderleri",
+  elektrik: "Elektrik",
+  dogalgaz: "Doğalgaz",
+  amortisman: "Amortisman",
+  yonetim: "Genel yönetim giderleri",
+  pazarlama: "Pazarlama satış giderleri",
+};
+const HAVUZ_KODLARI = Object.keys(HAVUZ_ADLARI);
+const AMBALAJ_BAZLI = ["yonetim", "pazarlama"];
+const bosHavuz = (kod: string): GiderHavuzu =>
+  ({
+    kod,
+    ad: HAVUZ_ADLARI[kod],
+    toplam_tutar: "0",
+    baz_tipi: AMBALAJ_BAZLI.includes(kod) ? "adet" : kod.startsWith("mal_kabul") ? "kg" : "saniye",
+    baz_miktar: null,
+    taban_tutar: null,
+    carpanlar: [],
+    anahtarlar: [],
+  }) as unknown as GiderHavuzu;
+
 function HavuzGirisKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; kilitli: boolean; onMesaj: (m: string) => void }) {
   const id = useId();
   const havuzlar = useGiderHavuzlari(senaryoId);
   const kaydet = useHavuzKaydet();
   const [kod, setKod] = useState("");
   const [duzenlenen, setDuzenlenen] = useState<GiderHavuzu | null>(null);
-  const kayitlar = havuzlar.data?.kayitlar ?? [];
+  const mevcutlar = havuzlar.data?.kayitlar ?? [];
+  // Boş (sıfırdan açılmış) çalışmada havuz yoktur: sabit 11 havuzun tanımlı olmayanları da seçilebilir, boş taslakla açılır.
+  const kayitlar: GiderHavuzu[] = [
+    ...HAVUZ_KODLARI.map((k) => mevcutlar.find((h) => h.kod === k) ?? bosHavuz(k)),
+    ...mevcutlar.filter((h) => !HAVUZ_KODLARI.includes(h.kod)),
+  ];
+  const tanimsiz = new Set(HAVUZ_KODLARI.filter((k) => !mevcutlar.some((h) => h.kod === k)));
   const secili = kayitlar.find((h) => h.kod === kod) ?? null;
   const payKontrol = havuzlar.data?.pay_kontrol.find((p) => p.havuz === kod);
 
@@ -62,7 +100,7 @@ function HavuzGirisKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; k
           <option value="">Seçin…</option>
           {kayitlar.map((h) => (
             <option key={h.kod} value={h.kod}>
-              {h.ad} ({h.kod})
+              {h.ad} ({h.kod}){tanimsiz.has(h.kod) ? " — tanımlı değil" : ""}
             </option>
           ))}
         </select>
@@ -312,7 +350,8 @@ function ParametreKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; ki
       )}
       {secili && (
         <p className="text-sm">
-          Geçerli değer: <strong className="tabular-nums">{deger === undefined ? "—" : degerMetni(deger, secili.birim)}</strong>
+          Geçerli değer:{" "}
+          <strong className="tabular-nums">{deger === undefined ? "—" : degerMetni(deger, secili.birim, secili.anahtar)}</strong>
           {enflasyonKilidi && <span className="block text-xs text-muted-foreground">Gerçekleşen senaryoda enflasyon kilitlidir.</span>}
         </p>
       )}
@@ -352,7 +391,7 @@ function ParametreKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; ki
               },
               {
                 onSuccess: () => {
-                  onMesaj(`${duzenlenen.anahtar} değeri kaydedildi.`);
+                  onMesaj(`${okunurAd(duzenlenen.anahtar, duzenlenen.aciklama)} değeri kaydedildi.`);
                   setDuzenlenen(null);
                 },
               },
@@ -475,6 +514,10 @@ function KapasiteKarti({ senaryoId, kilitli, onMesaj }: { senaryoId: number; kil
 export default function VeriGirisi() {
   const { senaryoId } = useSenaryo();
   const { kilitli, duzenlemeKilitli } = useYazmaKilidi();
+  // Yeni malzeme ve Malzeme fiyatı kartları "malzeme" yazma alanıdır: satın alma rolü yalnız bu ikisini kullanır (bkz. rolYetkisi.ts).
+  const malzeme = useYazmaKilidi("malzeme");
+  const { girisZorunlu, rol } = useOturum();
+  const yalnizMalzeme = alanaYazabilir(girisZorunlu, rol, "malzeme") && !alanaYazabilir(girisZorunlu, rol, "genel");
   const [mesaj, setMesaj] = useState<string | null>(null);
 
   return (
@@ -484,7 +527,10 @@ export default function VeriGirisi() {
         altBaslik="Yeni ürün kartı, gider havuzu, malzeme fiyatı, parametre, ürün üretim bilgileri, hat kapasitesi ve stokta kalanı Excel'e dönmeden tek yerden girin. Her kayıt nedenle günlüğe düşer."
       />
       <KilitSeridi />
-      <DuzenlemeKilidi />
+      <DuzenlemeKilidi
+        alan="malzeme"
+        engelMetni={yalnizMalzeme ? "Satın alma rolü bu sayfada yalnız Yeni malzeme ve Malzeme fiyatı kartlarını kullanabilir." : null}
+      />
       {mesaj && (
         <p role="status" className="rounded-md bg-muted p-2 text-sm">
           {mesaj}
@@ -496,7 +542,10 @@ export default function VeriGirisi() {
         <div className="grid gap-4 lg:grid-cols-2">
           <YeniUrunKarti senaryoId={senaryoId} kilitli={duzenlemeKilitli} onMesaj={setMesaj} />
           <HavuzGirisKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
-          <FiyatKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
+          <YazmaAlaniSaglayici alan="malzeme">
+            <YeniMalzemeKarti senaryoId={senaryoId} kilitli={malzeme.kilitli} onMesaj={setMesaj} />
+            <FiyatKarti senaryoId={senaryoId} kilitli={malzeme.kilitli} onMesaj={setMesaj} />
+          </YazmaAlaniSaglayici>
           <ParametreKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
           <UretimBilgileriKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />
           <KapasiteKarti senaryoId={senaryoId} kilitli={kilitli} onMesaj={setMesaj} />

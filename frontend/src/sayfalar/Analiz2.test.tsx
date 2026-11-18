@@ -122,6 +122,11 @@ describe("Kârlılık haritası", () => {
     expect(screen.getByText(/1 ürünün yıllık adeti yok/)).toBeInTheDocument();
     const indir = () => screen.getByRole("link", { name: /Excel'e indir/ });
     expect(indir()).toHaveAttribute("href", "/api/v1/disa-aktar/karlilik.xlsx?senaryo=1");
+    // toplam satırı: ürün sayısı, adet ve yıllık kâr (adeti/kârı boş olan atlanır)
+    const alt = () => screen.getByRole("table").querySelector("tfoot") as HTMLElement;
+    expect(within(alt()).getByText("Toplam (3 ürün)")).toBeInTheDocument();
+    expect(within(alt()).getByText("18.000")).toBeInTheDocument();
+    expect(within(alt()).getByText("120.000 TL")).toBeInTheDocument();
 
     const bolgeler = screen.getByRole("group", { name: "Bölgeler" });
     await userEvent.click(within(bolgeler).getByRole("button", { name: /Fiyatı gözden geçir/ }));
@@ -130,6 +135,9 @@ describe("Kârlılık haritası", () => {
     expect(within(tablo).getByText("Zeytin Ezmesi")).toBeInTheDocument();
     expect(within(tablo).queryByText("Biber Turşusu")).not.toBeInTheDocument();
     expect(within(tablo).queryByText("Domates Salçası")).not.toBeInTheDocument();
+    expect(within(alt()).getByText("Toplam (1 ürün)")).toBeInTheDocument();
+    expect(within(alt()).getByText("8.000")).toBeInTheDocument();
+    expect(within(alt()).getByText("60.000 TL")).toBeInTheDocument();
     expect(indir()).toHaveAttribute("href", "/api/v1/disa-aktar/karlilik.xlsx?senaryo=1&bolge=yuksek_adet_dusuk_marj");
 
     await userEvent.click(screen.getByRole("button", { name: /Süzmeyi kaldır/ }));

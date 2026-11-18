@@ -8,6 +8,7 @@ import { useUyarilar } from "@/api/sorgular/uyarilar";
 import type { ApiHatasi } from "@/api/istemci";
 import type { DashboardSatiri } from "@/api/tipler";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
+import { useOturum } from "@/bilesenler/GirisKapisi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Badge } from "@/bilesenler/ui/badge";
 import { Button, buttonVariants } from "@/bilesenler/ui/button";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { D, paraBicimle, topla } from "@/yardimcilar/para";
 import { ambalajMetni } from "@/yardimcilar/ambalaj";
 import { useSenaryoSayfasi } from "@/yardimcilar/sayfalama";
+import { senaryoYonetebilir } from "@/yardimcilar/rolYetkisi";
 import { AmbalajOzeti } from "./dashboard/AmbalajOzeti";
 import { GerceklesenSeridi } from "./dashboard/GerceklesenSeridi";
 import { VeriKontroluSeridi } from "./dashboard/VeriKontroluSeridi";
@@ -144,6 +146,9 @@ function HedefAdetHucresi({ satir }: { satir: DashboardSatiri }) {
 
 export default function Dashboard() {
   const { senaryoId, senaryo, senaryolar, yukleniyor: senaryoYukleniyor, yeniCalismaAc } = useSenaryo();
+  const oturum = useOturum();
+  // İzleyici ve satın alma çalışma açamaz, ürün ekleyemez: boş durumlarda bu yollar gösterilmez.
+  const yonetebilir = senaryoYonetebilir(oturum.girisZorunlu, oturum.rol);
   const gezin = useNavigate();
   const [gecici, setGecici] = useState(false);
   const [arama, setArama] = useState("");
@@ -324,17 +329,21 @@ export default function Dashboard() {
       return (
         <section>
           <SayfaBasligi baslik="Genel Bakış" />
-          <p className="mt-2 text-muted-foreground">
-            Henüz senaryo yok —{" "}
-            <button type="button" onClick={() => yeniCalismaAc("bos")} className="text-primary underline-offset-4 hover:underline">
-              Yeni çalışma
-            </button>{" "}
-            ile boş bir çalışma açın ya da{" "}
-            <Link to="/recete-aktar" className="text-primary underline-offset-4 hover:underline">
-              Veri Aktar
-            </Link>{" "}
-            ile Excel&apos;i yükleyin.
-          </p>
+          {!yonetebilir ? (
+            <p className="mt-2 text-muted-foreground">Henüz senaryo yok. Çalışmayı muhasebe ya da Genel Direktör açar.</p>
+          ) : (
+            <p className="mt-2 text-muted-foreground">
+              Henüz senaryo yok —{" "}
+              <button type="button" onClick={() => yeniCalismaAc("bos")} className="text-primary underline-offset-4 hover:underline">
+                Yeni çalışma
+              </button>{" "}
+              ile boş bir çalışma açın ya da{" "}
+              <Link to="/recete-aktar" className="text-primary underline-offset-4 hover:underline">
+                Veri Aktar
+              </Link>{" "}
+              ile Excel&apos;i yükleyin.
+            </p>
+          )}
         </section>
       );
     }
@@ -352,6 +361,14 @@ export default function Dashboard() {
   const hataSayisi = urunler.data ? satirlar.filter((s) => s.hata).length : null;
 
   // Faz 5c: senaryo var ama üye ürün yok (boş ya da yeni açılmış çalışma) — tablo yerine üç yol gösterilir.
+  if (toplam === 0 && !gecici && !yonetebilir) {
+    return (
+      <section className="flex flex-col gap-5">
+        <SayfaBasligi baslik="Genel Bakış" altBaslik={senaryo ? `${senaryo.sezon_ad} · ${senaryo.ad}` : undefined} />
+        <p className="text-muted-foreground">Bu çalışmada henüz ürün yok. Ürünleri muhasebe ya da Genel Direktör ekler.</p>
+      </section>
+    );
+  }
   if (toplam === 0 && !gecici) {
     const kopyalanabilir = senaryolar.length > 1;
     const sorgu = `?senaryo=${senaryoId}`;

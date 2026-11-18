@@ -180,24 +180,42 @@ describe("Teklifler", () => {
 
   it("satırdaki Sil onay sorar; onaylanınca DELETE gider, satır gezinmesi tetiklenmez", async () => {
     const silinen: string[] = [];
+    const nedenler: (string | null)[] = [];
     sunucu.use(
-      http.delete("*/api/v1/teklifler/:id", ({ params }) => {
+      http.delete("*/api/v1/teklifler/:id", ({ params, request }) => {
         silinen.push(params.id as string);
+        nedenler.push(new URL(request.url).searchParams.get("neden"));
         return new HttpResponse(null, { status: 204 });
       }),
     );
     kur();
     await within(await listeHazir()).findByText("Başka Müşteri");
-    await userEvent.click(within(tablo()).getByRole("button", { name: "Sil — URUN-002 Tur 1" }));
+    await userEvent.click(within(tablo()).getByRole("button", { name: "Sil — URUN-001 Tur 2" }));
     const onay = await screen.findByRole("dialog");
-    expect(onay).toHaveTextContent("URUN-002 Tur 1 silinecek");
+    expect(onay).toHaveTextContent("URUN-001 Tur 2 silinecek");
     await userEvent.click(within(onay).getByRole("button", { name: "Vazgeç" }));
     expect(silinen).toHaveLength(0);
-    await userEvent.click(within(tablo()).getByRole("button", { name: "Sil — URUN-002 Tur 1" }));
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Sil" }));
-    await waitFor(() => expect(silinen).toEqual(["3"]));
+    await userEvent.click(within(tablo()).getByRole("button", { name: "Sil — URUN-001 Tur 2" }));
+    const onay2 = await screen.findByRole("dialog");
+    // D7: neden boşken onay pasif, eski pencerede yazılan neden yeni açılışta temizlenir
+    expect(within(onay2).getByRole("button", { name: "Sil" })).toBeDisabled();
+    expect(within(onay2).getByText("Neden girin")).toBeInTheDocument();
+    await userEvent.type(within(onay2).getByLabelText("Neden (zorunlu)"), "Yanlış tur açıldı");
+    await userEvent.click(within(onay2).getByRole("button", { name: "Sil" }));
+    await waitFor(() => expect(silinen).toEqual(["2"]));
+    expect(nedenler).toEqual(["Yanlış tur açıldı"]);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.queryByTestId("yer")).not.toBeInTheDocument();
+  });
+
+  it("kabul edilmiş teklifin Sil düğmesi pasif; ipucu nedenini yazar", async () => {
+    kur();
+    await within(await listeHazir()).findByText("Başka Müşteri");
+    const sil = within(tablo()).getByRole("button", { name: "Sil — URUN-002 Tur 1" });
+    expect(sil).toBeDisabled();
+    expect(sil).toHaveAttribute("title", "Kabul edilmiş teklif silinemez; önce durumunu değiştirin.");
+    expect(sil.parentElement).toHaveAttribute("title", "Kabul edilmiş teklif silinemez; önce durumunu değiştirin.");
+    expect(within(tablo()).getByRole("button", { name: "Sil — URUN-001 Tur 1" })).toBeEnabled();
   });
 
   it("I6: kabul/red için onay ister; vazgeçilirse PATCH gitmez; diğer durumlar onaysız değişir", async () => {
@@ -230,7 +248,8 @@ describe("Teklifler", () => {
     await userEvent.selectOptions(sec, "gonderildi");
     await waitFor(() => expect(sec).toBeDisabled());
     birak();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Durum değiştirilemedi — durum: geçersiz");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Durum değiştirilemedi");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("durum: geçersiz");
     await waitFor(() => expect(sec).toBeEnabled());
   });
 

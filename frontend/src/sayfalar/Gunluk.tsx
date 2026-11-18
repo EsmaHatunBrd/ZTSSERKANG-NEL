@@ -10,7 +10,6 @@ import { Input } from "@/bilesenler/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/bilesenler/ui/table";
 import { cn } from "@/lib/utils";
 import { GeriAlOnayi } from "./ayarlar/GeriAlOnayi";
-import { parametreDegerGoster, parametreEtiketi } from "./urun/parametreEtiketleri";
 
 const BOYUT = 50;
 const ARAMA_GECIKME_MS = 300;
@@ -44,19 +43,14 @@ function zamanGoster(iso: string | null): string {
   return d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-const PARAMETRE_BASLIGI = /^Parametre: (\S+)(.*)$/;
-
-/** Parametre başlıklarındaki ham anahtar okunur etikete çevrilir; diğer başlıklar olduğu gibi gösterilir. */
+/** Başlık ve değerler sunucuda okunur Türkçe biçimlenir (parametre adı, yüzde, TL); burada olduğu gibi gösterilir. */
 export function baslikGoster(s: GunlukSatiri): string {
-  if (s.tur !== "parametre") return s.baslik;
-  const m = PARAMETRE_BASLIGI.exec(s.baslik);
-  return m ? `Parametre: ${parametreEtiketi(m[1])}${m[2]}` : s.baslik;
+  return s.baslik;
 }
 
-function degerGoster(s: GunlukSatiri, v: string | null | undefined): string {
+function degerGoster(_s: GunlukSatiri, v: string | null | undefined): string {
   if (v === null || v === undefined || v === "") return "—";
-  const m = s.tur === "parametre" ? PARAMETRE_BASLIGI.exec(s.baslik) : null;
-  return m ? parametreDegerGoster(m[1], v) : v;
+  return v;
 }
 
 function OzetKartlari({ senaryo, hazir }: { senaryo: number | null; hazir: boolean }) {
@@ -129,7 +123,7 @@ export default function Gunluk() {
     () => ({ senaryo, bas, son, kullanici: kullanici.trim(), tur: turler, urun_kodu: urun, q: arama, sayfa, boyut: BOYUT }),
     [senaryo, bas, son, kullanici, turler, urun, arama, sayfa],
   );
-  const hazir = tumSenaryolar || !yukleniyor;   // senaryo listesi gelmeden süzgeçsiz istek atılmaz
+  const hazir = tumSenaryolar || !yukleniyor; // senaryo listesi gelmeden süzgeçsiz istek atılmaz
   const sorgu = useGunluk(suzgec, hazir);
   const satirlar = sorgu.data?.kayitlar ?? [];
   const toplam = sorgu.data?.toplam ?? 0;
@@ -173,7 +167,12 @@ export default function Gunluk() {
         </p>
       )}
 
-      <form role="search" aria-label="Günlük süzgeçleri" className="flex flex-col gap-3 rounded-lg border p-3" onSubmit={(e) => e.preventDefault()}>
+      <form
+        role="search"
+        aria-label="Günlük süzgeçleri"
+        className="flex flex-col gap-3 rounded-lg border p-3"
+        onSubmit={(e) => e.preventDefault()}
+      >
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm">
             Başlangıç
@@ -185,7 +184,12 @@ export default function Gunluk() {
           </label>
           <label className="flex flex-col gap-1 text-sm">
             Kullanıcı
-            <Input value={kullanici} onChange={(e) => suz(() => setKullanici(e.target.value))} className="w-40" placeholder="Kullanıcı adı" />
+            <Input
+              value={kullanici}
+              onChange={(e) => suz(() => setKullanici(e.target.value))}
+              className="w-40"
+              placeholder="Kullanıcı adı"
+            />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             Ürün kodu

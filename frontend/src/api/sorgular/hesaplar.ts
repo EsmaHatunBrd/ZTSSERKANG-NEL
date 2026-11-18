@@ -119,7 +119,8 @@ export function useTeklifDurum() {
 export function useTeklifSil() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (teklifId: number) => cagir(api.DELETE("/api/v1/teklifler/{teklif_id}", { params: { path: { teklif_id: teklifId } } })),
+    mutationFn: ({ teklifId, neden }: { teklifId: number; neden: string }) =>
+      cagir(api.DELETE("/api/v1/teklifler/{teklif_id}", { params: { path: { teklif_id: teklifId }, query: { neden } } })),
     onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ["teklifler"] }), qc.invalidateQueries({ queryKey: ["hesaplar"] })]),
   });
 }

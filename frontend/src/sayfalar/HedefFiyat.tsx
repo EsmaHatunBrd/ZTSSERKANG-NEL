@@ -93,7 +93,7 @@ export default function HedefFiyat() {
         accessorKey: "ad",
         header: "Ürün",
         cell: (c) => (
-          <span className="flex flex-col">
+          <span className="flex max-w-56 min-w-40 flex-col whitespace-normal">
             <span>{c.row.original.ad}</span>
             <span className="text-xs text-muted-foreground">{c.row.original.kod}</span>
           </span>
@@ -107,8 +107,8 @@ export default function HedefFiyat() {
           const b = c.row.original.bolge ? BOLGE[c.row.original.bolge] : undefined;
           if (!b) return <span className="text-muted-foreground">—</span>;
           return (
-            <span className="flex items-center gap-1.5 whitespace-nowrap">
-              <span className="size-2.5 rounded-full" style={{ background: b.renk }} aria-hidden />
+            <span className="flex max-w-32 items-center gap-1.5 whitespace-normal">
+              <span className="size-2.5 shrink-0 rounded-full" style={{ background: b.renk }} aria-hidden />
               {b.etiket}
             </span>
           );
@@ -123,7 +123,8 @@ export default function HedefFiyat() {
       {
         id: "gecen_yil_fiyat",
         accessorFn: (r) => sayi(r.gecen_yil_fiyat),
-        header: "Geçen yıl fiyatı",
+        header: "Geçen yıl",
+        meta: { hiza: "sag" },
         cell: (c) => <ParaHucresi deger={c.row.original.gecen_yil_fiyat} />,
       },
       {
@@ -150,16 +151,27 @@ export default function HedefFiyat() {
         ),
       },
       {
-        id: "liste_fiyati_yurtici",
+        // Yurtiçi ve yurtdışı liste fiyatı tek sütunda alt alta (tablo daha dar); sıralama yurtiçine göre.
+        id: "liste_fiyati",
         accessorFn: (r) => sayi(r.liste_fiyati_yurtici),
-        header: "Liste fiyatı yurtiçi",
-        cell: (c) => <ParaHucresi deger={c.row.original.liste_fiyati_yurtici} />,
-      },
-      {
-        id: "liste_fiyati_yurtdisi",
-        accessorFn: (r) => sayi(r.liste_fiyati_yurtdisi),
-        header: "Liste fiyatı yurtdışı",
-        cell: (c) => <ParaHucresi deger={c.row.original.liste_fiyati_yurtdisi} />,
+        header: "Liste fiyatı (yurtiçi / yurtdışı)",
+        meta: { hiza: "sag" },
+        cell: (c) => {
+          const r = c.row.original;
+          if (r.liste_fiyati_yurtici == null && r.liste_fiyati_yurtdisi == null) return <span className="text-muted-foreground">—</span>;
+          return (
+            <span className="flex flex-col items-end">
+              <span title="Yurtiçi liste fiyatı">
+                <span className="mr-1 text-xs text-muted-foreground">Yİ</span>
+                <ParaHucresi deger={r.liste_fiyati_yurtici} className="inline" />
+              </span>
+              <span title="Yurtdışı liste fiyatı" className="text-muted-foreground">
+                <span className="mr-1 text-xs">YD</span>
+                <ParaHucresi deger={r.liste_fiyati_yurtdisi} className="inline text-muted-foreground" />
+              </span>
+            </span>
+          );
+        },
       },
       {
         id: "adet",

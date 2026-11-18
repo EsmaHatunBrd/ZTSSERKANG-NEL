@@ -8,7 +8,7 @@ from backend.depo.veritabani import Base, motor_olustur, oturum_fabrikasi, oturu
 from backend.servisler import import_servisi as ims, tutarlilik_servisi as ts
 from backend.uygulama import uygulama_olustur
 
-KODLAR = ["hesaplanamayan", "parametre_eksik", "fiyatsiz", "eksik_fiyat_etkisi", "hedef_alti", "malzeme_karti", "pay", "hat", "parametre_uyari", "recetesiz", "gecici_kod",
+KODLAR = ["hesaplanamayan", "parametre_eksik", "fiyatsiz", "eksik_fiyat_etkisi", "hedef_alti", "malzeme_karti", "pay", "hat", "olagan_disi_parametre", "parametre_uyari", "recetesiz", "gecici_kod",
           "uretim_adetleri", "ambalaj_tutarsiz", "fiyat_egilimi", "elle_hucre"]
 
 
@@ -56,6 +56,7 @@ def test_gercek_kitapta_bilinen_sorunlar(ortam):
     sayilar = [int(o["aciklama"].split(" ", 1)[0]) for o in etki]
     assert sayilar == sorted(sayilar, reverse=True)
     assert k["hedef_alti"]["durum"] == "tamam"   # kitapta kâr oranı %20 (eşik %10)
+    assert k["olagan_disi_parametre"]["durum"] == "tamam"   # kitaptaki kur ve oranlar olağan
     assert {o["etiket"] for o in k["pay"]["ogeler"]} == {"elektrik", "dogalgaz"}   # %100,1 ve %99,5 (muhasebeye soruldu)
     assert k["gecici_kod"]["sayi"] == 12 and all(o["etiket"].startswith("SAYFA-") for o in k["gecici_kod"]["ogeler"])
     eslesmeyen = k["uretim_adetleri"]["ogeler"]   # 02/03 kod sorunu: neredeyse hepsi 02.* (birkaç kodun da kartı yok)
@@ -81,6 +82,27 @@ def test_sorun_yaratilinca_ilgili_kontrol_doner(ortam):
         assert k["hesaplanamayan"]["durum"] == "hata"
         o = k["hesaplanamayan"]["ogeler"][0]
         assert o["etiket"].startswith(urunler[1].kod) and "üretim bilgileri" in o["aciklama"] and o["yol"] == f"/urunler/{urunler[1].kod}"
+    finally:
+        s.rollback()
+
+
+def test_olagan_disi_parametre_dikkat(ortam):
+    """Kur 0 (sınırdan önce kaydedilmiş eski değer gibi) ve %250 enflasyon 'dikkat' olarak listelenir; çözüm Parametreler."""
+    from datetime import date
+    from decimal import Decimal
+    from backend.servisler import parametre_servisi as ps
+    s, sid = ortam
+    try:
+        ps.deger_ekle(s, sid, "enflasyon", Decimal("2.5"), date(2000, 1, 2), "yanlış yazım")
+        kur = s.scalar(select(m.Parametre).where(m.Parametre.anahtar == "kur.USD"))
+        s.add(m.ParametreDegeri(parametre_id=kur.id, senaryo_id=sid, kapsam_tipi="genel", deger=Decimal(0), gecerlilik_basi=date(2000, 1, 2), neden="eski"))
+        s.flush()
+        k = _k(ts.kontroller(s, sid, date(2000, 1, 3)))["olagan_disi_parametre"]
+        assert k["durum"] == "dikkat" and k["cozum"]["yol"] == "/parametreler"
+        metin = {o["etiket"]: o["aciklama"] for o in k["ogeler"]}
+        assert metin["Enflasyon öngörüsü (tüm ürünler)"].startswith("değer %250: %100'ün üstünde")
+        assert metin["USD kuru (tüm ürünler)"].startswith("değer 0 TL: kur 0 ya da eksi")
+        assert all("." not in e.split(" (")[0] for e in metin)   # teknik anahtar (kur.USD) gösterilmez
     finally:
         s.rollback()
 

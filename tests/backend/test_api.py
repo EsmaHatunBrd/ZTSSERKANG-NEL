@@ -186,7 +186,7 @@ def test_senaryo_dogrulamasi_tekduze(istemci, oturum):
 def test_cakisma_409_ve_beklenmeyen_500(istemci, oturum, monkeypatch):
     assert istemci.post(f"{A}/malzeme-gruplari", json={"ad": "G1", "malzeme_kodlari": ["A"]}).status_code == 201
     r = istemci.post(f"{A}/malzeme-gruplari", json={"ad": "G1", "malzeme_kodlari": ["B"]})
-    assert r.status_code == 409 and r.json() == {"hata": "cakisma", "mesaj": "kayıt çakışması (benzersiz alan veya ilişki)", "alanlar": {}, "kod": None}
+    assert r.status_code == 409 and r.json() == {"hata": "cakisma", "mesaj": "Bu kayıt var olan bir kayıtla çakışıyor: aynı kod zaten var ya da kayıt başka bir kayda bağlı.", "alanlar": {}, "kod": None}
     oturum.rollback()
     sid = _senaryo(istemci)
     from backend.servisler import hesap_servisi as hs
@@ -195,7 +195,7 @@ def test_cakisma_409_ve_beklenmeyen_500(istemci, oturum, monkeypatch):
         raise RuntimeError("gizli ayrıntı")
     monkeypatch.setattr(hs, "urunler", patla)
     r = TestClient(istemci.app, raise_server_exceptions=False).get(f"{A}/urunler?senaryo={sid}")
-    assert r.status_code == 500 and r.json() == {"hata": "sunucu", "mesaj": "beklenmeyen hata", "alanlar": {}, "kod": None} and "gizli" not in r.text
+    assert r.status_code == 500 and r.json() == {"hata": "sunucu", "mesaj": "Beklenmeyen bir hata oluştu. Yeniden deneyin; sürerse sistem sorumlusuna bildirin.", "alanlar": {}, "kod": None} and "gizli" not in r.text
 
 
 def test_pasiflestirme_api(istemci, oturum):
@@ -341,9 +341,13 @@ def test_okuma_uclari(istemci, oturum):
 
 def test_uyarilar_ve_kartsiz_fiyatsiz(istemci, oturum):
     sid = _senaryo(istemci); _kur(istemci, sid, oturum)
-    assert istemci.post(f"{A}/urunler/TEST/recete?senaryo={sid}", json=[
-        {"malzeme_kodu": "KAV", "miktar": "1", "fire_override": "0.02"}, {"malzeme_kodu": "KARTYOK", "miktar": "1"},
-        {"malzeme_kodu": "ARAMAMUL", "miktar": "1", "dugum_tipi": "ara_mamul"}]).status_code == 201
+    satirlar = [{"malzeme_kodu": "KAV", "miktar": "1", "fire_override": "0.02"}, {"malzeme_kodu": "KARTYOK", "miktar": "1"},
+                {"malzeme_kodu": "ARAMAMUL", "miktar": "1", "dugum_tipi": "ara_mamul"}]
+    r = istemci.post(f"{A}/urunler/TEST/recete?senaryo={sid}", json={"satirlar": satirlar, "neden": "ekran"})   # ekran biçimi: kartsız kod reddedilir
+    assert r.status_code == 422 and r.json()["kod"] == "malzeme_yok"
+    assert r.json()["mesaj"] == "KARTYOK kodlu malzeme yok; önce Veri Girişi › Yeni malzeme ile açın."
+    # eski biçim (betik/aktarım uyumu) kartsız satırı kabul eder: uyarı ve "fiyatsız" listesi
+    assert istemci.post(f"{A}/urunler/TEST/recete?senaryo={sid}", json=satirlar).status_code == 201
     u = istemci.get(f"{A}/uyarilar?senaryo={sid}&tarih=2026-10-21").json()
     assert u["toplam"] == len(u["kayitlar"]) >= 1 and set(u["kayitlar"][0]) == {"urun_kodu", "uyari"}
     assert all(x["urun_kodu"] == "TEST" for x in u["kayitlar"]) and any("KARTYOK" in x["uyari"] for x in u["kayitlar"])
@@ -517,11 +521,27 @@ def test_senaryo_teklifleri_ve_son_tur(istemci, oturum):
     assert o[h2]["son_tur_no"] == 1 and o[h2]["son_musteri"] == "migros b"
     # silme: 204, liste ve son tur özeti güncellenir; olmayan teklif 404
     t3 = istemci.get(f"{A}/teklifler?senaryo={sid}").json()["kayitlar"][1]["teklif_id"]   # h1 tur 2
-    assert istemci.delete(f"{A}/teklifler/{t3}").status_code == 204
+    assert istemci.delete(f"{A}/teklifler/{t3}?neden=test").status_code == 204
     assert istemci.get(f"{A}/teklifler?senaryo={sid}").json()["toplam"] == 2
     o = {x["id"]: x for x in istemci.get(f"{A}/urunler/TEST/hesaplar?senaryo={sid}").json()["kayitlar"]}
     assert o[h1]["son_tur_no"] == 1
-    assert istemci.delete(f"{A}/teklifler/{t3}").status_code == 404
+    assert istemci.delete(f"{A}/teklifler/{t3}?neden=test").status_code == 404
+    # kabul edilmiş teklif silinmez (409, sade mesaj); durumu değişince silinir
+    r = istemci.delete(f"{A}/teklifler/{t1['id']}?neden=test")
+    assert r.status_code == 409 and r.json()["mesaj"] == "Kabul edilmiş teklif silinemez; önce durumunu değiştirin." and r.json()["alanlar"] == {}
+    istemci.patch(f"{A}/teklifler/{t1['id']}/durum", json={"durum": "red"})
+    assert istemci.delete(f"{A}/teklifler/{t1['id']}?neden=test").status_code == 204
+
+
+def test_parametre_deger_siniri_422(istemci, oturum):
+    """Kur 0, yüzde yerine yazılmış oran (250 = %25.000) ve vardiya saati 25 kaydedilmez; mesaj sade Türkçe, teknik ek yok."""
+    sid = _senaryo(istemci)
+    for anahtar, deger in [("kur.USD", "0"), ("enflasyon", "250"), ("satis_kar", "25"), ("vardiya_saati", "25")]:
+        r = istemci.post(f"{A}/parametreler/{anahtar}/degerler?senaryo={sid}", json={"deger": deger, "gecerlilik_basi": "2026-06-01", "neden": "x"})
+        assert r.status_code == 422, (anahtar, r.text)
+        assert r.json()["alanlar"] == {} and anahtar not in r.json()["mesaj"]
+    r = istemci.post(f"{A}/parametreler/enflasyon/degerler?senaryo={sid}", json={"deger": "2.5", "gecerlilik_basi": "2026-06-01", "neden": "x"})
+    assert r.status_code == 201   # %250: sınır içinde (arayüz "Yine de kaydet" sorar; Veri Kontrolü 'dikkat' listeler)
 
 
 def test_malzeme_aramasi_sayfalamadan_once_ve_turkce_harf(istemci, oturum):

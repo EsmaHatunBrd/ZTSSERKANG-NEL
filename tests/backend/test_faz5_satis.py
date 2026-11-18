@@ -15,7 +15,7 @@ def _urunler(c):
 
 
 def _govde(**ek):
-    return {"urun_kodu": "TST-1", "musteri": "Deneme Ltd", "tarih": "2025-03-01", "fiyat": "12.50", "para_birimi": "TL", "adet": "100", **ek}
+    return {"urun_kodu": "TST-1", "musteri": "Deneme Ltd", "tarih": "2025-03-01", "fiyat": "12.50", "para_birimi": "TL", "adet": "100", "neden": "elle giriş", **ek}
 
 
 def _yukle(c, icerik: bytes, ad: str):
@@ -130,12 +130,12 @@ def test_sablon_indirilir_ve_geri_yuklenir(istemci):
 def test_sil(istemci, oturum):
     c = istemci; _urunler(c)
     kid = c.post(A, json=_govde()).json()["id"]
-    assert c.delete(f"{A}/{kid}", headers={"X-Kullanici": "esma"}).status_code == 204
+    assert c.delete(f"{A}/{kid}?neden=yanl%C4%B1%C5%9F%20giri%C5%9F", headers={"X-Kullanici": "esma"}).status_code == 204
     assert c.get(A).json()["toplam"] == 0
     kayit = oturum.query(m.DegisiklikKaydi).filter_by(tablo="satis_gecmisi", islem="sil", kayit_id=kid).one()
     assert kayit.kullanici == "esma" and kayit.eski["fiyat"] == "12.50"
     assert D_(kayit.eski["adet"]) == 100
-    assert c.delete(f"{A}/{kid}").status_code == 404
+    assert c.delete(f"{A}/{kid}?neden=tekrar").status_code == 404
 
 
 def test_sayi_kabul_edilen_bicimler(istemci):

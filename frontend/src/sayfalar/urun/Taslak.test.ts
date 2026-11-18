@@ -13,6 +13,7 @@ import {
   taslaktanKaydetGovdesi,
   taslaktanOverride,
   varsayilanKapsam,
+  yeniSatirSeviyesi,
   type Taslak,
   type TaslakYamasi,
 } from "./Taslak";
@@ -432,5 +433,65 @@ describe("Elle gider hücreleri (Excel'de formül yerine yazılan I/K/M/P)", () 
     const g = taslaktanKaydetGovdesi(t, { senaryoId: 1, neden: "x", hesabiKaydet: false, urun, recete: r });
     expect(g.recete?.[2]).toMatchObject({ zs_elle: "S", para_birimi_elle: "USD" });
     expect(g.recete?.[0].zs_elle).toBeUndefined();
+  });
+});
+
+describe("reçete satır ekle / sil taslağı (D3)", () => {
+  const yeni = { malzeme_kodu: "M-002", ad: "Kapak 38 mm", miktar: "2", birim: "adet", fire: "0.015", seviye: null };
+
+  it("eklenen ve silinen satırlar sayılır; silinen satırın hücre taslağı düşer, silme sıralanır ve tekrarsızdır", () => {
+    let t = uygula(taslakBos(), { satirlar: { 3: { miktar: "4" }, 1: { miktar: "2" } } });
+    t = uygula(t, { silinen: [3, 3], eklenen: [yeni] });
+    expect(t.silinen).toEqual([3]);
+    expect(t.satirlar[3]).toBeUndefined();
+    expect(t.satirlar[1]).toEqual({ miktar: "2" });
+    expect(taslakSayisi(t)).toBe(3); // miktar + silinen + eklenen
+    t = uygula(t, { silinen: [], eklenen: [] });
+    expect(taslakSayisi(t)).toBe(1);
+  });
+
+  it("override: silinen sıralar ve eklenen satırlar gider; silinen satırın hücre değişikliği gönderilmez", () => {
+    const t: Taslak = { ...taslakBos(), satirlar: { 3: { miktar: "4" } }, silinen: [3], eklenen: [yeni] };
+    const o = taslaktanOverride(t, recete);
+    expect(o?.silinen_satirlar).toEqual([3]);
+    expect(o?.satirlar).toEqual({});
+    expect(o?.eklenen_satirlar).toEqual([
+      { malzeme_kodu: "M-002", ad: "Kapak 38 mm", miktar: "2", birim: "adet", dugum_tipi: "yaprak", fire_override: "0.015" },
+    ]);
+    expect(taslaktanOverride({ ...taslakBos(), parametreler: { "kur.USD": "52" } }, recete)).not.toHaveProperty("silinen_satirlar");
+  });
+
+  it("Kaydet gövdesi: silinen satır çıkar, kalanlar elle değerleriyle korunur, eklenen sona girer; boş reçete reddedilir", () => {
+    const t: Taslak = { ...taslakBos(), silinen: [1], eklenen: [{ ...yeni, fire: undefined }] };
+    const g = taslaktanKaydetGovdesi(t, { senaryoId: 1, neden: "Kapak", hesabiKaydet: true, recete });
+    expect(g.recete?.map((r) => r.malzeme_kodu)).toEqual(["M-050", "M-77", "M-002"]);
+    expect(g.recete?.[0]).toMatchObject({ brut_miktar_elle: "0.38", birim_fiyat_elle: "12.4" });
+    expect(g.recete?.[2]).toEqual({ malzeme_kodu: "M-002", ad: "Kapak 38 mm", miktar: "2", birim: "adet", dugum_tipi: "yaprak" });
+    expect(() =>
+      taslaktanKaydetGovdesi({ ...taslakBos(), silinen: [1, 2, 3] }, { senaryoId: 1, neden: "x", hesabiKaydet: true, recete }),
+    ).toThrow("Reçetede en az bir satır kalmalı");
+  });
+
+  it("değişiklik listesi 'Satır silindi' ve 'Satır eklendi' satırlarını verir", () => {
+    const liste = degisiklikListesi({ ...taslakBos(), silinen: [2], eklenen: [yeni] }, sunucu);
+    expect(liste.find((x) => x.alan === "silinen.2")).toMatchObject({
+      etiket: "Satır silindi: M-050 · Salamura Karışımı",
+      yeni: "silinecek",
+    });
+    expect(liste.find((x) => x.alan === "eklenen.0")).toMatchObject({
+      etiket: "Satır eklendi: M-002 · Kapak 38 mm",
+      yeni: "2 adet · fire 1,5 %",
+    });
+  });
+
+  it("yeni satırın seviyesi: seviyesiz reçetede null, ürün satırı varsa onun bir altı, yoksa en üst seviye", () => {
+    expect(yeniSatirSeviyesi(recete)).toBeNull();
+    const agac = [
+      { ...recete[0], sira: 1, malzeme_kodu: "URUN-001", dugum_tipi: "ara_mamul" as const, seviye: 0 },
+      { ...recete[1], sira: 2, seviye: 1 },
+      { ...recete[2], sira: 3, seviye: 2 },
+    ];
+    expect(yeniSatirSeviyesi(agac, "URUN-001")).toBe(1);
+    expect(yeniSatirSeviyesi(agac.slice(1))).toBe(1);
   });
 });

@@ -95,7 +95,7 @@ describe("YeniCalismaDiyalogu (Faz 5c)", () => {
     const { onKapat, onOlusturuldu } = kur();
     expect(screen.queryByLabelText("Parametre kaynağı")).not.toBeInTheDocument();
     await u.click(screen.getByRole("checkbox", { name: /Parametreleri başka bir çalışmadan al/ }));
-    expect(screen.getByLabelText("Parametre kaynağı")).toHaveValue("1");   // varsayılan: seçili çalışma
+    expect(screen.getByLabelText("Parametre kaynağı")).toHaveValue("1"); // varsayılan: seçili çalışma
     await u.type(screen.getByLabelText("Sezon adı"), "2027-2028");
     expect(screen.getByText(/parametreler "#1 · 2026-2027 · Varsayılan · Fiyat çalışması" çalışmasından alınacak/)).toBeInTheDocument();
     await u.click(screen.getByRole("button", { name: "Parametrelerle aç" }));
@@ -106,7 +106,7 @@ describe("YeniCalismaDiyalogu (Faz 5c)", () => {
       sezon_ad: "2027-2028",
       ad: "Fiyat çalışması",
       tur: "fiyat_calismasi",
-      kopyala: { receteler: false, fiyatlar: false, parametreler: true, gider: false, uretim: false, fire_kurallari: false },
+      kopyala: { receteler: false, fiyatlar: false, parametreler: true, gider: false, uretim: false, fire_kurallari: false, sablon: false },
     });
     expect(String(kopya[0].govde.neden)).toMatch(/parametreler/);
     await waitFor(() => expect(onOlusturuldu).toHaveBeenCalledWith(4));
@@ -147,7 +147,7 @@ describe("YeniCalismaDiyalogu (Faz 5c)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Neden zorunlu");
     expect(kayit).toHaveLength(0);
     await u.click(screen.getByRole("checkbox", { name: /Fire kuralları/ }));
-    expect(screen.getByText(/5\/6 bölüm "2027-2028 · Varsayılan" adıyla/)).toBeInTheDocument();
+    expect(screen.getByText(/6\/7 bölüm "2027-2028 · Varsayılan" adıyla/)).toBeInTheDocument();
     await u.type(screen.getByLabelText("Neden"), "Yeni sezon açılışı");
     await u.click(screen.getByRole("button", { name: "Kopyala ve aç" }));
     await waitFor(() => expect(kayit).toHaveLength(1));
@@ -158,10 +158,12 @@ describe("YeniCalismaDiyalogu (Faz 5c)", () => {
       tur: "fiyat_calismasi",
       aciklama: null,
       neden: "Yeni sezon açılışı",
-      kopyala: { receteler: true, fiyatlar: true, parametreler: true, gider: true, uretim: true, fire_kurallari: false },
+      kopyala: { receteler: true, fiyatlar: true, parametreler: true, gider: true, uretim: true, fire_kurallari: false, sablon: true },
     });
     const durum = await screen.findByRole("status");
-    expect(durum).toHaveTextContent("Kopyalandı: 67 reçete, 661 malzeme fiyatı, 12 parametre, 3 metin parametresi, 8 gider havuzu, 4 ambalaj sınıfı, 67 üretim hedefi, 5 kapasite kaydı, 2 fire kuralı.");
+    expect(durum).toHaveTextContent(
+      "Kopyalandı: 67 reçete, 661 malzeme fiyatı, 12 parametre, 3 metin parametresi, 8 gider havuzu, 4 ambalaj sınıfı, 67 üretim hedefi, 5 kapasite kaydı, 2 fire kuralı, 1 Excel şablonu.",
+    );
     expect(durum).toHaveTextContent("Yeni çalışma seçildi: #4 · 2027-2028 · Varsayılan");
     expect(onOlusturuldu).toHaveBeenCalledWith(4);
     expect(onKapat).not.toHaveBeenCalled();
@@ -201,9 +203,11 @@ describe("YeniCalismaDiyalogu (Faz 5c)", () => {
 
   it("kopyaOzeti sıfır bölümleri atlar; hepsi sıfırsa açıklayıcı metin", () => {
     expect(kopyaOzeti({ ...kopyalananSayilar, metin: 0, kapasite: 0 })).toBe(
-      "Kopyalandı: 67 reçete, 661 malzeme fiyatı, 12 parametre, 8 gider havuzu, 4 ambalaj sınıfı, 67 üretim hedefi, 2 fire kuralı.",
+      "Kopyalandı: 67 reçete, 661 malzeme fiyatı, 12 parametre, 8 gider havuzu, 4 ambalaj sınıfı, 67 üretim hedefi, 2 fire kuralı, 1 Excel şablonu.",
     );
-    expect(kopyaOzeti({ recete: 0, fiyat: 0, parametre: 0, metin: 0, havuz: 0, ambalaj: 0, hedef: 0, kapasite: 0, fire: 0 })).toMatch(/Kopyalanacak kayıt bulunmadı/);
+    expect(
+      kopyaOzeti({ recete: 0, fiyat: 0, parametre: 0, metin: 0, havuz: 0, ambalaj: 0, hedef: 0, kapasite: 0, fire: 0, sablon: 0 }),
+    ).toMatch(/Kopyalanacak kayıt bulunmadı/);
     expect(within(document.body).queryByRole("dialog")).toBeNull();
   });
 });

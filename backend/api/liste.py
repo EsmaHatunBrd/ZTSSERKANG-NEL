@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from ..servisler import hesap_servisi as hs, liste_servisi as ls, satis_okuyucu
-from ..servisler.hatalar import DogrulamaHatasi
+from ..servisler.hatalar import DogrulamaHatasi, hatali_satirlar_mesaji, neden_zorunlu
 from . import urunler as urunler_api
 from .bagimliliklar import OturumDep, SenaryoDep, kullanici_ver
 from .import_ import geri_al_uclari
@@ -44,12 +44,13 @@ def calisma(s: OturumDep, sen: SenaryoDep, yanit: Response, pazar: Pazar = Query
 @router.put("/liste-fiyatlari", response_model=ListeFiyatiCikis, responses=HATA_404_422)
 def kaydet(s: OturumDep, g: ListeFiyatiGiris, k: str = Depends(kullanici_ver),
            senaryo: int | None = Query(None, description="Bölen girilmezse bu senaryonun bugünkü geçerli böleni yazılır (yoksa varsayılan)")):
-    return ls.kaydet(s, g.urun_kodu, g.yil, g.liste_fiyati, g.birim_maliyet, k, g.pazar, g.bolen, _senaryo_id(s, senaryo))
+    return ls.kaydet(s, g.urun_kodu, g.yil, g.liste_fiyati, g.birim_maliyet, k, g.pazar, g.bolen, _senaryo_id(s, senaryo), neden=neden_zorunlu(g.neden))
 
 
 @router.delete("/liste-fiyatlari/{urun_kodu}/{yil}", status_code=204, response_class=Response, responses=HATA_404_422)
-def sil(s: OturumDep, urun_kodu: str, yil: int, pazar: Pazar = Query("yurtici"), k: str = Depends(kullanici_ver)):
-    ls.sil(s, urun_kodu, yil, k, pazar)
+def sil(s: OturumDep, urun_kodu: str, yil: int, pazar: Pazar = Query("yurtici"),
+        neden: str = Query(..., max_length=300, description="Silme nedeni (zorunlu; boşsa 422 'Neden girin.')"), k: str = Depends(kullanici_ver)):
+    ls.sil(s, urun_kodu, yil, k, pazar, neden=neden_zorunlu(neden))
     return Response(status_code=204)
 
 
@@ -71,7 +72,7 @@ def yukle(s: OturumDep, dosya: UploadFile = File(...), k: str = Depends(kullanic
     icerik = dosya.file.read(satis_okuyucu.MAKS_BAYT + 1)
     yazilan, hatalar = ls.toplu_yukle(s, ls.dosya_oku(icerik, dosya.filename or ""), k, dosya.filename or "", _senaryo_id(s, senaryo))
     if hatalar:
-        raise DogrulamaHatasi("dosyada hatalı satırlar var; hiçbir satır yazılmadı", {"hatalar": hatalar})
+        raise DogrulamaHatasi(hatali_satirlar_mesaji(hatalar, "yazılmadı"), {"hatalar": hatalar})
     return {"yazilan": yazilan, "hatalar": []}
 
 

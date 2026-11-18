@@ -180,11 +180,86 @@ describe("Kullanıcılar", () => {
     await u.click(screen.getByRole("button", { name: /Kullanıcıyı ekle/ }));
     expect(await screen.findByRole("status")).toHaveTextContent(`geçici şifre: ${sifre}`);
     expect(eklenen).toEqual({ ad: "Mehmet Kaya", kullanici_adi: "mehmet.kaya", rol: "satin_alma", gecici_sifre: sifre });
-    await u.selectOptions(await screen.findByLabelText("Rol — Ayşe"), "izleyici");
+    const rolSecimi = await screen.findByLabelText("Rol — Ayşe");
+    // D8: rol değişikliği onay ister; Vazgeç'te istek gitmez ve seçim eski değerine döner
+    await u.selectOptions(rolSecimi, "izleyici");
+    let onay = await screen.findByRole("dialog", { name: "Ayşe'nin rolü Muhasebe → İzleyici olsun mu?" });
+    await u.click(within(onay).getByRole("button", { name: "Vazgeç" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(rolSecimi).toHaveValue("muhasebe");
+    expect(yama).toBeNull();
+    await u.selectOptions(rolSecimi, "izleyici");
+    onay = await screen.findByRole("dialog", { name: "Ayşe'nin rolü Muhasebe → İzleyici olsun mu?" });
+    await u.click(within(onay).getByRole("button", { name: "Rolü değiştir" }));
     await waitFor(() => expect(yama).toEqual({ rol: "izleyici" }));
+    // Yeni işlem eski başarı mesajını (geçici şifre) temizler; yalnız son işlemin sonucu görünür
+    expect(await screen.findByRole("status")).toHaveTextContent("Ayşe'nin rolü İzleyici olarak değiştirildi.");
+    expect(screen.getByRole("status")).not.toHaveTextContent("geçici şifre");
     // kendini pasifleştiremez
     const benimSatir = screen.getByText("siz").closest("tr") as HTMLElement;
     expect(within(benimSatir).getByRole("button", { name: "Pasifleştir" })).toBeDisabled();
+  });
+
+  it("D8: pasifleştir ve şifre sıfırla onay sorar; hata mesajı yeni işlemde temizlenir", async () => {
+    const yamalar: unknown[] = [];
+    const sifirlananlar: string[] = [];
+    let sifirlamaHatasi = true;
+    const kayitlar = [
+      gd,
+      { ...gd, id: 4, kullanici_adi: "izleyici1", ad: "İzleyici Bir", rol: "izleyici" as const, rol_ad: "İzleyici" },
+      { ...gd, id: 5, kullanici_adi: "satinalma1", ad: "Satın Alma Bir", rol: "satin_alma" as const, rol_ad: "Satın alma" },
+    ];
+    sunucu.use(
+      http.get(`${T}/kullanicilar`, () => HttpResponse.json({ kayitlar, toplam: 3, roller: {} })),
+      http.patch(`${T}/kullanicilar/:id`, async ({ request, params }) => {
+        yamalar.push({ id: params.id, ...((await request.json()) as object) });
+        return HttpResponse.json(kayitlar[1]);
+      }),
+      http.post(`${T}/kullanicilar/:id/sifre-sifirla`, ({ params }) => {
+        if (sifirlamaHatasi) {
+          sifirlamaHatasi = false;
+          return HttpResponse.json({ hata: "sunucu", mesaj: "Şifre sıfırlanamadı", alanlar: { id: 5 }, kod: null }, { status: 500 });
+        }
+        sifirlananlar.push(String(params.id));
+        return HttpResponse.json(kayitlar[2]);
+      }),
+    );
+    kurSayfa(
+      <OturumSaglayici deger={{ girisZorunlu: true, kullanici: gd }}>
+        <Kullanicilar />
+      </OturumSaglayici>,
+    );
+    const u = userEvent.setup();
+    const izleyici = (await screen.findByText("İzleyici Bir")).closest("tr") as HTMLElement;
+    const satinAlma = screen.getByText("Satın Alma Bir").closest("tr") as HTMLElement;
+
+    // Pasifleştir: onay penceresi, Vazgeç'te istek yok
+    await u.click(within(izleyici).getByRole("button", { name: "Pasifleştir" }));
+    let onay = await screen.findByRole("dialog", { name: "İzleyici Bir pasifleştirilsin mi?" });
+    expect(onay).toHaveTextContent("Açık oturumları hemen kapanır");
+    await u.click(within(onay).getByRole("button", { name: "Vazgeç" }));
+    expect(yamalar).toEqual([]);
+
+    // Şifre sıfırla: onay; sunucu hatası pencerede kalır (teknik ek olmadan)
+    await u.click(within(satinAlma).getByRole("button", { name: /Şifre sıfırla/ }));
+    onay = await screen.findByRole("dialog", { name: "Satın Alma Bir için şifre sıfırlansın mı?" });
+    expect(onay).toHaveTextContent("Yeni geçici şifre üretilir, açık oturumları kapanır.");
+    expect(sifirlananlar).toEqual([]);
+    await u.click(within(onay).getByRole("button", { name: "Şifreyi sıfırla" }));
+    expect(await within(onay).findByRole("alert")).toHaveTextContent(/^Şifre sıfırlanamadı$/);
+    await u.click(within(onay).getByRole("button", { name: "Şifreyi sıfırla" }));
+    await waitFor(() => expect(sifirlananlar).toEqual(["5"]));
+    expect(await screen.findByRole("status")).toHaveTextContent("Satın Alma Bir için yeni geçici şifre");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    // Pasifleştir onaylanınca istek gider; önceki şifre mesajı yerini yeni sonuca bırakır
+    await u.click(within(izleyici).getByRole("button", { name: "Pasifleştir" }));
+    onay = await screen.findByRole("dialog", { name: "İzleyici Bir pasifleştirilsin mi?" });
+    await u.click(within(onay).getByRole("button", { name: "Pasifleştir" }));
+    await waitFor(() => expect(yamalar).toEqual([{ id: "4", aktif: false }]));
+    expect(await screen.findByRole("status")).toHaveTextContent("İzleyici Bir pasifleştirildi");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status")).not.toHaveTextContent("geçici şifre");
   });
 
   it("Genel Direktör olmayana sayfa kapalı", () => {

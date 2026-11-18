@@ -33,6 +33,19 @@ export interface SatirTaslagi {
   birim_fiyat_elle?: string | null;
 }
 
+/** Taslakta reçeteye eklenen satır (Kaydet'te yeni sürümün sonuna girer). */
+export interface YeniSatir {
+  malzeme_kodu: string;
+  ad: string;
+  /** API sayısı (noktalı). */
+  miktar: string;
+  birim: string | null;
+  /** Fire oranı (0.05 gibi); boşsa fire kurallardan gelir. */
+  fire?: string;
+  /** Reçete ağacındaki seviye: reçetede seviye varsa üst düzey malzeme seviyesi (`yeniSatirSeviyesi`). */
+  seviye?: number | null;
+}
+
 /** Gider satırında elle yazılabilen hücreler (Excel I/K/M/P). */
 export const GIDER_ELLE_ALANLARI = ["miktar", "brut_miktar", "birim_fiyat", "tutar"] as const;
 export type GiderElleAlani = (typeof GIDER_ELLE_ALANLARI)[number];
@@ -50,6 +63,10 @@ export interface Taslak {
   giderOranlari: Record<string, string>;
   /** Bu ürüne özel elle gider hücreleri (senaryo oranından bağımsız). */
   giderElle: GiderElle;
+  /** Reçetenin sonuna eklenecek satırlar (sırayla; canlı hesapta sırası n+1, n+2 ...). */
+  eklenen: YeniSatir[];
+  /** Silinecek reçete satırlarının sıraları (artan). */
+  silinen: number[];
 }
 
 /**
@@ -63,9 +80,22 @@ export interface TaslakYamasi {
   parametreler?: Record<string, string | undefined>;
   giderOranlari?: Record<string, string | undefined>;
   giderElle?: Record<string, Partial<Record<GiderElleAlani, string | null | undefined>>>;
+  /** Eklenen satırların yeni tam listesi (yerine geçer). */
+  eklenen?: YeniSatir[];
+  /** Silinecek satır sıralarının yeni tam listesi (yerine geçer). */
+  silinen?: number[];
 }
 
-export const taslakBos = (): Taslak => ({ urun: {}, hedef: {}, satirlar: {}, parametreler: {}, giderOranlari: {}, giderElle: {} });
+export const taslakBos = (): Taslak => ({
+  urun: {},
+  hedef: {},
+  satirlar: {},
+  parametreler: {},
+  giderOranlari: {},
+  giderElle: {},
+  eklenen: [],
+  silinen: [],
+});
 
 const SATIR_ALANLARI = ["miktar", "fire", "brut_miktar_elle", "birim_fiyat_elle"] as const;
 
@@ -74,7 +104,30 @@ export function taslakSayisi(t: Taslak): number {
   const satir = Object.values(t.satirlar).reduce((n, s) => n + SATIR_ALANLARI.filter((a) => s[a] !== undefined).length, 0);
   const hedef = Object.values(t.hedef).filter((v) => v !== undefined).length;
   const elle = Object.values(t.giderElle).reduce((n, h) => n + Object.keys(h).length, 0);
-  return Object.keys(t.urun).length + hedef + satir + Object.keys(t.parametreler).length + Object.keys(t.giderOranlari).length + elle;
+  const yapi = (t.eklenen?.length ?? 0) + (t.silinen?.length ?? 0);
+  return (
+    Object.keys(t.urun).length + hedef + satir + Object.keys(t.parametreler).length + Object.keys(t.giderOranlari).length + elle + yapi
+  );
+}
+
+/**
+ * Eklenen satırın seviyesi: reçetede seviye yoksa null; varsa üst düzey malzeme seviyesi (ürün satırı varsa onun bir altı,
+ * yoksa reçetedeki en küçük seviye). Böylece yeni satır hiçbir ara mamulün altına girmez.
+ */
+export function yeniSatirSeviyesi(recete: ReceteSatiri[], urunKodu?: string): number | null {
+  const seviyeli = recete.filter((r) => r.seviye != null);
+  if (seviyeli.length === 0) return null;
+  const urun = seviyeli.find((r) => r.dugum_tipi === "ara_mamul" && !!urunKodu && r.malzeme_kodu === urunKodu);
+  if (urun) return (urun.seviye as number) + 1;
+  return Math.min(...seviyeli.map((r) => r.seviye as number));
+}
+
+/** Taslaktaki eklenen satır -> API reçete satırı. */
+export function yeniSatirGirisi(y: YeniSatir): Sema["ReceteSatirGiris"] {
+  const g: Sema["ReceteSatirGiris"] = { malzeme_kodu: y.malzeme_kodu, ad: y.ad, miktar: y.miktar, birim: y.birim, dugum_tipi: "yaprak" };
+  if (y.fire !== undefined) g.fire_override = y.fire;
+  if (y.seviye != null) g.seviye = y.seviye;
+  return g;
 }
 
 /** Sunucudaki (kayıtlı) değerler: taslakla karşılaştırma ve "eski" sütunu için. */
@@ -214,6 +267,8 @@ export function taslakYamasi(t: Taslak, yama: TaslakYamasi, sunucu: SunucuDegerl
     giderOranlari: alanBirlestir(t.giderOranlari, yama.giderOranlari, (a) => sunucu.giderOranlari?.[a]),
     satirlar: { ...t.satirlar },
     giderElle: { ...t.giderElle },
+    eklenen: yama.eklenen ?? t.eklenen ?? [],
+    silinen: yama.silinen ? [...new Set(yama.silinen)].sort((a, b) => a - b) : (t.silinen ?? []),
   };
   for (const [kod, hy] of Object.entries(yama.giderElle ?? {})) {
     const giris = { ...t.giderElle[kod] };
@@ -244,6 +299,8 @@ export function taslakYamasi(t: Taslak, yama: TaslakYamasi, sunucu: SunucuDegerl
     if (SATIR_ALANLARI.some((a) => giris[a] !== undefined)) sonraki.satirlar[sira] = giris;
     else delete sonraki.satirlar[sira];
   }
+  // Silinen satırın hücre taslakları anlamsızdır: düşer (geri alınınca hücre kayıtlı değerle başlar).
+  for (const sira of sonraki.silinen) delete sonraki.satirlar[sira];
   // Hat/sınıf değişince eski hat/sınıfa bağlı gider oranı girdileri yetim kalır: etkin değere uymayanlar düşer.
   if (yama.urun && ("hat" in yama.urun || "taze_tursu_sinifi" in yama.urun)) {
     const kf = (v: unknown) =>
@@ -296,8 +353,10 @@ export function taslaktanOverride(
   if (taslakSayisi(t) === 0) return undefined;
   const fire: Record<string, string> = {};
   const satirlar: Record<string, Sema["SatirOverride"]> = {};
+  const silinen = new Set(t.silinen ?? []);
   for (const [anahtar, s] of Object.entries(t.satirlar)) {
     const sira = Number(anahtar);
+    if (silinen.has(sira)) continue;
     const r = recete.find((x) => x.sira === sira);
     if (s.fire !== undefined && etkinElle(r, s) === null) fire[anahtar] = s.fire;
     const o: Sema["SatirOverride"] = { elle_brut_kaldir: false, elle_fiyat_kaldir: false };
@@ -320,6 +379,9 @@ export function taslaktanOverride(
   if (Object.keys(urunOverride).length > 0) override.urun = urunOverride as Sema["UrunOverride"];
   // Elle gider: sunucu kayıtlı haritanın TAMAMI yerine geçirir; bu yüzden kayıtlı + taslak birlikte gider.
   if (Object.keys(t.giderElle).length > 0) override.gider_elle = etkinGiderElle(t, sunucuGiderElle);
+  // Reçete yapısı: silinen satırlar canlı hesaptan düşer, eklenenler sona girer (sunucu özgün sıraları korur).
+  if (silinen.size > 0) override.silinen_satirlar = [...silinen].sort((a, b) => a - b);
+  if ((t.eklenen ?? []).length > 0) override.eklenen_satirlar = t.eklenen.map(yeniSatirGirisi);
   return override;
 }
 
@@ -395,8 +457,12 @@ export function taslaktanKaydetGovdesi(t: Taslak, s: KaydetSecenekleri): Sema["T
     };
   }
 
-  if (Object.keys(t.satirlar).length > 0) {
-    govde.recete = s.recete.map((r) => {
+  const silinen = new Set(t.silinen ?? []);
+  const eklenen = t.eklenen ?? [];
+  if (Object.keys(t.satirlar).length > 0 || silinen.size > 0 || eklenen.length > 0) {
+    const kalan = s.recete.filter((r) => !silinen.has(r.sira));
+    if (kalan.length + eklenen.length === 0) throw new Error("Reçetede en az bir satır kalmalı");
+    govde.recete = kalan.map((r) => {
       const x = t.satirlar[r.sira];
       const brut = etkinElle(r, x);
       const fiyat = x && x.birim_fiyat_elle !== undefined ? x.birim_fiyat_elle : r.birim_fiyat_elle;
@@ -417,6 +483,8 @@ export function taslaktanKaydetGovdesi(t: Taslak, s: KaydetSecenekleri): Sema["T
       if (r.para_birimi_elle) satir.para_birimi_elle = r.para_birimi_elle;
       return satir;
     });
+    // Eklenen satırlar yeni sürümün sonuna girer (canlı hesaptaki sırayla aynı).
+    govde.recete.push(...eklenen.map(yeniSatirGirisi));
   }
 
   const parametreler = Object.entries(t.parametreler);
@@ -621,6 +689,28 @@ export function degisiklikListesi(t: Taslak, s: SunucuDegerleri, havuzlar?: Havu
         x.birim_fiyat_elle !== null ? `${sayiGoster(x.birim_fiyat_elle)}${doviz}` : "listeye döner",
       );
   }
+
+  for (const sira of t.silinen ?? []) {
+    const r = s.recete.find((y) => y.sira === sira);
+    liste.push({
+      alan: `silinen.${sira}`,
+      etiket: `Satır silindi: ${r ? `${r.malzeme_kodu} · ${r.ad}` : `Satır ${sira}`}`,
+      eski: r ? `Satır ${sira} · ${sayiGoster(r.miktar)}${r.birim ? ` ${r.birim}` : ""}` : `Satır ${sira}`,
+      yeni: "silinecek",
+      etki: "urun",
+      kalici: true,
+    });
+  }
+  (t.eklenen ?? []).forEach((y, i) => {
+    liste.push({
+      alan: `eklenen.${i}`,
+      etiket: `Satır eklendi: ${y.malzeme_kodu} · ${y.ad || "—"}`,
+      eski: "—",
+      yeni: `${sayiGoster(y.miktar)}${y.birim ? ` ${y.birim}` : ""} · fire ${y.fire !== undefined ? `${sayiGoster(fireYuzdeMetni(y.fire))} %` : "kuraldan"}`,
+      etki: "urun",
+      kalici: true,
+    });
+  });
 
   for (const [anahtar, yeni] of Object.entries(t.parametreler)) {
     const eski = s.parametreler?.[anahtar];

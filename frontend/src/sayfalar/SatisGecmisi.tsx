@@ -1,8 +1,10 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useId, useMemo, useState, type FormEvent } from "react";
 import { Download } from "lucide-react";
 import { type ApiHatasi, hataMetni, hataMetniVarsa } from "@/api/istemci";
 import { useSatisEkle, useSatisGecmisi, useSatisSil } from "@/api/sorgular/satis";
 import type { SatisKaydi } from "@/api/tipler";
+import { NedenAlani } from "@/bilesenler/NedenAlani";
+import { nedenGecerli } from "@/yardimcilar/neden";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { ParaHucresi } from "@/bilesenler/ParaHucresi";
 import { DuzenlemeKilidi, useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
@@ -21,14 +23,17 @@ const SABLON_ADRESI = sablonAdresi("satis_gecmisi");
 const SELECT_SINIFI =
   "h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
-const BOS_FORM = { urun_kodu: "", musteri: "", tarih: "", fiyat: "", para_birimi: "TL", adet: "" };
+const BOS_FORM = { urun_kodu: "", musteri: "", tarih: "", fiyat: "", para_birimi: "TL", adet: "", neden: "" };
 
-function Alan({ etiket, children }: { etiket: string; children: React.ReactNode }) {
+/** Etiket + alan; etiket `htmlFor` ile alanın `id`sine açıkça bağlıdır (ekran okuyucu ve tıklayınca odak). */
+function Alan({ id, etiket, children }: { id: string; etiket: string; children: React.ReactNode }) {
   return (
-    <label className="flex min-w-32 flex-1 flex-col gap-1 text-sm">
-      <span className="text-muted-foreground">{etiket}</span>
+    <div className="flex min-w-32 flex-1 flex-col gap-1 text-sm">
+      <label htmlFor={id} className="text-muted-foreground">
+        {etiket}
+      </label>
       {children}
-    </label>
+    </div>
   );
 }
 
@@ -49,6 +54,9 @@ export default function SatisGecmisi() {
   const [formHatasi, setFormHatasi] = useState<string | null>(null);
   const [eklendi, setEklendi] = useState(false);
   const [silinecek, setSilinecek] = useState<SatisKaydi | null>(null);
+  const [silmeNedeni, setSilmeNedeni] = useState("");
+  const k = useId();
+  const id = (alan: string) => `${k}-${alan}`;
 
   const kayitlar = liste.data?.kayitlar ?? [];
   const toplam = liste.data?.toplam ?? 0;
@@ -69,6 +77,7 @@ export default function SatisGecmisi() {
     if (!form.urun_kodu.trim() || !form.musteri.trim() || !form.tarih) return setFormHatasi("Ürün kodu, müşteri ve tarih zorunlu");
     if (fiyat === null) return setFormHatasi("Fiyat sayı olmalı (0 veya büyük)");
     if (adet === null || Number(adet) <= 0) return setFormHatasi("Adet 0'dan büyük bir sayı olmalı");
+    if (!nedenGecerli(form.neden)) return setFormHatasi("Neden girin");
     setFormHatasi(null);
     ekle.mutate(
       {
@@ -78,6 +87,7 @@ export default function SatisGecmisi() {
         fiyat,
         para_birimi: form.para_birimi as (typeof PARA_BIRIMLERI)[number],
         adet,
+        neden: form.neden.trim(),
       },
       {
         onSuccess: () => {
@@ -126,6 +136,7 @@ export default function SatisGecmisi() {
             title={kilitNotu}
             onClick={() => {
               sil.reset();
+              setSilmeNedeni("");
               setSilinecek(c.row.original);
             }}
           >
@@ -160,17 +171,17 @@ export default function SatisGecmisi() {
       <SatisYuklemeKarti />
 
       <div className="flex flex-wrap items-end gap-2" role="search" aria-label="Süzgeç">
-        <Alan etiket="Ürün kodu">
-          <Input value={urunKodu} onChange={(e) => suzgec(setUrunKodu)(e.target.value)} />
+        <Alan id={id("s-urun")} etiket="Ürün kodu">
+          <Input id={id("s-urun")} value={urunKodu} onChange={(e) => suzgec(setUrunKodu)(e.target.value)} />
         </Alan>
-        <Alan etiket="Müşteri">
-          <Input value={musteri} onChange={(e) => suzgec(setMusteri)(e.target.value)} />
+        <Alan id={id("s-musteri")} etiket="Müşteri">
+          <Input id={id("s-musteri")} value={musteri} onChange={(e) => suzgec(setMusteri)(e.target.value)} />
         </Alan>
-        <Alan etiket="Başlangıç tarihi">
-          <Input type="date" value={bas} onChange={(e) => suzgec(setBas)(e.target.value)} />
+        <Alan id={id("s-bas")} etiket="Başlangıç tarihi">
+          <Input id={id("s-bas")} type="date" value={bas} onChange={(e) => suzgec(setBas)(e.target.value)} />
         </Alan>
-        <Alan etiket="Bitiş tarihi">
-          <Input type="date" value={son} onChange={(e) => suzgec(setSon)(e.target.value)} />
+        <Alan id={id("s-son")} etiket="Bitiş tarihi">
+          <Input id={id("s-son")} type="date" value={son} onChange={(e) => suzgec(setSon)(e.target.value)} />
         </Alan>
       </div>
 
@@ -198,29 +209,44 @@ export default function SatisGecmisi() {
       <form onSubmit={satirEkle} aria-label="Satır ekle" className="flex flex-col gap-2 rounded-lg border p-3">
         <h2 className="text-base font-semibold">Satır ekle</h2>
         <div className="flex flex-wrap items-end gap-2">
-          <Alan etiket="Ürün kodu *">
-            <Input value={form.urun_kodu} onChange={(e) => setForm({ ...form, urun_kodu: e.target.value })} />
+          <Alan id={id("urun_kodu")} etiket="Ürün kodu *">
+            <Input id={id("urun_kodu")} value={form.urun_kodu} onChange={(e) => setForm({ ...form, urun_kodu: e.target.value })} />
           </Alan>
-          <Alan etiket="Müşteri *">
-            <Input value={form.musteri} onChange={(e) => setForm({ ...form, musteri: e.target.value })} />
+          <Alan id={id("musteri")} etiket="Müşteri *">
+            <Input id={id("musteri")} value={form.musteri} onChange={(e) => setForm({ ...form, musteri: e.target.value })} />
           </Alan>
-          <Alan etiket="Tarih *">
-            <Input type="date" value={form.tarih} onChange={(e) => setForm({ ...form, tarih: e.target.value })} />
+          <Alan id={id("tarih")} etiket="Tarih *">
+            <Input id={id("tarih")} type="date" value={form.tarih} onChange={(e) => setForm({ ...form, tarih: e.target.value })} />
           </Alan>
-          <Alan etiket="Fiyat *">
-            <Input inputMode="decimal" value={form.fiyat} onChange={(e) => setForm({ ...form, fiyat: e.target.value })} />
+          <Alan id={id("fiyat")} etiket="Fiyat *">
+            <Input id={id("fiyat")} inputMode="decimal" value={form.fiyat} onChange={(e) => setForm({ ...form, fiyat: e.target.value })} />
           </Alan>
-          <Alan etiket="Para birimi">
-            <select className={SELECT_SINIFI} value={form.para_birimi} onChange={(e) => setForm({ ...form, para_birimi: e.target.value })}>
+          <Alan id={id("para_birimi")} etiket="Para birimi">
+            <select
+              id={id("para_birimi")}
+              className={SELECT_SINIFI}
+              value={form.para_birimi}
+              onChange={(e) => setForm({ ...form, para_birimi: e.target.value })}
+            >
               {PARA_BIRIMLERI.map((p) => (
                 <option key={p}>{p}</option>
               ))}
             </select>
           </Alan>
-          <Alan etiket="Adet *">
-            <Input inputMode="decimal" value={form.adet} onChange={(e) => setForm({ ...form, adet: e.target.value })} />
+          <Alan id={id("adet")} etiket="Adet *">
+            <Input id={id("adet")} inputMode="decimal" value={form.adet} onChange={(e) => setForm({ ...form, adet: e.target.value })} />
           </Alan>
-          <Button type="submit" disabled={ekle.isPending || kilitli} title={kilitNotu}>
+        </div>
+        <div className="flex flex-wrap items-start gap-2">
+          <div className="min-w-64 flex-1">
+            <NedenAlani deger={form.neden} onDegis={(v) => setForm({ ...form, neden: v })} />
+          </div>
+          <Button
+            type="submit"
+            className="mt-6"
+            disabled={ekle.isPending || kilitli || !nedenGecerli(form.neden)}
+            title={kilitNotu ?? (nedenGecerli(form.neden) ? undefined : "Neden girin")}
+          >
             Ekle
           </Button>
         </div>
@@ -241,14 +267,16 @@ export default function SatisGecmisi() {
           baslik="Satış kaydı silinsin mi?"
           onayMetni="Sil"
           bekliyor={sil.isPending}
+          onayPasif={!nedenGecerli(silmeNedeni)}
           hata={hataMetniVarsa(sil.error)}
-          onOnayla={() => sil.mutate(silinecek.id, { onSuccess: () => setSilinecek(null) })}
+          onOnayla={() => sil.mutate({ id: silinecek.id, neden: silmeNedeni.trim() }, { onSuccess: () => setSilinecek(null) })}
           onVazgec={() => setSilinecek(null)}
         >
           <p>
             {silinecek.urun_kodu} · {silinecek.musteri} · {goster(silinecek.tarih)} kaydı silinecek. Silinen içerik değişiklik geçmişinde
             saklanır.
           </p>
+          <NedenAlani deger={silmeNedeni} onDegis={setSilmeNedeni} autoFocus />
         </OnayDiyalogu>
       )}
     </section>

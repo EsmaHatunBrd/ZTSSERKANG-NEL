@@ -31,7 +31,7 @@ def _gecici(dosya: UploadFile):
             while parca := dosya.file.read(PARCA_BAYT):
                 toplam += len(parca)
                 if toplam > MAKS_DOSYA_BAYT:
-                    raise DogrulamaHatasi("dosya 25 MB'den büyük")
+                    raise DogrulamaHatasi("Dosya 25 MB'den büyük.")
                 f.write(parca)
         try:
             yield Path(f.name)
@@ -47,7 +47,7 @@ def excel_tam(s: OturumDep, dosya: UploadFile = File(...), sezon_ad: str | None 
               senaryo_id: int | None = Form(None), k: str = Depends(kullanici_ver)):
     """senaryo_id verilirse 'mevcut senaryoyu tamamla' modu: sezon_ad/senaryo_ad/tur yok sayılır, yeni Sezon/Senaryo açılmaz."""
     if senaryo_id is None and not ((sezon_ad or "").strip() and (senaryo_ad or "").strip()):
-        raise DogrulamaHatasi("sezon_ad ve senaryo_ad zorunlu (veya senaryo_id verin)")
+        raise DogrulamaHatasi("Sezon ve çalışma adını girin ya da var olan bir çalışmayı seçin.")
     if senaryo_id is not None:   # tamamla modu mevcut senaryoya yazar: kilitliyse 409
         hs.kilit_denetle(hs.senaryo_getir(s, senaryo_id))
     with _gecici(dosya) as yol:

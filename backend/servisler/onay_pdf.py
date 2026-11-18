@@ -41,7 +41,7 @@ def _yazi_tipleri() -> tuple[str, str]:
     for normal, kalin in adaylar:
         if normal and Path(normal).is_file():
             return normal, kalin if kalin and Path(kalin).is_file() else normal
-    raise DogrulamaHatasi("PDF için Türkçe karakter destekli yazı tipi bulunamadı (PDF_YAZI_TIPI ayarlayın)")
+    raise DogrulamaHatasi("PDF için Türkçe karakter destekli yazı tipi bulunamadı; sistem sorumlusuna bildirin.", {"ayar": "PDF_YAZI_TIPI"})
 
 
 # ---------------------------------------------------------------- sayı ve metin biçimi

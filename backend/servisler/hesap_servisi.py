@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field, replace
 from datetime import date
 from decimal import Decimal
+from types import SimpleNamespace
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from fiyat_motoru.gider_dagitim import anahtar
@@ -14,7 +15,7 @@ from ..depo import modeller as m
 from fiyat_motoru.fiyat import satis_fiyati, suzme_kg_fiyati, yuzdeleri_doldur
 from . import aile, fiyat_servisi, gider_servisi, liste_kurallari, parametre_servisi, recete_servisi, stok_devri_servisi
 from .donusum import decimal_str
-from .hatalar import HEDEF_YOK, BulunamadiHatasi, DogrulamaHatasi, KilitliHatasi, ServisHatasi
+from .hatalar import BulunamadiHatasi, DogrulamaHatasi, HEDEF_YOK, KilitliHatasi, ServisHatasi, alan_adi, liste_metni
 
 URUN_OVERRIDE_ALANLARI = ("hat", "taze_tursu_sinifi", "ambalaj_hacmi", "suzme_kg", "pazar")
 URETIM_ALANLARI = ("vardiya_uretim_adedi", "dolum_personel", "etiketleme_adedi", "etiket_personel", "mal_kabul_miktar_kg", "mal_kabul_fire", "pazarlama_yonetim_uygula")
@@ -36,26 +37,28 @@ class HesapCiktisi:
     notlar: list[str] = field(default_factory=list)   # metin parametrelerden (satış fiyatı notu); snapshot'a yazılır
     stok_devri: dict | None = None    # stokta kalan özeti (stok_devri_servisi.ozet, Decimal değerli); kayıt yoksa None
     satis_ortalamadan: bool = False   # satış fiyatı ortalama maliyetten hesaplandı (`satis_ortalama_maliyetten` = 1 ve stok etkisi var)
+    # Taslak reçete yapısında (override silinen/eklenen satır) malzeme satırlarının reçete sıraları; None: yapı aynı (sıra = indeks + 1)
+    siralar: list[int] | None = None
 
 
 def urun_getir(s: Session, kod: str) -> m.Urun:
     u = s.scalar(select(m.Urun).where(m.Urun.kod == kod))
     if u is None:
-        raise BulunamadiHatasi(f"ürün yok: {kod}", {"kod": kod})
+        raise BulunamadiHatasi(f"{kod} kodlu ürün bulunamadı.", {"kod": kod})
     return u
 
 
 def senaryo_getir(s: Session, senaryo_id: int) -> m.Senaryo:
     sen = s.get(m.Senaryo, senaryo_id)
     if sen is None:
-        raise BulunamadiHatasi("senaryo yok", {"senaryo_id": senaryo_id})
+        raise BulunamadiHatasi("Çalışma bulunamadı.", {"senaryo_id": senaryo_id})
     return sen
 
 
 def kilit_denetle(sen: m.Senaryo) -> None:
     """Kilitli senaryoda yazma yok: 409 `senaryo kilitli` (KilitliHatasi)."""
     if sen.kilitli:
-        raise KilitliHatasi("senaryo kilitli", {"senaryo_id": sen.id})
+        raise KilitliHatasi(f"{sen.ad} çalışması kilitli; değişiklik için önce kilidi açın.", {"senaryo_id": sen.id})
 
 
 def dosya_adi_temizle(ad: str | None) -> str | None:
@@ -68,7 +71,7 @@ def senaryo_olustur(s: Session, sezon_ad: str, tur: str, ad: str, aciklama: str 
     from . import import_servisi   # import_servisi bu modülü kullanır; döngüyü yerel içe aktarma kırar
     ad = (ad or "").strip()
     if not ad:
-        raise DogrulamaHatasi("senaryo adı boş olamaz", {"ad": ad})
+        raise DogrulamaHatasi("Çalışma adı boş olamaz.", {"ad": ad})
     sezon = import_servisi.sezon_getir_veya_olustur(s, sezon_ad)
     sen = m.Senaryo(sezon_id=sezon.id, tur=tur, ad=ad, aciklama=(aciklama or None), olusturan=kullanici)
     s.add(sen); s.flush()
@@ -79,7 +82,7 @@ def senaryo_olustur(s: Session, sezon_ad: str, tur: str, ad: str, aciklama: str 
 def urun_getir_id(s: Session, urun_id: int) -> m.Urun:
     u = s.get(m.Urun, urun_id)
     if u is None:
-        raise BulunamadiHatasi("ürün yok", {"urun_id": urun_id})
+        raise BulunamadiHatasi("Ürün bulunamadı.", {"urun_id": urun_id})
     return u
 
 
@@ -101,7 +104,9 @@ def senaryolar(s: Session) -> list[m.Senaryo]:
 def uretim_hedefi_getir(s: Session, urun_id: int, senaryo_id: int) -> m.UretimHedefi:
     h = s.scalar(select(m.UretimHedefi).where(m.UretimHedefi.urun_id == urun_id, m.UretimHedefi.senaryo_id == senaryo_id))
     if h is None:
-        raise BulunamadiHatasi("üretim hedefi yok", {"urun_id": urun_id, "senaryo_id": senaryo_id}, kod=HEDEF_YOK)
+        u = s.get(m.Urun, urun_id)
+        raise BulunamadiHatasi(f"{u.kod if u else 'Bu'} ürününün bu çalışmada üretim bilgisi yok; Üretim bilgileri bölümünden girin.",
+                               {"urun_id": urun_id, "senaryo_id": senaryo_id}, kod=HEDEF_YOK)
     return h
 
 
@@ -145,10 +150,10 @@ def urun_kod_degistir(s: Session, eski_kod: str, yeni_kod: str, kullanici: str =
     u = urun_getir(s, eski_kod)
     yeni_kod = (yeni_kod or "").strip()
     if not yeni_kod:
-        raise DogrulamaHatasi("yeni kod boş olamaz")
+        raise DogrulamaHatasi("Yeni ürün kodu boş olamaz.")
     if yeni_kod != eski_kod:
         if s.scalar(select(m.Urun.id).where(m.Urun.kod == yeni_kod)) is not None:
-            raise DogrulamaHatasi(f"bu ürün kodu zaten var: {yeni_kod}", {"yeni_kod": yeni_kod})
+            raise DogrulamaHatasi(f"{yeni_kod} kodlu bir ürün zaten var.", {"yeni_kod": yeni_kod})
         u.kod = yeni_kod
         u.gecici_kod = False
         s.add(m.DegisiklikKaydi(tablo="urun", kayit_id=u.id, islem="kod_degistir", eski={"kod": eski_kod}, yeni={"kod": yeni_kod}, kullanici=kullanici))
@@ -162,21 +167,21 @@ def gider_elle_normalle(veri) -> dict | None:
     out = {}
     for kalem, alanlar in (veri or {}).items():
         if kalem not in GIDER_KALEMLERI:
-            raise DogrulamaHatasi(f"bilinmeyen gider kalemi: {kalem}", {"kalem": kalem})
+            raise DogrulamaHatasi(f"Bilinmeyen gider kalemi: {kalem}.", {"kalem": kalem})
         if isinstance(alanlar, GiderElle):
             alanlar = {a: getattr(alanlar, a) for a in GIDER_ELLE_ALANLARI}
         elif not isinstance(alanlar, dict):
             alanlar = alanlar.model_dump()   # API şeması (GiderElleGiris)
         bilinmeyen = sorted(set(alanlar) - set(GIDER_ELLE_ALANLARI))
         if bilinmeyen:
-            raise DogrulamaHatasi("bilinmeyen elle gider alanı", {"kalem": kalem, "alanlar": bilinmeyen})
+            raise DogrulamaHatasi(f"{kalem} kaleminde bilinmeyen elle gider alanı: {liste_metni(bilinmeyen)}.", {"kalem": kalem, "alanlar": bilinmeyen})
         d = {}
         for a, v in alanlar.items():
             if v is None or v == "":
                 continue
             v = Decimal(str(v))
             if not v.is_finite():
-                raise DogrulamaHatasi("elle gider değeri sonlu olmalı", {"kalem": kalem, "alan": a})
+                raise DogrulamaHatasi(f"{kalem} kalemindeki elle gider değeri geçerli bir sayı olmalı.", {"kalem": kalem, "alan": a})
             d[a] = str(v)
         if d:
             out[kalem] = d
@@ -196,7 +201,7 @@ def uretim_hedefi_kaydet(s: Session, urun_id: int, senaryo_id: int, kullanici: s
     """gider_elle verilmezse mevcut elle gider hücrelerine dokunulmaz; verilirse (None dahil) tamamı bununla değişir."""
     eksik = [a for a in URETIM_ALANLARI if a not in alanlar]
     if eksik:
-        raise DogrulamaHatasi("üretim hedefi alanı eksik", {"eksik": eksik})
+        raise DogrulamaHatasi(f"Üretim bilgilerinde eksik alan var: {liste_metni(alan_adi(a) for a in eksik)}.", {"eksik": eksik})
     h = s.scalar(select(m.UretimHedefi).where(m.UretimHedefi.urun_id == urun_id, m.UretimHedefi.senaryo_id == senaryo_id))
     elle = None if gider_elle is _DEGISMEZ else gider_elle_normalle(gider_elle)
     if h is None:
@@ -233,14 +238,14 @@ def _parametre_override(p: Parametreler, degerler: dict[str, Decimal]) -> Parame
             try:
                 n = int(k[11:])
             except ValueError:
-                raise DogrulamaHatasi(f"bilinmeyen override parametresi: {k}")
+                raise DogrulamaHatasi(f"Bilinmeyen parametre: {k}.")
             if n < 1:
-                raise DogrulamaHatasi("teklif_kar sırası >= 1 olmalı", {"anahtar": k})
+                raise DogrulamaHatasi("Teklif kâr oranı sırası 1 ya da daha büyük olmalı.", {"anahtar": k})
             i = n - 1
             while len(teklif) <= i: teklif.append(SIFIR)
             teklif[i] = v
         else:
-            raise DogrulamaHatasi(f"bilinmeyen override parametresi: {k}")
+            raise DogrulamaHatasi(f"Bilinmeyen parametre: {k}.")
     return Parametreler(enflasyon=enf, kurlar=kurlar, faiz_oranlari=faiz, stok_sureleri_ay=stok, satis_kar_orani=kar,
                         teklif_kar_oranlari=tuple(teklif), vardiya_saati=vs)
 
@@ -262,7 +267,7 @@ def _gider_orani_override(o: GiderOranlari, degerler: dict[str, Decimal]) -> Gid
             continue
         alan, nokta, alt = k.partition(".")
         if not nokta or alan not in _GIDER_SOZLUK or not alt.strip():
-            raise DogrulamaHatasi(f"bilinmeyen gider oranı anahtarı: {k}", {"anahtar": k})
+            raise DogrulamaHatasi(f"Bilinmeyen gider oranı: {k}.", {"anahtar": k})
         d = sozlukler.setdefault(alan, dict(getattr(o, _GIDER_SOZLUK[alan])))
         d[anahtar(alt)] = v
     return replace(o, **skaler, **sozlukler)
@@ -291,14 +296,15 @@ def hesapla(s: Session, urun_kodu: str, senaryo_id: int, tarih: date | None = No
     u, sen = _urun(s, urun_kodu), _senaryo(s, senaryo_id)
     hedef = s.scalar(select(m.UretimHedefi).where(m.UretimHedefi.urun_id == u.id, m.UretimHedefi.senaryo_id == senaryo_id))
     if hedef is None:
-        raise BulunamadiHatasi("üretim hedefi yok", {"urun": urun_kodu, "senaryo_id": senaryo_id}, kod=HEDEF_YOK)
+        raise BulunamadiHatasi(f"{urun_kodu} ürününün bu çalışmada üretim bilgisi yok; Üretim bilgileri bölümünden girin.",
+                               {"urun": urun_kodu, "senaryo_id": senaryo_id}, kod=HEDEF_YOK)
 
     param_satirlari = b.al(("parametreler", senaryo_id, tarih), lambda: parametre_servisi.parametre_satirlari(s, senaryo_id, tarih))
     kullanilan = parametre_servisi.degerleri_coz(param_satirlari, u.id)
     p = parametre_servisi.gecerli_parametreler(s, senaryo_id, tarih, u.id, satirlar=param_satirlari)
     ov_param = override.get("parametreler") or {}
     if sen.tur == "gerceklesen" and "enflasyon" in ov_param:
-        raise DogrulamaHatasi("gerçekleşen senaryoda enflasyon override edilemez")
+        raise DogrulamaHatasi("Gerçekleşen çalışmada enflasyon değiştirilemez.")
     if ov_param:
         p = _parametre_override(p, ov_param); kullanilan.update({k: Decimal(str(v)) for k, v in ov_param.items()})
     if sen.tur == "gerceklesen":   # override'dan SONRA: gerçekleşen senaryoda enflasyon her zaman 0
@@ -309,15 +315,15 @@ def hesapla(s: Session, urun_kodu: str, senaryo_id: int, tarih: date | None = No
     oranlar = b.al(("oranlar", senaryo_id), lambda: gider_servisi.oranlar(s, senaryo_id))
     recete = recete_servisi.aktif_recete_veya_none(s, u.id, senaryo_id)
     if recete is None:
-        raise DogrulamaHatasi("reçete yok: bu üründe bu senaryoda aktif reçete bulunmuyor", {"urun": urun_kodu, "senaryo_id": senaryo_id})
+        raise DogrulamaHatasi(f"{urun_kodu} ürününün bu çalışmada aktif reçetesi yok; önce reçete girin ya da aktarın.", {"urun": urun_kodu, "senaryo_id": senaryo_id})
     satir_ov = {int(k): v for k, v in (override.get("satirlar") or {}).items()}
     for sira, o in satir_ov.items():
         if not 1 <= sira <= len(recete.satirlar):
-            raise DogrulamaHatasi("satır override sira aralık dışı", {"sira": sira})
+            raise DogrulamaHatasi(f"Reçetede {sira}. satır yok.", {"sira": sira})
         if o.get("brut_miktar_elle") is not None and o.get("elle_brut_kaldir"):
-            raise DogrulamaHatasi("brüt miktar hem verilip hem kaldırılamaz", {"sira": sira})
+            raise DogrulamaHatasi(f"{sira}. satırda brüt miktar aynı anda hem girilip hem kaldırılamaz.", {"sira": sira})
         if o.get("birim_fiyat_elle") is not None and o.get("elle_fiyat_kaldir"):
-            raise DogrulamaHatasi("birim fiyat hem verilip hem kaldırılamaz", {"sira": sira})
+            raise DogrulamaHatasi(f"{sira}. satırda birim fiyat aynı anda hem girilip hem kaldırılamaz.", {"sira": sira})
     brut_kaldir = frozenset(sira for sira, o in satir_ov.items() if o.get("elle_brut_kaldir"))
     satirlar, kaynaklar = recete_servisi.fire_uygulanmis(s, recete, senaryo_id, tarih, tipler, brut_kaldir)
     for sira, o in satir_ov.items():   # fire override'dan ÖNCE: elle brüt kaldırılan satıra fire verilebilir, elle brüt verilen satıra verilemez
@@ -336,23 +342,24 @@ def hesapla(s: Session, urun_kodu: str, senaryo_id: int, tarih: date | None = No
     for sira, oran in (override.get("fire") or {}).items():
         sira = int(sira)
         if not 1 <= sira <= len(satirlar):
-            raise DogrulamaHatasi("fire override sira aralık dışı", {"sira": sira})
+            raise DogrulamaHatasi(f"Reçetede {sira}. satır yok; fire verilemez.", {"sira": sira})
         i = sira - 1
         if satirlar[i].brut_miktar_elle is not None:
-            raise DogrulamaHatasi("satır elle brüt miktarlı; önce elle değeri kaldırın", {"sira": sira})
+            raise DogrulamaHatasi(f"{sira}. satırın brüt miktarı elle girilmiş; fire vermek için önce elle değeri kaldırın.", {"sira": sira})
         satirlar[i] = replace(satirlar[i], fire_orani=Decimal(str(oran))); kaynaklar[i] = "satir"
+    satirlar, kaynaklar, seviyeler, siralar = _yapi_override(s, recete, satirlar, kaynaklar, override, senaryo_id, tarih, tipler)
     oranlar = _gider_orani_override(oranlar, override.get("gider_oranlari") or {})
 
     ov_uretim = {k: v for k, v in (override.get("uretim") or {}).items() if v is not None}
     bilinmeyen = sorted(set(ov_uretim) - set(URETIM_ALANLARI))
     if bilinmeyen:
-        raise DogrulamaHatasi("bilinmeyen üretim override alanı", {"alanlar": bilinmeyen})
+        raise DogrulamaHatasi(f"Bilinmeyen üretim bilgisi alanı: {liste_metni(bilinmeyen)}.", {"alanlar": bilinmeyen})
     ub = {a: getattr(hedef, a) for a in URETIM_ALANLARI}
     ub.update(ov_uretim)
     ov_urun = {k: v for k, v in (override.get("urun") or {}).items() if v is not None}
     bilinmeyen_urun = sorted(set(ov_urun) - set(URUN_OVERRIDE_ALANLARI))
     if bilinmeyen_urun:
-        raise DogrulamaHatasi("bilinmeyen ürün override alanı", {"alanlar": bilinmeyen_urun})
+        raise DogrulamaHatasi(f"Bilinmeyen ürün bilgisi alanı: {liste_metni(bilinmeyen_urun)}.", {"alanlar": bilinmeyen_urun})
     ua = {a: getattr(u, a) for a in URUN_OVERRIDE_ALANLARI}
     ua.update(ov_urun)
     uretim = UretimBilgisi(pazar=ua["pazar"], hat=ua["hat"], taze_tursu_sinifi=ua["taze_tursu_sinifi"], ambalaj_hacmi=Decimal(str(ua["ambalaj_hacmi"])),
@@ -372,9 +379,50 @@ def hesapla(s: Session, urun_kodu: str, senaryo_id: int, tarih: date | None = No
     return HesapCiktisi(stok_devri=stok, satis_ortalamadan=satis_ortalamadan,
                         girdi=girdi, parametreler=p, oranlar=oranlar, sonuc=sonuc, fire_kaynaklari=kaynaklar, kullanilan_parametreler=kullanilan,
                         recete_id=recete.id, recete_versiyon=recete.versiyon,
-                        malzemeler={r.malzeme_kodu: malzemeler[r.malzeme_kodu] for r in recete.satirlar if r.malzeme_kodu in malzemeler},
-                        override=override or None, seviyeler=[r.seviye for r in recete.satirlar],
+                        malzemeler={r.malzeme_kodu: malzemeler[r.malzeme_kodu] for r in satirlar if r.malzeme_kodu in malzemeler},
+                        override=override or None, seviyeler=seviyeler, siralar=siralar,
                         notlar=list(b.al(("notlar", senaryo_id, tarih), lambda: [k.deger for k in parametre_servisi.metin_gecerli(s, senaryo_id, tarih)])))
+
+
+def _ondalik(x) -> Decimal | None:
+    return None if x is None else Decimal(str(x))
+
+
+def _yapi_override(s: Session, recete: m.Recete, satirlar: list, kaynaklar: list[str], override: dict, senaryo_id: int, tarih: date,
+                   tipler: dict[str, str | None]) -> tuple[list, list[str], list[int | None], list[int] | None]:
+    """Taslak reçete yapısı (kaydedilmez): `silinen_satirlar` (aktif reçetenin 1 tabanlı sıraları) düşer, `eklenen_satirlar` sona girer;
+    eklenen satırın fire'ı kendi `fire_override`'ından ya da kurallardan (kayıtlı satırla aynı öncelik) gelir. Satır override'ları
+    özgün sıralara daha önce uygulanmıştır. Dönüş: (motor satırları, fire kaynakları, seviyeler, reçete sıraları); yapı değişmediyse
+    sıralar None. Kaydet'te aynı liste yeni sürüm olarak yazılır, hesap o sürümden koşar: canlı hesapla aynı sonuç."""
+    n = len(recete.satirlar)
+    seviyeler: list[int | None] = [r.seviye for r in recete.satirlar]
+    silinen = {int(x) for x in (override.get("silinen_satirlar") or [])}
+    eklenen = list(override.get("eklenen_satirlar") or [])
+    if not silinen and not eklenen:
+        return satirlar, kaynaklar, seviyeler, None
+    recete_servisi.kartsiz_malzeme_denetle(s, eklenen, recete)
+    disarida = sorted(x for x in silinen if not 1 <= x <= n)
+    if disarida:
+        raise DogrulamaHatasi(f"Silinecek satır reçetede yok: {liste_metni(disarida)}.", {"siralar": disarida})
+    kalan = [i for i in range(n) if i + 1 not in silinen]
+    satirlar, kaynaklar = [satirlar[i] for i in kalan], [kaynaklar[i] for i in kalan]
+    seviyeler, siralar = [seviyeler[i] for i in kalan], [i + 1 for i in kalan]
+    if eklenen:
+        sahte = SimpleNamespace(satirlar=[SimpleNamespace(
+            sira=n + j + 1, malzeme_kodu=d["malzeme_kodu"], ad=d.get("ad") or "", miktar=Decimal(str(d["miktar"])), birim=d.get("birim"),
+            dugum_tipi=d.get("dugum_tipi") or "yaprak", fire_override=_ondalik(d.get("fire_override")),
+            brut_miktar_elle=_ondalik(d.get("brut_miktar_elle")), birim_fiyat_elle=_ondalik(d.get("birim_fiyat_elle")), seviye=d.get("seviye"),
+            zs_elle=recete_servisi._metin_veya_none(d.get("zs_elle")), para_birimi_elle=recete_servisi._metin_veya_none(d.get("para_birimi_elle")))
+            for j, d in enumerate(eklenen)])
+        ek, ek_kaynak = recete_servisi.fire_uygulanmis(s, sahte, senaryo_id, tarih, tipler)
+        satirlar, kaynaklar = satirlar + ek, kaynaklar + ek_kaynak
+        seviyeler = seviyeler + [d.get("seviye") for d in eklenen]
+        siralar = siralar + [n + j + 1 for j in range(len(eklenen))]
+    if not satirlar:
+        raise DogrulamaHatasi("Reçete boş olamaz; en az bir satır kalmalı.")
+    # Alt satır bilgisi (yalnız uyarıları etkiler) yeni sıraya göre yeniden çıkarılır: alt satırları silinen üst satır yaprak olur.
+    alt = [sv is not None and i + 1 < len(seviyeler) and seviyeler[i + 1] is not None and seviyeler[i + 1] > sv for i, sv in enumerate(seviyeler)]
+    return [replace(x, alt_satiri_var=a) for x, a in zip(satirlar, alt)], kaynaklar, seviyeler, siralar
 
 
 def satisi_maliyetten_hesapla(sonuc: MaliyetSonucu, maliyet_tl: Decimal, p: Parametreler, uretim: UretimBilgisi) -> MaliyetSonucu:
@@ -413,7 +461,7 @@ def kaydet(s: Session, cikti: HesapCiktisi, urun_kodu: str, senaryo_id: int, tar
 def getir(s: Session, hesap_id: int) -> m.MaliyetHesabi:
     h = s.get(m.MaliyetHesabi, hesap_id)
     if h is None:
-        raise BulunamadiHatasi("hesap yok", {"hesap_id": hesap_id})
+        raise BulunamadiHatasi("Kayıtlı hesap bulunamadı.", {"hesap_id": hesap_id})
     return h
 
 
@@ -468,15 +516,17 @@ def toplu_kaydet(s: Session, kod: str, g, kullanici: str = "sistem") -> dict:
     gorulen_p: set[tuple[str, str]] = set()
     for p in parametreler:
         if (p.anahtar, p.kapsam) in gorulen_p:
-            raise DogrulamaHatasi("parametre listesinde tekrar", {"anahtar": p.anahtar, "kapsam": p.kapsam})
+            raise DogrulamaHatasi(f"{p.anahtar} parametresi listede birden çok kez var.", {"anahtar": p.anahtar, "kapsam": p.kapsam})
         gorulen_p.add((p.anahtar, p.kapsam))
         if sen.tur == "gerceklesen" and p.anahtar == "enflasyon":
-            raise DogrulamaHatasi("gerçekleşen senaryoda enflasyon yazılamaz", {"anahtar": p.anahtar})
+            raise DogrulamaHatasi("Gerçekleşen çalışmada enflasyon yazılamaz.", {"anahtar": p.anahtar})
         if not p.deger.is_finite():
-            raise DogrulamaHatasi("parametre değeri sonlu olmalı", {"anahtar": p.anahtar})
+            raise DogrulamaHatasi(f"{p.anahtar} parametresinin değeri geçerli bir sayı olmalı.", {"anahtar": p.anahtar})
     havuzlar_ = list(g.gider_havuzlari or [])
     if len({h.kod for h in havuzlar_}) != len(havuzlar_):
-        raise DogrulamaHatasi("gider havuzu listesinde tekrar")
+        raise DogrulamaHatasi("Gider havuzu listesinde aynı havuz birden çok kez var.")
+    if g.recete is not None:
+        recete_servisi.kartsiz_malzeme_denetle(s, [x.model_dump() for x in g.recete], recete_servisi.aktif_recete_veya_none(s, u.id, sen.id))
 
     if g.urun is not None:
         u = urun_kaydet(s, kod, g.urun.ad, g.urun.ambalaj_hacmi, g.urun.hat, g.urun.taze_tursu_sinifi, g.urun.suzme_kg, g.urun.pazar, kullanici, g.neden,
@@ -489,7 +539,7 @@ def toplu_kaydet(s: Session, kod: str, g, kullanici: str = "sistem") -> dict:
         uretim_hedefi_kaydet(s, u.id, sen.id, kullanici, g.neden, **({"gider_elle": g.gider_elle} if elle_var else {}), **alanlar)
         yazilan["hedef"] = 1
     if g.recete is not None:
-        r = recete_servisi.yeni_versiyon(s, u.id, sen.id, [x.model_dump() for x in g.recete], "ekran", kullanici)
+        r = recete_servisi.yeni_versiyon(s, u.id, sen.id, [x.model_dump() for x in g.recete], "ekran", kullanici, g.neden)
         yazilan["recete"] = len(r.satirlar)
     for p in parametreler:
         if p.kapsam == "genel" and s.scalar(select(m.ParametreDegeri.id).join(m.Parametre).where(
@@ -506,10 +556,10 @@ def toplu_kaydet(s: Session, kod: str, g, kullanici: str = "sistem") -> dict:
         mevcut = gider_servisi.havuzlar(s, sen.id)
         for hg in havuzlar_:
             if hg.kod not in gider_servisi.HAVUZ_KODLARI:
-                raise DogrulamaHatasi(f"bilinmeyen havuz: {hg.kod}", {"kod": hg.kod})
+                raise DogrulamaHatasi(f"{hg.kod} adlı bir gider havuzu yok.", {"kod": hg.kod})
             h = mevcut.get(hg.kod)
             if h is None:
-                raise BulunamadiHatasi(f"gider havuzu yok: {hg.kod}", {"kod": hg.kod, "senaryo_id": sen.id})
+                raise BulunamadiHatasi(f"Bu çalışmada {hg.kod} gider havuzu yok.", {"kod": hg.kod, "senaryo_id": sen.id})
             if h.toplam_tutar == hg.toplam_tutar:
                 continue   # değişmeyen havuz: gereksiz değişiklik kaydı açılmaz
             if h.taban_tutar is not None:   # toplam doğrudan yazılınca taban × çarpan açıklaması artık geçerli değil; sessiz silinmesin

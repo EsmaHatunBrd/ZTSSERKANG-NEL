@@ -13,12 +13,7 @@ import { Alan, Kart, SELECT } from "./ortak";
 const LISTE_BOYUTU = 500;
 
 type HedefAlanAnahtari =
-  | "vardiya_uretim_adedi"
-  | "dolum_personel"
-  | "etiketleme_adedi"
-  | "etiket_personel"
-  | "mal_kabul_miktar_kg"
-  | "mal_kabul_fire";
+  "vardiya_uretim_adedi" | "dolum_personel" | "etiketleme_adedi" | "etiket_personel" | "mal_kabul_miktar_kg" | "mal_kabul_fire";
 /** Ürün ekranındaki "Üretim bilgileri" bloğuyla aynı alanlar (fire yüzde olarak girilir, API'ye oran gider). */
 const HEDEF_ALANLARI: {
   anahtar: HedefAlanAnahtari;
@@ -140,7 +135,13 @@ export function UretimBilgileriKarti({ senaryoId, kilitli, onMesaj, sabitKod, on
     >
       {!sabitKod && (
         <Alan etiket="Ürün" htmlFor={`${id}-urun`}>
-          <select id={`${id}-urun`} className={SELECT} value={kod} disabled={kilitli || liste.isLoading} onChange={(e) => setKod(e.target.value)}>
+          <select
+            id={`${id}-urun`}
+            className={SELECT}
+            value={kod}
+            disabled={kilitli || liste.isLoading}
+            onChange={(e) => setKod(e.target.value)}
+          >
             <option value="">Seçin…</option>
             {(liste.data?.kayitlar ?? []).map((u) => (
               <option key={u.kod} value={u.kod}>
@@ -158,7 +159,9 @@ export function UretimBilgileriKarti({ senaryoId, kilitli, onMesaj, sabitKod, on
       {kod && urun.isLoading && <p className="text-sm text-muted-foreground">Yükleniyor…</p>}
       {kod && urun.data && (
         <div className="flex flex-col gap-2">
-          {!hedef && <p className="text-xs text-muted-foreground">Bu ürün için henüz üretim bilgisi yok; girilen değerler ilk kayıt olur.</p>}
+          {!hedef && (
+            <p className="text-xs text-muted-foreground">Bu ürün için henüz üretim bilgisi yok; girilen değerler ilk kayıt olur.</p>
+          )}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {HEDEF_ALANLARI.map((a) => {
               const mevcut = hedef ? (a.yuzde ? fireYuzdeMetni(hedef[a.anahtar]) : hedef[a.anahtar]) : undefined;
@@ -188,7 +191,14 @@ export function UretimBilgileriKarti({ senaryoId, kilitli, onMesaj, sabitKod, on
             <input type="checkbox" checked={pazarlama} disabled={kilitli} onChange={(e) => setPazarlama(e.target.checked)} />
             Pazarlama ve yönetim gideri uygulansın
           </label>
-          <Input aria-label="Neden" placeholder="Neden (zorunlu)" value={neden} disabled={kilitli} onChange={(e) => setNeden(e.target.value)} className="h-8" />
+          <Input
+            aria-label="Neden"
+            placeholder="Neden (zorunlu)"
+            value={neden}
+            disabled={kilitli}
+            onChange={(e) => setNeden(e.target.value)}
+            className="h-8"
+          />
           {dokunuldu &&
             hatalar.map((h) => (
               <p key={h} className="text-xs text-destructive">

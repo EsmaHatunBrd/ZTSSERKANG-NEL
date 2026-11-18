@@ -227,7 +227,7 @@ def recete_seviyeleri_oku(ws_v) -> list[int | None]:
 
 def sezon_getir_veya_olustur(s: Session, ad: str) -> m.Sezon:
     if not re.fullmatch(r"\d{4}-\d{4}", ad or ""):
-        raise DogrulamaHatasi("sezon adı YYYY-YYYY olmalı", {"sezon_ad": ad})
+        raise DogrulamaHatasi(f"Sezon adı YYYY-YYYY biçiminde olmalı (ör. 2026-2027); girilen: {ad}.", {"sezon_ad": ad})
     sz = s.scalar(select(m.Sezon).where(m.Sezon.ad == ad))
     if sz is None:
         y1 = int(ad.split("-")[0]); sz = m.Sezon(ad=ad, baslangic=date(y1, 6, 1), bitis=date(y1 + 1, 5, 31)); s.add(sz); s.flush()
@@ -309,7 +309,7 @@ def excel_tam_yukle(s: Session, excel_yolu: Path, sezon_ad: str, senaryo_ad: str
             s.flush()
         return ozet
     except (KeyError, ValueError, StopIteration) as e:
-        raise DogrulamaHatasi(f"çalışma kitabı beklenen yapıda değil: {e!r}")
+        raise DogrulamaHatasi(f"Çalışma kitabı beklenen yapıda değil: {e}")
 
 
 TAM_KITAP_SAYFALARI = {"S.ALMA BF": ("SALMA BF", "Satın Alma"), "Gider Dağıtım": ("Gider Dagitim", "Gider Dağıtımı")}
@@ -591,7 +591,7 @@ def fiyat_listesi_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, gecerlil
     Yazmadan önce yedek bırakılır (geri al: eklenen fiyat kayıtları silinir). Yazılan kodları döner."""
     from .yukleme_guvenligi import yedek_guncelle, yedekle
     if not (neden or "").strip():
-        raise DogrulamaHatasi("neden zorunlu")
+        raise DogrulamaHatasi("Neden girin.")
     on = fiyat_listesi_onizle(s, senaryo_id, dosya_yolu, gecerlilik_basi, elle_ustune_yaz)
     kodlar = []
     y = yedekle(s, "fiyat_listesi", senaryo_id, {"fiyat_idleri": []}, f"{len(on['degisen'])} fiyat", kaynak_dosya, kullanici) if on["degisen"] else None

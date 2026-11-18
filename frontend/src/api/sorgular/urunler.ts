@@ -108,17 +108,19 @@ export interface ReceteKaydetDegiskenleri {
   kod: string;
   senaryo: number;
   satirlar: Sema["ReceteSatirGiris"][];
+  /** Zorunlu neden: Değişiklik Günlüğüne reçete sürümüyle yazılır. */
+  neden: string;
 }
 
-/** Yeni reçete versiyonu açar (tam satır listesi). Reçete, ürün, uyarı ve kayıtlı hesap sorgularını yeniler. */
+/** Yeni reçete versiyonu açar (tam satır listesi + neden). Reçete, ürün, uyarı ve kayıtlı hesap sorgularını yeniler. */
 export function useReceteKaydet() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ kod, senaryo, satirlar }: ReceteKaydetDegiskenleri) =>
+    mutationFn: ({ kod, senaryo, satirlar, neden }: ReceteKaydetDegiskenleri) =>
       cagir(
         api.POST("/api/v1/urunler/{kod}/recete", {
           params: { path: { kod }, query: { senaryo } },
-          body: satirlar,
+          body: { satirlar, neden: neden.trim() },
         }),
       ),
     onSuccess: (_v, { kod }) =>

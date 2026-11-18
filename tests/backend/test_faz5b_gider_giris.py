@@ -151,7 +151,7 @@ def test_api_gunluk_havuz_satiri_taban_gosterir(istemci, oturum):
     assert r.status_code == 200, r.text
     satir = r.json()["kayitlar"][0]
     assert satir["baslik"].startswith("Gider havuzu") and satir["neden"] == "çarpanlı"
-    assert "toplam_tutar: 400,00 × 1,50 (SGK) = 600,00" in satir["yeni"]   # G3: taban × çarpan okunur metin (ham JSON yok)
+    assert "Toplam tutar: 400,00 × 1,50 (SGK) = 600,00 TL" in satir["yeni"]   # G3: taban × çarpan okunur metin (ham JSON yok)
 
 
 def test_toplu_kaydet_taban_temizlenince_uyarir(istemci, oturum):

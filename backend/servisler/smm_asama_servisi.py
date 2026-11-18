@@ -23,7 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from .donusum import decimal_str
-from .hatalar import BulunamadiHatasi, DogrulamaHatasi
+from .hatalar import BulunamadiHatasi, DogrulamaHatasi, liste_metni
 from .smm_servisi import HAVUZ_HUCRELERI, SIFIR, _d, _tr, _yakin, donem_cikis, donem_getir, kilit_denetle, stok_hesabi
 
 ASAMA_ADLARI = {20: "Sebze kabul", 40: "Üretim hattı", 50: "Etiketleme"}
@@ -304,7 +304,7 @@ def _dagitim_cikis(d: m.SmmDonem) -> dict:
 def uretim_maliyeti(s: Session, donem_id: int, asama: int = 50, arama: str | None = None, yalniz_farkli: bool = False) -> dict:
     """Dönemin aşama maliyetleri: aşama özetleri (hepsi), dağıtım havuzları ve seçilen aşamanın ürünleri."""
     if asama not in ASAMA_ADLARI:
-        raise DogrulamaHatasi("aşama 20, 40 ya da 50 olmalı", {"asama": asama})
+        raise DogrulamaHatasi("Aşama 20, 40 ya da 50 olmalı.", {"asama": asama})
     d = donem_getir(s, donem_id)
     b = _Baglam(s, d)
     ozetler = []
@@ -358,7 +358,7 @@ def urun_recetesi(s: Session, donem_id: int, asama: int, kod: str) -> dict:
     b = _Baglam(s, d)
     x = b.sonuc.get(asama, {}).get(kod)
     if x is None:
-        raise BulunamadiHatasi("bu aşamada ürün bulunamadı", {"asama": asama, "kod": kod})
+        raise BulunamadiHatasi(f"{asama} aşamasında {kod} kodlu ürün bulunamadı.", {"asama": asama, "kod": kod})
     satirlar = recete_satirlari(b, asama, kod)
     ex = (d.excel_asama or {}).get(str(asama), {}).get(kod)
     return decimal_str({"urun": {**x, "excel_birim": _d(ex) if ex is not None else None,
@@ -372,14 +372,14 @@ def dagitim_guncelle(s: Session, donem_id: int, havuzlar: dict[str, Decimal], ku
     d = donem_getir(s, donem_id)
     bilinmeyen = sorted(set(havuzlar) - set(HAVUZLAR))
     if bilinmeyen:
-        raise DogrulamaHatasi("bilinmeyen havuz", {"havuzlar": bilinmeyen})
+        raise DogrulamaHatasi(f"Bilinmeyen havuz: {liste_metni(bilinmeyen)}.", {"havuzlar": bilinmeyen})
     eksi = sorted(k for k, v in havuzlar.items() if v < 0)
     if eksi:
-        raise DogrulamaHatasi("havuz tutarı eksi olamaz", {"havuzlar": eksi})
+        raise DogrulamaHatasi(f"Havuz tutarı eksi olamaz: {liste_metni(HAVUZ_ADLARI.get(x, x) for x in eksi)}.", {"havuzlar": eksi})
     anahtarlar = anahtarlar or {}
     gecersiz = sorted(k for k, v in anahtarlar.items() if k not in VARSAYILAN_ANAHTARLAR or v not in ANAHTAR_SECENEKLERI)
     if gecersiz:
-        raise DogrulamaHatasi("geçersiz dağıtım anahtarı", {"anahtarlar": gecersiz, "secenekler": list(ANAHTAR_SECENEKLERI)})
+        raise DogrulamaHatasi(f"Geçersiz dağıtım anahtarı: {liste_metni(gecersiz)}; seçenekler: {liste_metni(ANAHTAR_SECENEKLERI)}.", {"anahtarlar": gecersiz, "secenekler": list(ANAHTAR_SECENEKLERI)})
     kilit_denetle(d)
     eski = dict(d.dagitim or {})
     yeni = {**eski, **decimal_str(dict(havuzlar))}
@@ -397,16 +397,16 @@ def urun_elle_guncelle(s: Session, donem_id: int, asama: int, kod: str, alanlar:
     """Ürünün aşama değerlerini (malzeme, işçilik, GÜG, fire, birim maliyet; birim başına TL) elle girer. None = formüle dön."""
     d = donem_getir(s, donem_id)
     if asama not in ASAMA_ADLARI:
-        raise DogrulamaHatasi("aşama 20, 40 ya da 50 olmalı", {"asama": asama})
+        raise DogrulamaHatasi("Aşama 20, 40 ya da 50 olmalı.", {"asama": asama})
     bilinmeyen = sorted(set(alanlar) - set(ELLE_ALANLARI))
     if bilinmeyen:
-        raise DogrulamaHatasi("bilinmeyen alan", {"alanlar": bilinmeyen, "gecerli": list(ELLE_ALANLARI)})
+        raise DogrulamaHatasi(f"Bilinmeyen alan: {liste_metni(bilinmeyen)}.", {"alanlar": bilinmeyen, "gecerli": list(ELLE_ALANLARI)})
     eksi = sorted(k for k, v in alanlar.items() if v is not None and v < 0)
     if eksi:
-        raise DogrulamaHatasi("değer eksi olamaz", {"alanlar": eksi})
+        raise DogrulamaHatasi(f"Değer eksi olamaz: {liste_metni(eksi)}.", {"alanlar": eksi})
     kilit_denetle(d)
     if kod not in _Baglam(s, d).gruplar.get(asama, {}):
-        raise BulunamadiHatasi("bu aşamada ürün bulunamadı", {"asama": asama, "kod": kod})
+        raise BulunamadiHatasi(f"{asama} aşamasında {kod} kodlu ürün bulunamadı.", {"asama": asama, "kod": kod})
     tum = {a: {k: dict(v) for k, v in x.items()} for a, x in (d.asama_elle or {}).items()}
     e = tum.setdefault(str(asama), {}).setdefault(kod, {})
     eski = {k: e.get(k) for k in alanlar}
@@ -446,7 +446,7 @@ def sure_listesi(s: Session, donem_id: int, arama: str | None = None) -> dict:
 def _sure_dogrula(alanlar: dict) -> None:
     eksi = sorted(k for k, v in alanlar.items() if isinstance(v, Decimal) and v < 0)
     if eksi:
-        raise DogrulamaHatasi("süre ve kişi sayıları eksi olamaz", {"alanlar": eksi})
+        raise DogrulamaHatasi("Süre ve kişi sayıları eksi olamaz.", {"alanlar": eksi})
 
 
 def sure_ekle(s: Session, donem_id: int, alanlar: dict, kullanici: str = "sistem") -> dict:
@@ -454,7 +454,7 @@ def sure_ekle(s: Session, donem_id: int, alanlar: dict, kullanici: str = "sistem
     kilit_denetle(d)
     alanlar = {k: v for k, v in alanlar.items() if k in SURE_ALANLARI and v is not None}
     if not (alanlar.get("mamul_kod") or alanlar.get("yari_mamul_kod")):
-        raise DogrulamaHatasi("mamul ya da yarı mamul kodu girin", {"mamul_kod": "zorunlu"})
+        raise DogrulamaHatasi("Mamul ya da yarı mamul kodu girin.", {"mamul_kod": "zorunlu"})
     _sure_dogrula(alanlar)
     alanlar["kod"] = alanlar.get("mamul_kod") or alanlar.get("yari_mamul_kod")
     x = m.SmmIscilik(donem_id=d.id, olusturan=kullanici, **alanlar)
@@ -468,7 +468,7 @@ def sure_ekle(s: Session, donem_id: int, alanlar: dict, kullanici: str = "sistem
 def sure_guncelle(s: Session, sure_id: int, alanlar: dict, kullanici: str = "sistem") -> dict:
     x = s.get(m.SmmIscilik, sure_id)
     if x is None:
-        raise BulunamadiHatasi("süre satırı bulunamadı", {"id": sure_id})
+        raise BulunamadiHatasi("Süre satırı bulunamadı.", {"id": sure_id})
     kilit_denetle(donem_getir(s, x.donem_id))
     alanlar = {k: v for k, v in alanlar.items() if k in SURE_ALANLARI and k != "kod" and v is not None}
     _sure_dogrula(alanlar)
@@ -477,7 +477,7 @@ def sure_guncelle(s: Session, sure_id: int, alanlar: dict, kullanici: str = "sis
         setattr(x, k, v)
     x.kod = x.mamul_kod or x.yari_mamul_kod or x.kod
     if not (x.mamul_kod or x.yari_mamul_kod):
-        raise DogrulamaHatasi("mamul ya da yarı mamul kodu girin", {"mamul_kod": "zorunlu"})
+        raise DogrulamaHatasi("Mamul ya da yarı mamul kodu girin.", {"mamul_kod": "zorunlu"})
     yeni = decimal_str({k: getattr(x, k) for k in alanlar})
     if eski != yeni:
         s.add(m.DegisiklikKaydi(tablo="smm_donem", kayit_id=x.donem_id, islem="sure_guncelle", eski={"kod": x.kod, **eski},
@@ -489,7 +489,7 @@ def sure_guncelle(s: Session, sure_id: int, alanlar: dict, kullanici: str = "sis
 def sure_sil(s: Session, sure_id: int, kullanici: str = "sistem") -> None:
     x = s.get(m.SmmIscilik, sure_id)
     if x is None:
-        raise BulunamadiHatasi("süre satırı bulunamadı", {"id": sure_id})
+        raise BulunamadiHatasi("Süre satırı bulunamadı.", {"id": sure_id})
     kilit_denetle(donem_getir(s, x.donem_id))
     s.add(m.DegisiklikKaydi(tablo="smm_donem", kayit_id=x.donem_id, islem="sure_sil", eski={"kod": x.kod, "ad": x.ad}, yeni=None,
                             kullanici=kullanici))

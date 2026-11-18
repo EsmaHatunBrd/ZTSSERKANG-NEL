@@ -55,3 +55,18 @@ def test_sil_gunluge_yazar_ve_tur_numarasi_yeniden_verilmez(oturum, ortam):
     assert satir["urun_kodu"] == "TEST" and satir["baslik"] == "Teklif turu silindi"
     with pytest.raises(BulunamadiHatasi):
         ts.sil(oturum, 999999)
+
+
+def test_kabul_edilmis_teklif_silinmez(oturum, ortam):
+    from backend.servisler.hatalar import CatismaHatasi
+    sen, _ = ortam
+    h = hs.kaydet(oturum, hs.hesapla(oturum, "TEST", sen.id, date(2026, 10, 21)), "TEST", sen.id, date(2026, 10, 21))
+    t = ts.tur_ekle(oturum, h.id, D_("0.2"))
+    ts.durum_guncelle(oturum, t.id, "kabul")
+    with pytest.raises(CatismaHatasi) as e:
+        ts.sil(oturum, t.id)
+    assert e.value.mesaj == "Kabul edilmiş teklif silinemez; önce durumunu değiştirin."
+    assert [x.id for x in ts.turlar(oturum, h.id)] == [t.id]
+    ts.durum_guncelle(oturum, t.id, "red")   # durum değişince silinir
+    ts.sil(oturum, t.id)
+    assert ts.turlar(oturum, h.id) == []

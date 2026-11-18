@@ -6,6 +6,8 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { http, HttpResponse } from "msw";
 import { sunucu } from "@/test/msw/sunucu";
 import { senaryolar } from "@/test/fikstur/urunler";
+import type { GirisKullanicisi, Rol } from "@/api/sorgular/kimlik";
+import { OturumSaglayici } from "./GirisKapisi";
 import { SenaryoSecici, SenaryoSaglayici, useSenaryo } from "./SenaryoSecici";
 
 beforeAll(() => sunucu.listen({ onUnhandledFrame: "error" }));
@@ -216,5 +218,37 @@ describe("SenaryoSecici — Faz 5c: yeni çalışma, düzenle, sil", () => {
     await u.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(dugme).toHaveFocus();
+  });
+});
+
+describe("SenaryoSecici — D9: rol bazlı görünürlük", () => {
+  const kullanici = (rol: Rol) =>
+    ({ id: 1, kullanici_adi: "k", ad: "K", rol, aktif: true, sifre_degismeli: false }) as unknown as GirisKullanicisi;
+  function rolleKur(rol: Rol | null) {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <OturumSaglayici deger={{ girisZorunlu: rol !== null, kullanici: rol ? kullanici(rol) : null }}>
+            <SenaryoSaglayici>
+              <SenaryoSecici />
+            </SenaryoSaglayici>
+          </OturumSaglayici>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it.each(["izleyici", "satin_alma"] as const)("%s: Yeni çalışma ve senaryo işlemleri menüsü görünmez; seçim serbest", async (rol) => {
+    rolleKur(rol);
+    expect(await screen.findByLabelText("Senaryo")).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /Yeni çalışma/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Senaryo işlemleri" })).not.toBeInTheDocument();
+  });
+
+  it.each(["muhasebe", "genel_direktor", null] as const)("%s: Yeni çalışma ve menü görünür", async (rol) => {
+    rolleKur(rol);
+    expect(await screen.findByRole("button", { name: /Yeni çalışma/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Senaryo işlemleri" })).toBeInTheDocument();
   });
 });

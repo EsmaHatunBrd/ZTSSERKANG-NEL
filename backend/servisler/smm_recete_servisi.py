@@ -297,7 +297,7 @@ def urun(s: Session, kod: str) -> dict:
     satirlar = list(s.scalars(select(m.SmmAnaRecete).where(m.SmmAnaRecete.ana_kod == kod)
                               .order_by(m.SmmAnaRecete.alternatif, m.SmmAnaRecete.satir_no)))
     if not satirlar:
-        raise BulunamadiHatasi("reçete bulunamadı", {"kod": kod})
+        raise BulunamadiHatasi(f"{kod} kodlu ürünün reçetesi bulunamadı.", {"kod": kod})
     altlar = defaultdict(list)
     for r in satirlar:
         altlar[r.alternatif].append({"id": r.id, "satir_no": r.satir_no, "kalem_tipi": r.kalem_tipi, "malzeme_kod": r.malzeme_kod,
@@ -341,7 +341,7 @@ def _satir_dogrula(ana_kod: str, malzeme_kod: str | None, miktar: Decimal | None
     if fire_orani is not None and not (0 <= fire_orani <= 10):
         hatalar["fire_orani"] = "fire oranı %0 ile %1000 arasında olmalı"
     if hatalar:
-        raise DogrulamaHatasi("reçete satırı geçersiz", hatalar)
+        raise DogrulamaHatasi(f"Reçete satırı geçersiz: {'; '.join(hatalar.values())}.", hatalar)
 
 
 def _urun_satirlari(s: Session, kod: str) -> list[m.SmmAnaRecete]:
@@ -353,11 +353,11 @@ def satir_ekle(s: Session, kod: str, alternatif: str, malzeme_kod: str, malzeme_
     kod = kod.strip()
     var = _urun_satirlari(s, kod)
     if yeni_urun and var:
-        raise CatismaHatasi("bu kodla reçete zaten var", {"kod": kod})
+        raise CatismaHatasi(f"{kod} kodlu reçete zaten var.", {"kod": kod})
     if not yeni_urun and not var:
-        raise BulunamadiHatasi("reçete bulunamadı", {"kod": kod})
+        raise BulunamadiHatasi(f"{kod} kodlu ürünün reçetesi bulunamadı.", {"kod": kod})
     if not ALTERNATIF_DESENI.match(alternatif or ""):
-        raise DogrulamaHatasi("alternatif iki haneli olmalı (00, 01…)", {"alternatif": alternatif})
+        raise DogrulamaHatasi("Alternatif iki haneli olmalı (00, 01…).", {"alternatif": alternatif})
     _satir_dogrula(kod, malzeme_kod, miktar, birim, fire_orani)
     no = max((r.satir_no for r in var if r.alternatif == alternatif), default=0) + 1
     r = m.SmmAnaRecete(ana_kod=kod, ana_ad=(var[0].ana_ad if var else ana_ad), alternatif=alternatif, satir_no=no, kalem_tipi=None,
@@ -374,7 +374,7 @@ def satir_ekle(s: Session, kod: str, alternatif: str, malzeme_kod: str, malzeme_
 def satir_guncelle(s: Session, satir_id: int, alanlar: dict, kullanici: str = "sistem") -> dict:
     r = s.get(m.SmmAnaRecete, satir_id)
     if r is None:
-        raise BulunamadiHatasi("reçete satırı bulunamadı", {"id": satir_id})
+        raise BulunamadiHatasi("Reçete satırı bulunamadı.", {"id": satir_id})
     alanlar = {k: v for k, v in alanlar.items() if k in ("malzeme_kod", "malzeme_ad", "miktar", "birim", "fire_orani") and v is not None}
     _satir_dogrula(r.ana_kod, alanlar.get("malzeme_kod"), alanlar.get("miktar"), alanlar.get("birim"), alanlar.get("fire_orani"))
     eski = {k: str(getattr(r, k)) for k in alanlar}
@@ -391,10 +391,10 @@ def satir_guncelle(s: Session, satir_id: int, alanlar: dict, kullanici: str = "s
 def satir_sil(s: Session, satir_id: int, kullanici: str = "sistem") -> dict:
     r = s.get(m.SmmAnaRecete, satir_id)
     if r is None:
-        raise BulunamadiHatasi("reçete satırı bulunamadı", {"id": satir_id})
+        raise BulunamadiHatasi("Reçete satırı bulunamadı.", {"id": satir_id})
     kod = r.ana_kod
     if len(_urun_satirlari(s, kod)) <= 1:
-        raise DogrulamaHatasi("ürünün son reçete satırı silinemez")
+        raise DogrulamaHatasi("Ürünün son reçete satırı silinemez.")
     _gunluk(s, kod, "satir_sil", {"alternatif": r.alternatif, "malzeme": r.malzeme_kod, "miktar": str(r.miktar)}, None, kullanici)
     s.delete(r)
     _isaretle(s, kod, kullanici)
@@ -405,14 +405,14 @@ def satir_sil(s: Session, satir_id: int, kullanici: str = "sistem") -> dict:
 def alternatif_kopyala(s: Session, kod: str, kaynak: str, yeni: str, kullanici: str = "sistem") -> dict:
     satirlar = _urun_satirlari(s, kod)
     if not satirlar:
-        raise BulunamadiHatasi("reçete bulunamadı", {"kod": kod})
+        raise BulunamadiHatasi(f"{kod} kodlu ürünün reçetesi bulunamadı.", {"kod": kod})
     if not ALTERNATIF_DESENI.match(yeni or ""):
-        raise DogrulamaHatasi("alternatif iki haneli olmalı (00, 01…)", {"alternatif": yeni})
+        raise DogrulamaHatasi("Alternatif iki haneli olmalı (00, 01…).", {"alternatif": yeni})
     if any(r.alternatif == yeni for r in satirlar):
-        raise CatismaHatasi("bu alternatif zaten var", {"alternatif": yeni})
+        raise CatismaHatasi(f"{yeni} alternatifi zaten var.", {"alternatif": yeni})
     kaynaklar = [r for r in satirlar if r.alternatif == kaynak]
     if not kaynaklar:
-        raise BulunamadiHatasi("kopyalanacak alternatif bulunamadı", {"alternatif": kaynak})
+        raise BulunamadiHatasi(f"Kopyalanacak {kaynak} alternatifi bulunamadı.", {"alternatif": kaynak})
     for r in kaynaklar:
         s.add(m.SmmAnaRecete(ana_kod=r.ana_kod, ana_ad=r.ana_ad, alternatif=yeni, satir_no=r.satir_no, kalem_tipi=r.kalem_tipi, asama=r.asama,
                              malzeme_kod=r.malzeme_kod, malzeme_ad=r.malzeme_ad, miktar=r.miktar, birim=r.birim, fire_orani=r.fire_orani,
@@ -426,10 +426,10 @@ def alternatif_kopyala(s: Session, kod: str, kaynak: str, yeni: str, kullanici: 
 def asama_degistir(s: Session, kod: str, asama: int, kullanici: str = "sistem") -> dict:
     """Ürünün aşamasını (20 / 40 / 50) elle değiştirir; tüm alternatiflerine uygulanır. Varsayılan koddan gelir (bkz. asama_bul)."""
     if asama not in (20, 40, 50):
-        raise DogrulamaHatasi("aşama 20, 40 ya da 50 olmalı", {"asama": asama})
+        raise DogrulamaHatasi("Aşama 20, 40 ya da 50 olmalı.", {"asama": asama})
     satirlar = _urun_satirlari(s, kod)
     if not satirlar:
-        raise BulunamadiHatasi("reçete bulunamadı", {"kod": kod})
+        raise BulunamadiHatasi(f"{kod} kodlu ürünün reçetesi bulunamadı.", {"kod": kod})
     eski = satirlar[0].asama
     if eski != asama:
         for r in satirlar:
@@ -444,7 +444,7 @@ def caniasa_don(s: Session, kod: str, kullanici: str = "sistem") -> dict:
     """Elle değiştirilmiş ürünün reçetesini son yüklenen Canias dökümündeki hâline döndürür."""
     kaynak = list(s.scalars(select(m.SmmCaniasRecete).where(m.SmmCaniasRecete.ana_kod == kod)))
     if not kaynak:
-        raise DogrulamaHatasi("bu ürün son Canias dökümünde yok; döndürülemez", {"kod": kod})
+        raise DogrulamaHatasi(f"{kod} ürünü son Canias dökümünde yok; Canias reçetesine döndürülemez.", {"kod": kod})
     s.execute(delete(m.SmmAnaRecete).where(m.SmmAnaRecete.ana_kod == kod))
     for r in kaynak:
         s.add(m.SmmAnaRecete(ana_kod=r.ana_kod, ana_ad=r.ana_ad, alternatif=r.alternatif, satir_no=r.satir_no, kalem_tipi=r.kalem_tipi,
@@ -476,9 +476,9 @@ def malzeme_ara(s: Session, q: str, limit: int = 20) -> list[dict]:
 def alternatif_sec(s: Session, kod: str, alternatif: str, kullanici: str = "sistem") -> dict:
     var = set(s.scalars(select(m.SmmAnaRecete.alternatif).where(m.SmmAnaRecete.ana_kod == kod).distinct()))
     if not var:
-        raise BulunamadiHatasi("reçete bulunamadı", {"kod": kod})
+        raise BulunamadiHatasi(f"{kod} kodlu ürünün reçetesi bulunamadı.", {"kod": kod})
     if alternatif not in var:
-        raise DogrulamaHatasi("bu üründe böyle bir alternatif yok", {"alternatif": alternatif, "var": sorted(var)})
+        raise DogrulamaHatasi(f"Bu üründe {alternatif} alternatifi yok.", {"alternatif": alternatif, "var": sorted(var)})
     x = s.scalar(select(m.SmmAlternatifSecimi).where(m.SmmAlternatifSecimi.ana_kod == kod))
     eski = x.alternatif if x else VARSAYILAN_ALTERNATIF
     if x is None:

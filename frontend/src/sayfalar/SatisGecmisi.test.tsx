@@ -40,7 +40,13 @@ const KAYITLAR = [
 ];
 
 function kur() {
-  const istekler = { liste: [] as string[], ekle: [] as Record<string, unknown>[], sil: [] as string[], yukle: 0 };
+  const istekler = {
+    liste: [] as string[],
+    ekle: [] as Record<string, unknown>[],
+    sil: [] as string[],
+    silNedeni: [] as (string | null)[],
+    yukle: 0,
+  };
   const durum = { yuklemeYaniti: null as Response | null };
   sunucu.use(
     http.get(T, ({ request }) => {
@@ -58,8 +64,9 @@ function kur() {
       expect(request.headers.get("content-type")).toContain("multipart/form-data");
       return durum.yuklemeYaniti ?? HttpResponse.json({ eklenen: 3, hatalar: [] });
     }),
-    http.delete(`${T}/:id`, ({ params }) => {
+    http.delete(`${T}/:id`, ({ params, request }) => {
       istekler.sil.push(String(params.id));
+      istekler.silNedeni.push(new URL(request.url).searchParams.get("neden"));
       return new HttpResponse(null, { status: 204 });
     }),
   );
@@ -150,7 +157,12 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
     await userEvent.type(within(form).getByLabelText("Fiyat *"), "12,5");
     await userEvent.selectOptions(within(form).getByLabelText("Para birimi"), "USD");
     await userEvent.type(within(form).getByLabelText("Adet *"), "40");
-    await userEvent.click(within(form).getByRole("button", { name: "Ekle" }));
+    const ekleDugmesi = within(form).getByRole("button", { name: "Ekle" });
+    expect(ekleDugmesi).toBeDisabled(); // D7: neden zorunlu
+    expect(within(form).getByText("Neden girin")).toBeInTheDocument();
+    await userEvent.type(within(form).getByLabelText("Neden (zorunlu)"), "  Faturadan elle  ");
+    expect(within(form).queryByText("Neden girin")).not.toBeInTheDocument();
+    await userEvent.click(ekleDugmesi);
     await waitFor(() => expect(istekler.ekle).toHaveLength(1));
     expect(istekler.ekle[0]).toEqual({
       urun_kodu: "ORNEK-001",
@@ -159,8 +171,21 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
       fiyat: "12.5",
       para_birimi: "USD",
       adet: "40",
+      neden: "Faturadan elle",
     });
     expect(await screen.findByRole("status", { name: "Ekleme durumu" })).toBeInTheDocument();
+  });
+
+  it("D7: Satır ekle etiketleri alanlara htmlFor/id ile bağlıdır", async () => {
+    kur();
+    await screen.findByText("ORNEK-001");
+    const form = screen.getByRole("form", { name: "Satır ekle" });
+    for (const etiket of ["Ürün kodu *", "Müşteri *", "Tarih *", "Fiyat *", "Para birimi", "Adet *", "Neden (zorunlu)"]) {
+      const alan = within(form).getByLabelText(etiket);
+      const label = within(form).getByText(etiket, { selector: "label" });
+      expect(label).toHaveAttribute("for", alan.id);
+      expect(alan.id).not.toBe("");
+    }
   });
 
   it("geçersiz forma istek atmaz", async () => {
@@ -168,6 +193,7 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
     await screen.findByText("ORNEK-001");
     const form = screen.getByRole("form", { name: "Satır ekle" });
     await userEvent.type(within(form).getByLabelText("Ürün kodu *"), "ORNEK-001");
+    await userEvent.type(within(form).getByLabelText("Neden (zorunlu)"), "Deneme");
     await userEvent.click(within(form).getByRole("button", { name: "Ekle" }));
     expect(await within(form).findByRole("alert")).toHaveTextContent("zorunlu");
     expect(istekler.ekle).toHaveLength(0);
@@ -182,8 +208,14 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(istekler.sil).toEqual([]);
     await userEvent.click(within(satir).getByRole("button", { name: /^Sil/ }));
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Sil" }));
+    const onay = await screen.findByRole("dialog");
+    const silDugmesi = within(onay).getByRole("button", { name: "Sil" });
+    expect(silDugmesi).toBeDisabled(); // D7: neden boşken pasif
+    expect(within(onay).getByText("Neden girin")).toBeInTheDocument();
+    await userEvent.type(within(onay).getByLabelText("Neden (zorunlu)"), "Mükerrer kayıt");
+    await userEvent.click(silDugmesi);
     await waitFor(() => expect(istekler.sil).toEqual(["7"]));
+    expect(istekler.silNedeni).toEqual(["Mükerrer kayıt"]);
   });
 
   it("düzenleme kilidi: kilitliyken ekleme ve silme devre dışı, kilit açılınca etkin", async () => {
@@ -205,6 +237,8 @@ describe("SatisGecmisi (Faz 5 T2)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Düzenlemeyi aç" }));
     await userEvent.click(await screen.findByRole("button", { name: "Evet, aç" }));
     await waitFor(() => expect(within(satir).getByRole("button", { name: /^Sil/ })).toBeEnabled());
+    expect(screen.getByRole("button", { name: "Ekle" })).toBeDisabled(); // kilit açık ama neden boş
+    await userEvent.type(screen.getByLabelText("Neden (zorunlu)"), "Elle giriş");
     expect(screen.getByRole("button", { name: "Ekle" })).toBeEnabled();
   });
 });

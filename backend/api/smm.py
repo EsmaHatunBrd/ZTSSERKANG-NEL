@@ -288,7 +288,7 @@ def kilit(s: OturumDep, donem_id: int, g: SmmKilitGiris, giren: GirisKullanicisi
     Kilit açma: yalnız Genel Direktör (403; giriş zorunlu değilken serbest). Açılışı bu dönemden devralmış dönem kilitliyse 409
     `sonraki_kilitli`; kilitli değilse yanıtta `uyari`."""
     if giren is not None and not g.kilitli and giren.rol != YONETICI_ROL:   # giriş kapalıyken (testler, eski kurulum) denetim yok
-        raise YetkiHatasi("dönem kilidini yalnız Genel Direktör açabilir", kod="kilit_acma_yetkisi")
+        raise YetkiHatasi("Dönem kilidini yalnız Genel Direktör açabilir.", kod="kilit_acma_yetkisi")
     return sv.kilit(s, donem_id, g.kilitli, k, g.zorla)
 
 

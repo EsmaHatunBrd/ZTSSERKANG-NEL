@@ -89,7 +89,7 @@ def test_hatalar_kilit_neden_secim_tekrar_kod(istemci, oturum, kucuk_kitap):
     assert _post(c, "uygula", kucuk_kitap, sid, neden="  ", sayfalar=["001"]).status_code == 422
     assert _post(c, "uygula", kucuk_kitap, sid, neden="x", sayfalar=["999"]).status_code == 422
     r = _post(c, "uygula", kucuk_kitap, sid, neden="x", sayfalar=["001", "001 (2)"])
-    assert r.status_code == 422 and "aynı ürün" in r.json()["mesaj"]
+    assert r.status_code == 422 and "Aynı ürün" in r.json()["mesaj"]
     assert oturum.scalars(select(m.Recete)).all() == []   # tek işlem: hiçbiri yazılmadı
     assert c.post(f"/api/v1/senaryolar/{sid}/kilitle", json={"neden": "kapandı"}, headers=H).status_code == 200
     r = _post(c, "uygula", kucuk_kitap, sid, neden="x", sayfalar=["001"])

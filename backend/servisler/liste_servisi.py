@@ -152,7 +152,7 @@ def calisma(s: Session, sen: m.Senaryo, satirlar: list[dict], pazar: str = "yurt
 def _urun(s: Session, kod: str) -> m.Urun:
     u = s.scalar(select(m.Urun).where(m.Urun.kod == (kod or "").strip()))
     if u is None:
-        raise BulunamadiHatasi("ürün bulunamadı", {"urun_kodu": kod})
+        raise BulunamadiHatasi(f"{kod} kodlu ürün bulunamadı.", {"urun_kodu": kod})
     return u
 
 
@@ -195,7 +195,7 @@ def _yaz(s: Session, u: m.Urun, yil: int, pazar: str, liste_fiyati: Decimal, bir
 
 
 def kaydet(s: Session, urun_kodu: str, yil: int, liste_fiyati: Decimal, birim_maliyet: Decimal | None = None, kullanici: str = "sistem",
-           pazar: str = "yurtici", bolen: Decimal | None = None, senaryo_id: int | None = None) -> dict:
+           pazar: str = "yurtici", bolen: Decimal | None = None, senaryo_id: int | None = None, neden: str | None = None) -> dict:
     """`bolen` verilmezse kaydedildiği andaki geçerli bölen yazılır: `senaryo_id` varsa o senaryonun bugünkü değeri, yoksa pazarın varsayılanı."""
     pazar = pazar_dogrula(pazar)
     u = _urun(s, urun_kodu)
@@ -203,7 +203,7 @@ def kaydet(s: Session, urun_kodu: str, yil: int, liste_fiyati: Decimal, birim_ma
     if not berrak_mi(u.marka):
         h.append(BERRAK_DEGIL)
     if h:
-        raise DogrulamaHatasi("liste fiyatı geçersiz", {"hatalar": h})
+        raise DogrulamaHatasi(f"Liste fiyatı kaydedilmedi: {'; '.join(h)}.", {"hatalar": h})
     if bolen is not None:
         bolen = bolen_dogrula(bolen)
     elif senaryo_id is not None:
@@ -212,7 +212,7 @@ def kaydet(s: Session, urun_kodu: str, yil: int, liste_fiyati: Decimal, birim_ma
         bolen = VARSAYILAN_BOLENLER[pazar]
     k, eski = _yaz(s, u, yil, pazar, Decimal(liste_fiyati), Decimal(birim_maliyet) if birim_maliyet is not None else None, bolen, kullanici)
     s.add(m.DegisiklikKaydi(tablo="liste_fiyati", kayit_id=k.id, islem="ekle" if eski is None else "guncelle", eski=eski, kullanici=kullanici,
-                            yeni={"urun_kodu": u.kod, "yil": yil, **_icerik(k)}))
+                            yeni={"urun_kodu": u.kod, "yil": yil, **_icerik(k), **({"_neden": neden} if neden else {})}))
     s.flush()
     return cikis(k, u)
 
@@ -222,13 +222,13 @@ def cikis(k: m.ListeFiyati, u: m.Urun) -> dict:
                         "bolen": k.bolen, "ornek": k.ornek})
 
 
-def sil(s: Session, urun_kodu: str, yil: int, kullanici: str = "sistem", pazar: str = "yurtici") -> None:
+def sil(s: Session, urun_kodu: str, yil: int, kullanici: str = "sistem", pazar: str = "yurtici", neden: str | None = None) -> None:
     pazar = pazar_dogrula(pazar)
     u = _urun(s, urun_kodu)
     k = _bul(s, u, yil, pazar)
     if k is None:
-        raise BulunamadiHatasi("liste fiyatı bulunamadı", {"urun_kodu": urun_kodu, "yil": yil, "pazar": pazar})
-    s.add(m.DegisiklikKaydi(tablo="liste_fiyati", kayit_id=k.id, islem="sil", yeni=None, kullanici=kullanici,
+        raise BulunamadiHatasi(f"{urun_kodu} ürününün {yil} yılı {'yurtdışı' if pazar == 'yurtdisi' else 'yurtiçi'} liste fiyatı bulunamadı.", {"urun_kodu": urun_kodu, "yil": yil, "pazar": pazar})
+    s.add(m.DegisiklikKaydi(tablo="liste_fiyati", kayit_id=k.id, islem="sil", yeni={"_neden": neden} if neden else None, kullanici=kullanici,
                             eski={"urun_kodu": u.kod, "yil": yil, **_icerik(k)}))
     s.delete(k)
     s.flush()

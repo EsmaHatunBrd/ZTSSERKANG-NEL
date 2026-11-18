@@ -2,7 +2,8 @@
 
 Üyelik: bir ürün, o senaryoda **aktif reçetesi** varsa senaryonun üyesidir; dashboard/uyarılar/dışa aktarım yalnız üyeleri alır.
 Kopya: kaynaktaki bugün geçerli kayıtlar tek kayıt olarak yeni senaryoya yazılır (kaynak="kopya", neden "Kopya: <kaynak adı>");
-kayıtlı hesaplar, teklifler ve kilit kopyalanmaz. Yalnız aktif ürünlerin reçete/hedef/kapasitesi kopyalanır (pasif kart yeni sezona taşınmaz).
+kayıtlı hesaplar, teklifler ve kilit kopyalanmaz. Kaynağın saklanan "Fiyat Çalışması Excel'i" şablonu (excel_sablon_deposu,
+tür "fiyat_kitabi") `sablon` seçimiyle (varsayılan açık) yeni senaryoya da saklanır. Yalnız aktif ürünlerin reçete/hedef/kapasitesi kopyalanır (pasif kart yeni sezona taşınmaz).
 Tek işlem: servis yalnız flush eder; commit/rollback oturum sahibinin (router: `oturum_ver`) işidir — ara adımda hata olursa istek
 geri alınır, hiçbir şey kalmaz (SQLite/pysqlite'ta SAVEPOINT güvenilir olmadığından bilerek begin_nested kullanılmaz).
 Silme: yalnız kayıtlı hesabı olmayan ve kilitsiz senaryo; öncesinde dosya veritabanında otomatik yedek alınır; senaryoya bağlı
@@ -13,11 +14,12 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from ..depo.yedek import silme_oncesi_yedek_al
-from . import fiyat_servisi, hesap_servisi, parametre_servisi, recete_servisi
-from .hatalar import CatismaHatasi, DogrulamaHatasi
+from . import excel_sablon_deposu, fiyat_servisi, hesap_servisi, parametre_servisi, recete_servisi
+from .hatalar import CatismaHatasi, DogrulamaHatasi, liste_metni
 
-SECIMLER = ("receteler", "fiyatlar", "parametreler", "gider", "uretim", "fire_kurallari")
-SAYI_ANAHTARLARI = ("recete", "fiyat", "parametre", "metin", "havuz", "ambalaj", "hedef", "kapasite", "fire")
+SECIMLER = ("receteler", "fiyatlar", "parametreler", "gider", "uretim", "fire_kurallari", "sablon")
+VARSAYILAN_ACIK = {"sablon"}   # gönderilmezse açık sayılan seçimler (eski istemciler şablonu da kopyalasın)
+SAYI_ANAHTARLARI = ("recete", "fiyat", "parametre", "metin", "havuz", "ambalaj", "hedef", "kapasite", "fire", "sablon")
 
 
 def uye_urun_kodlari(s: Session, senaryo_id: int, aktif: bool = True) -> set[str]:
@@ -37,22 +39,22 @@ def uye_sayilari(s: Session) -> dict[int, int]:
 
 def _neden_denetle(neden: str | None) -> str:
     if not (neden or "").strip():
-        raise DogrulamaHatasi("neden zorunlu")
+        raise DogrulamaHatasi("Neden girin.")
     return neden.strip()
 
 
 def kopyala(s: Session, kaynak_id: int, sezon_ad: str, ad: str, tur: str, aciklama: str | None, secimler: dict[str, bool], neden: str,
             kullanici: str = "sistem", tarih: date | None = None) -> tuple[m.Senaryo, dict[str, int]]:
     """Kaynak senaryodan seçilen bölümleri yeni senaryoya kopyalar; (yeni senaryo, sayılar) döner.
-    secimler: {receteler, fiyatlar, parametreler, gider, uretim, fire_kurallari} -> bool (eksik anahtar False sayılır).
+    secimler: {receteler, fiyatlar, parametreler, gider, uretim, fire_kurallari, sablon} -> bool (eksik ya da None anahtar False sayılır; `sablon` eksik/None ise True).
     `tarih` (varsayılan bugün): append-only tablolarda o tarihte geçerli kayıt kopyalanır."""
     neden = _neden_denetle(neden)
     bilinmeyen = sorted(set(secimler) - set(SECIMLER))
     if bilinmeyen:
-        raise DogrulamaHatasi("bilinmeyen kopya seçimi", {"secimler": bilinmeyen})
+        raise DogrulamaHatasi(f"Bilinmeyen kopya seçimi: {liste_metni(bilinmeyen)}.", {"secimler": bilinmeyen})
     kaynak = hesap_servisi.senaryo_getir(s, kaynak_id)
     tarih = tarih or date.today()
-    sec = {k: bool(secimler.get(k)) for k in SECIMLER}
+    sec = {k: (k in VARSAYILAN_ACIK) if secimler.get(k) is None else bool(secimler[k]) for k in SECIMLER}   # None = gönderilmedi
     kopya_neden = f"Kopya: {kaynak.ad}"
     sayilar = {k: 0 for k in SAYI_ANAHTARLARI}
     yeni = hesap_servisi.senaryo_olustur(s, sezon_ad, tur, ad, aciklama, kullanici)
@@ -71,10 +73,22 @@ def kopyala(s: Session, kaynak_id: int, sezon_ad: str, ad: str, tur: str, acikla
         sayilar["kapasite"] = _kapasiteleri_kopyala(s, kaynak.id, yeni.id, kullanici)
     if sec["fire_kurallari"]:
         sayilar["fire"] = _fire_kurallarini_kopyala(s, kaynak.id, yeni.id, tarih, kopya_neden, kullanici)
+    if sec["sablon"]:
+        sayilar["sablon"] = _sablonu_kopyala(s, kaynak.id, yeni.id, kullanici)
     s.add(m.DegisiklikKaydi(tablo="senaryo", kayit_id=yeni.id, islem="kopyala", eski=None,
                             yeni={**sayilar, "kaynak_senaryo_id": kaynak.id, "kaynak_senaryo_ad": kaynak.ad, "_neden": neden}, kullanici=kullanici))
     s.flush()
     return yeni, sayilar
+
+
+def _sablonu_kopyala(s: Session, kaynak_id: int, hedef_id: int, kullanici: str) -> int:
+    """Kaynağın saklanan Fiyat Çalışması Excel'i şablonu (dosya adı ve içerik aynen) yeni senaryoya da saklanır. Dönüş: 1 ya da 0 (şablon yok)."""
+    from .musavir_excel_servisi import TUR   # yerel içe aktarma: musavir_excel_servisi ağır bağımlılıklar (openpyxl, motor) yükler
+    y = excel_sablon_deposu.son(s, TUR, str(kaynak_id))
+    if y is None:
+        return 0
+    excel_sablon_deposu.kaydet(s, TUR, str(hedef_id), y.dosya_adi, y.icerik, kullanici)
+    return 1
 
 
 def _aktif_urun_idleri(s: Session) -> set[int]:
@@ -191,9 +205,9 @@ def guncelle(s: Session, senaryo_id: int, alanlar: dict, neden: str, kullanici: 
     hesap_servisi.kilit_denetle(sen)
     bilinmeyen = sorted(set(alanlar) - set(GUNCELLENEBILIR))
     if bilinmeyen:
-        raise DogrulamaHatasi("bilinmeyen senaryo alanı", {"alanlar": bilinmeyen})
+        raise DogrulamaHatasi(f"Bilinmeyen çalışma alanı: {liste_metni(bilinmeyen)}.", {"alanlar": bilinmeyen})
     if "ad" in alanlar and not (alanlar["ad"] or "").strip():
-        raise DogrulamaHatasi("senaryo adı boş olamaz", {"ad": alanlar["ad"]})
+        raise DogrulamaHatasi("Çalışma adı boş olamaz.", {"ad": alanlar["ad"]})
     eski, yeni = {}, {}
     if "sezon_ad" in alanlar and alanlar["sezon_ad"] != sen.sezon.ad:
         sezon = import_servisi.sezon_getir_veya_olustur(s, alanlar["sezon_ad"])
@@ -225,10 +239,10 @@ def sil(s: Session, senaryo_id: int, yedek_url: str | None = None, kullanici: st
     Dönüş: {"yedek": yol|None, "silinen": {tablo: sayı}}."""
     sen = hesap_servisi.senaryo_getir(s, senaryo_id)
     if sen.kilitli:
-        raise CatismaHatasi("senaryo kilitli; silmek için önce kilidi açın", {"senaryo_id": sen.id})
+        raise CatismaHatasi("Çalışma kilitli; silmek için önce kilidi açın.", {"senaryo_id": sen.id})
     hesap_sayisi = s.scalar(select(func.count()).select_from(m.MaliyetHesabi).where(m.MaliyetHesabi.senaryo_id == sen.id)) or 0
     if hesap_sayisi:
-        raise CatismaHatasi(f"senaryoda {hesap_sayisi} kayıtlı hesap var; kayıtlı hesabı olan senaryo silinemez", {"senaryo_id": sen.id, "hesap_sayisi": hesap_sayisi})
+        raise CatismaHatasi(f"Bu çalışmada {hesap_sayisi} kayıtlı hesap var; kayıtlı hesabı olan çalışma silinemez.", {"senaryo_id": sen.id, "hesap_sayisi": hesap_sayisi})
     yedek = silme_oncesi_yedek_al(yedek_url or _yedek_url(s) or "", sen.ad)
 
     silinen: dict[str, int] = {}

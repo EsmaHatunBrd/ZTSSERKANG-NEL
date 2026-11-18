@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from fiyat_motoru import excel_okuyucu as eo
 from ..depo import modeller as m
 from . import hesap_servisi, recete_servisi
-from .hatalar import DogrulamaHatasi
+from .hatalar import DogrulamaHatasi, liste_metni
 from .import_servisi import recete_seviyeleri_oku
 
 OKUMA_HATALARI = (KeyError, ValueError, TypeError, ArithmeticError, StopIteration, IndexError, AttributeError)
@@ -124,7 +124,7 @@ def recete_onizle(s: Session, senaryo_id: int, dosya_yolu: Path) -> dict:
     wb_f, wb_v = _kitaplar(dosya_yolu)
     sayfalar = _urun_sayfalari(wb_v)
     if not sayfalar:
-        raise DogrulamaHatasi("dosyada ürün sayfası bulunamadı ('001' gibi adlı sayfa ya da tek sayfalık ürün sayfası olmalı)")
+        raise DogrulamaHatasi("Dosyada ürün sayfası bulunamadı ('001' gibi adlı sayfa ya da tek sayfalık ürün sayfası olmalı).")
     malzemeler = eo.malzemeleri_oku(wb_v) if SATIN_ALMA in wb_v.sheetnames else None
     sonuc, hatali, okunan, sorunlu = [], [], {}, []
     for ad in sayfalar:
@@ -191,19 +191,19 @@ def recete_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, sayfalar: list[
     """Seçilen sayfalar için yeni reçete versiyonu açar (tek işlem; biri hatalıysa hiçbiri yazılmaz). Neden değişiklik günlüğüne düşer."""
     neden = (neden or "").strip()
     if not neden:
-        raise DogrulamaHatasi("neden zorunlu")
+        raise DogrulamaHatasi("Neden girin.")
     secilen = list(dict.fromkeys(x for x in sayfalar if x))
     if not secilen:
-        raise DogrulamaHatasi("en az bir sayfa seçin")
+        raise DogrulamaHatasi("En az bir sayfa seçin.")
     on = recete_onizle(s, senaryo_id, dosya_yolu)
     okunan = on["_okunan"]
     olmayan = [x for x in secilen if x not in okunan]
     if olmayan:
-        raise DogrulamaHatasi("dosyada okunabilen ürün sayfası değil", {"sayfalar": olmayan})
+        raise DogrulamaHatasi(f"Seçilen sayfalar dosyada okunabilen ürün sayfası değil: {liste_metni(olmayan)}.", {"sayfalar": olmayan})
     kodlar = [okunan[x][2] for x in secilen]
     tekrar = sorted({k for k in kodlar if kodlar.count(k) > 1})
     if tekrar:
-        raise DogrulamaHatasi("aynı ürün için birden çok sayfa seçildi; birini seçin", {"kodlar": tekrar})
+        raise DogrulamaHatasi(f"Aynı ürün için birden çok sayfa seçildi ({liste_metni(tekrar)}); birini seçin.", {"kodlar": tekrar})
     from .yukleme_guvenligi import yedek_guncelle, yedekle
     y = yedekle(s, "recete", senaryo_id, {"senaryo_id": senaryo_id, "urunler": []}, f"{len(secilen)} ürün reçetesi", kaynak_dosya, kullanici)
     yedek_urunler = []

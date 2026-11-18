@@ -143,6 +143,7 @@ class Recete(Base, Ortak):
     versiyon: Mapped[int] = mapped_column(Integer)
     kaynak: Mapped[str | None] = mapped_column(String(16))
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
+    neden: Mapped[str | None] = mapped_column(String(300))   # elle/ekrandan açılan sürümün nedeni (günlükte görünür); Excel aktarımında boş
     satirlar: Mapped[list["ReceteSatiri"]] = relationship(order_by="ReceteSatiri.sira", cascade="all, delete-orphan")
 
 

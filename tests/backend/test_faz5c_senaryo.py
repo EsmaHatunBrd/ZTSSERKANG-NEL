@@ -65,7 +65,7 @@ def test_kopya_tam_sayilar_ve_icerik(istemci, oturum):
     yeni = g["id"]
     assert yeni != sid and g["sezon_ad"] == "2027-2028" and g["ad"] == "Kopya" and g["tur"] == "fiyat_calismasi" and g["aciklama"] == "yeni sezon"
     assert g["kilitli"] is False and g["urun_sayisi"] == 1
-    assert g["kopyalanan"] == {"recete": 1, "fiyat": 1, "parametre": 13, "metin": 1, "havuz": 11, "ambalaj": 2, "hedef": 1, "kapasite": 1, "fire": 2}
+    assert g["kopyalanan"] == {"recete": 1, "fiyat": 1, "parametre": 13, "metin": 1, "havuz": 11, "ambalaj": 2, "hedef": 1, "kapasite": 1, "fire": 2, "sablon": 0}
 
     # reçete: yalnız aktif sürüm, versiyon 1, kaynak kopya, satırlar aynen (elle değerler, seviye, düğüm tipi dahil)
     rec = c.get(f"{A}/urunler/TEST/recete?senaryo={yeni}").json()
@@ -121,7 +121,7 @@ def test_kopya_secimli(istemci, oturum):
     r = c.post(f"{A}/senaryolar/{sid}/kopyala", json=_govde("Yalnız reçete", {**HICBIRI, "receteler": True}))
     assert r.status_code == 201, r.text
     g = r.json()
-    assert g["kopyalanan"] == {"recete": 1, "fiyat": 0, "parametre": 0, "metin": 0, "havuz": 0, "ambalaj": 0, "hedef": 0, "kapasite": 0, "fire": 0}
+    assert g["kopyalanan"] == {"recete": 1, "fiyat": 0, "parametre": 0, "metin": 0, "havuz": 0, "ambalaj": 0, "hedef": 0, "kapasite": 0, "fire": 0, "sablon": 0}
     assert g["urun_sayisi"] == 1
     for tablo in (m.MalzemeFiyati, m.ParametreDegeri, m.MetinParametre, m.GiderHavuzu, m.AmbalajSinifi, m.UretimHedefi, m.UretimKapasitesi, m.FireKurali):
         assert _say(oturum, tablo, g["id"]) == 0, tablo.__tablename__
@@ -224,6 +224,28 @@ def test_kopya_pasif_urun_tasinmaz(istemci, oturum):
     assert c.get(f"{A}/urunler/PASIF/recete?senaryo={g['id']}").json()["versiyon"] == 0
 
 
+def test_kopya_fiyat_calismasi_excel_sablonu(istemci, oturum):
+    """B7: kaynağın saklanan Fiyat Çalışması Excel'i şablonu kopyaya da saklanır (seçim gönderilmezse açık); kapalıysa kopyalanmaz."""
+    from backend.servisler import musavir_excel_servisi as mx
+    c = istemci
+    sid = _senaryo(c)
+    mx.sablon_sakla(oturum, sid, "kitap.xlsx", b"PK-sahte-icerik", "esma"); oturum.commit()
+    r = c.post(f"{A}/senaryolar/{sid}/kopyala", json=_govde("Şablonlu", HICBIRI), headers={"X-Kullanici": "ali"})   # `sablon` gönderilmedi
+    assert r.status_code == 201, r.text
+    assert r.json()["kopyalanan"]["sablon"] == 1
+    yeni = r.json()["id"]
+    y = mx.sablon(oturum, yeni)
+    assert y is not None and (y.dosya_adi, y.icerik, y.olusturan) == ("kitap.xlsx", b"PK-sahte-icerik", "ali")
+    d = c.get(f"{A}/disa-aktar/musavir/fiyat-kitabi/durum", params={"senaryo_id": yeni}).json()
+    assert d["sablon"]["dosya_adi"] == "kitap.xlsx"
+    assert mx.sablon(oturum, sid).icerik == b"PK-sahte-icerik"   # kaynak yerinde kalır
+    r2 = c.post(f"{A}/senaryolar/{sid}/kopyala", json=_govde("Şablonsuz", {**HICBIRI, "sablon": False}))
+    assert r2.status_code == 201 and r2.json()["kopyalanan"]["sablon"] == 0 and mx.sablon(oturum, r2.json()["id"]) is None
+    # kaynakta şablon yoksa sayı 0, hata yok
+    r3 = c.post(f"{A}/senaryolar/{r2.json()['id']}/kopyala", json=_govde("Boş kaynak", {**HICBIRI, "sablon": True}))
+    assert r3.status_code == 201 and r3.json()["kopyalanan"]["sablon"] == 0
+
+
 def test_kopya_dogrulama(istemci, oturum):
     c = istemci
     sid = _senaryo(c)
@@ -289,7 +311,7 @@ def test_delete_senaryo_204_ve_tum_satirlar_gider(istemci, oturum):
     assert k[0]["yeni"]["ad"] == "Kopya" and k[0]["yeni"]["sezon_ad"] == "2027-2028" and k[0]["yeni"]["ayrinti"]["recete"] == 1 and k[0]["yeni"]["silinen_satir"] > 10
     gl = c.get(f"{A}/gunluk").json()["kayitlar"]
     satir = next(x for x in gl if x["baslik"] == "Senaryo silindi")
-    assert satir["senaryo_id"] == kopya and satir["kullanici"] == "esma" and satir["yeni"].startswith("ad: Kopya, sezon_ad: 2027-2028")
+    assert satir["senaryo_id"] == kopya and satir["kullanici"] == "esma" and satir["yeni"].startswith("Ad: Kopya; Sezon: 2027-2028")
     assert not any(x["senaryo_id"] == kopya for x in c.get(f"{A}/gunluk?senaryo={sid}").json()["kayitlar"])
     assert c.get(f"{A}/gunluk/ozet").status_code == 200
     assert c.get(f"{A}/urunler?senaryo={kopya}").status_code == 404
@@ -364,7 +386,7 @@ def test_uyelik_suzgeci_ve_tum(istemci, oturum):
     t = c.get(f"{A}/urunler?senaryo={sid}&tum=1").json()
     assert [x["kod"] for x in t["kayitlar"]] == ["BOS", "HEDEFLI", "TEST"] and t["toplam"] == 3
     satir = {x["kod"]: x for x in t["kayitlar"]}
-    assert "reçete yok" in satir["HEDEFLI"]["hata"] and "üretim hedefi yok" in satir["BOS"]["hata"] and satir["TEST"]["hata"] is None
+    assert "aktif reçetesi yok" in satir["HEDEFLI"]["hata"] and "üretim bilgisi yok" in satir["BOS"]["hata"] and satir["TEST"]["hata"] is None
     # uyarılar: üye olmayanlar hesaba girmez (hata satırı zaten uyarı üretmez), tum=1 da aynı sonucu verir
     assert c.get(f"{A}/uyarilar?senaryo={sid}").json() == c.get(f"{A}/uyarilar?senaryo={sid}&tum=1").json()
     # dışa aktarım: üyeler; tum=1 hepsi
@@ -380,7 +402,7 @@ def test_uyelik_suzgeci_ve_tum(istemci, oturum):
     assert c.get(f"{A}/senaryolar").json()["kayitlar"][0]["urun_sayisi"] == 0
     # reçetesiz ürüne hesap: anlamlı doğrulama hatası
     r = c.post(f"{A}/urunler/HEDEFLI/hesapla", json={"senaryo_id": sid})
-    assert r.status_code == 422 and r.json()["hata"] == "dogrulama" and "reçete yok" in r.json()["mesaj"] and r.json()["alanlar"]["urun"] == "HEDEFLI"
+    assert r.status_code == 422 and r.json()["hata"] == "dogrulama" and "aktif reçetesi yok" in r.json()["mesaj"] and r.json()["alanlar"]["urun"] == "HEDEFLI"
     assert r.json()["kod"] is None
 
 

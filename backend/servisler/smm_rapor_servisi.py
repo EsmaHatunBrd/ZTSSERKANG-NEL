@@ -145,11 +145,11 @@ def _donem_idleri(s: Session, donemler: str | None) -> list[m.SmmDonem]:
         if not p:
             continue
         if not p.isdigit():
-            raise DogrulamaHatasi("dönem listesi virgülle ayrılmış dönem numaraları olmalı", {"donemler": donemler})
+            raise DogrulamaHatasi("Dönem listesi virgülle ayrılmış dönem numaraları olmalı.", {"donemler": donemler})
         if int(p) not in idler:
             idler.append(int(p))
     if len(idler) > MAKS_DONEM:
-        raise DogrulamaHatasi(f"en çok {MAKS_DONEM} dönem karşılaştırılabilir", {"donemler": len(idler)})
+        raise DogrulamaHatasi(f"En çok {MAKS_DONEM} dönem karşılaştırılabilir.", {"donemler": len(idler)})
     return sorted((donem_getir(s, i) for i in idler), key=lambda d: (d.yil, d.ay))
 
 
@@ -206,7 +206,7 @@ def maliyet_karti(s: Session, donem_id: int, kod: str) -> dict:
     b = _Baglam(s, d)
     asama = urun_asamasi(b, kod)
     if asama is None:
-        raise BulunamadiHatasi("bu dönemde ürünün aşama reçetesi bulunamadı", {"kod": kod, "donem_id": donem_id})
+        raise BulunamadiHatasi(f"Bu dönemde {kod} ürününün aşama reçetesi bulunamadı.", {"kod": kod, "donem_id": donem_id})
     x = b.sonuc[asama][kod]
     onceki = None
     od = onceki_donem(s, d.yil, d.ay)

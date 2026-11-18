@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from .donusum import decimal_str
-from .hatalar import DogrulamaHatasi
+from .hatalar import DogrulamaHatasi, alan_adi, liste_metni
 
 SAYISAL_ALANLAR = ("net_kapasite", "net_sure", "toplam_kapasite", "toplam_sure", "hedef_uretim", "ortalama_isci")
 
@@ -18,10 +18,10 @@ def listele(s: Session, senaryo_id: int, sayfa: int = 1, boyut: int = 50) -> tup
 def kaydet(s: Session, senaryo_id: int, urun_kodu: str, alanlar: dict[str, Decimal], neden: str, urun_ad: str | None = None,
            kullanici: str = "sistem") -> m.UretimKapasitesi:
     if not (neden or "").strip():
-        raise DogrulamaHatasi("neden zorunlu")
+        raise DogrulamaHatasi("Neden girin.")
     eksik = [a for a in SAYISAL_ALANLAR if a not in alanlar]
     if eksik:
-        raise DogrulamaHatasi("kapasite alanı eksik", {"eksik": eksik})
+        raise DogrulamaHatasi(f"Kapasite bilgisinde eksik alan var: {liste_metni(alan_adi(a) for a in eksik)}.", {"eksik": eksik})
     yeni = {a: alanlar[a] for a in SAYISAL_ALANLAR}
     k = s.scalar(select(m.UretimKapasitesi).where(m.UretimKapasitesi.senaryo_id == senaryo_id, m.UretimKapasitesi.urun_kodu == urun_kodu))
     if k is None:

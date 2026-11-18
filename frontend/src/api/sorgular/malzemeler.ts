@@ -14,12 +14,10 @@ export interface MalzemeListeSecenegi {
   arama?: string;
 }
 
-export function useMalzemeler(senaryo: number | null | undefined, secenek: MalzemeListeSecenegi = {}) {
-  return useQuery({
+/** Malzeme listesi sorgusunun seçenekleri: hook ile anlık `fetchQuery` (ör. kod doğrulama) aynı önbelleği paylaşır. */
+export function malzemelerSorgusu(senaryo: number | null | undefined, secenek: MalzemeListeSecenegi = {}) {
+  return {
     queryKey: anahtar.malzemeler(senaryo, secenek),
-    enabled: senaryo != null,
-    // Yalnızca aynı senaryonun önceki verisi (sayfa değişimi) gösterilir; senaryo değişince başka senaryonun tutarları asla.
-    placeholderData: (onceki, oncekiSorgu) => (oncekiSorgu?.queryKey[1] === (senaryo ?? null) ? onceki : undefined),
     queryFn: () =>
       cagir(
         api.GET("/api/v1/malzemeler", {
@@ -36,6 +34,15 @@ export function useMalzemeler(senaryo: number | null | undefined, secenek: Malze
           },
         }),
       ),
+  };
+}
+
+export function useMalzemeler(senaryo: number | null | undefined, secenek: MalzemeListeSecenegi = {}) {
+  return useQuery({
+    ...malzemelerSorgusu(senaryo, secenek),
+    enabled: senaryo != null,
+    // Yalnızca aynı senaryonun önceki verisi (sayfa değişimi) gösterilir; senaryo değişince başka senaryonun tutarları asla.
+    placeholderData: (onceki, oncekiSorgu) => (oncekiSorgu?.queryKey[1] === (senaryo ?? null) ? onceki : undefined),
   });
 }
 

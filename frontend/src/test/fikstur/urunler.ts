@@ -18,7 +18,18 @@ export const senaryolar: Senaryo[] = [
 ];
 
 /** Faz 5c: `POST /senaryolar/{id}/kopyala` yanıtındaki sayılar (uydurma). */
-export const kopyalananSayilar = { recete: 67, fiyat: 661, parametre: 12, metin: 3, havuz: 8, ambalaj: 4, hedef: 67, kapasite: 5, fire: 2 };
+export const kopyalananSayilar = {
+  recete: 67,
+  fiyat: 661,
+  parametre: 12,
+  metin: 3,
+  havuz: 8,
+  ambalaj: 4,
+  hedef: 67,
+  kapasite: 5,
+  fire: 2,
+  sablon: 1,
+};
 
 /** Faz 5c: bu senaryoda reçetesi olmayan (çalışma dışı) ürün kodu; `GET recete` boş yapı döner. */
 export const RECETESIZ_KOD = "YENI-001";

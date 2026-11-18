@@ -97,7 +97,7 @@ def kilit_denetle(d: m.SmmDonem) -> None:
 def donem_getir(s: Session, donem_id: int) -> m.SmmDonem:
     d = s.get(m.SmmDonem, donem_id)
     if d is None:
-        raise BulunamadiHatasi("dönem bulunamadı", {"donem_id": donem_id})
+        raise BulunamadiHatasi("Dönem bulunamadı.", {"donem_id": donem_id})
     return d
 
 
@@ -235,11 +235,11 @@ def excel_oku(icerik: bytes) -> dict:
     """SMM Excel'inin veri sayfalarını okur (formüller değil, Excel'in son hesapladığı değerler). Dönüş: ham kalemler, reçeteler, işçilik,
     finansman ve Excel'in kendi TABLO değerleri (karşılaştırma için)."""
     if len(icerik) > MAKS_BAYT:
-        raise DogrulamaHatasi("dosya 60 MB'den büyük")
+        raise DogrulamaHatasi("Dosya 60 MB'den büyük.")
     try:
         wb = load_workbook(io.BytesIO(icerik), read_only=True, data_only=True)
     except (zipfile.BadZipFile, InvalidFileException, KeyError):
-        raise DogrulamaHatasi("dosya geçerli bir .xlsx değil")
+        raise DogrulamaHatasi("Dosya geçerli bir .xlsx değil.")
     try:
         _sablon_degil(wb)
         bul = _sayfa_bulucu(wb)   # sayfa adı esnek: 'HM-YM ALIŞ SATIŞ' = 'hm-ym alış satış'; '20 KOD' = '20KOD'
@@ -486,10 +486,10 @@ def _donem_belirle(dosya_adi: str, yil: int | None, ay: int | None) -> tuple[int
     if yil is None or ay is None:
         bulunan = dosyadan_donem(dosya_adi)
         if bulunan is None:
-            raise DogrulamaHatasi("dönem (yıl ve ay) seçin; dosya adından çıkarılamadı", {"dosya": dosya_adi})
+            raise DogrulamaHatasi("Dönem (yıl ve ay) seçin; dosya adından çıkarılamadı.", {"dosya": dosya_adi})
         yil, ay = yil or bulunan[0], ay or bulunan[1]
     if not (2000 <= yil <= 2100 and 1 <= ay <= 12):
-        raise DogrulamaHatasi("dönem geçersiz", {"yil": yil, "ay": ay})
+        raise DogrulamaHatasi("Dönem geçersiz; yıl ve ay (1-12) girin.", {"yil": yil, "ay": ay})
     return yil, ay
 
 
@@ -561,7 +561,7 @@ def yukle(s: Session, icerik: bytes, dosya_adi: str, yil: int | None = None, ay:
     veri = excel_oku(icerik)
     d = s.scalar(select(m.SmmDonem).where(m.SmmDonem.yil == yil, m.SmmDonem.ay == ay))
     if d is not None and not uzerine_yaz:
-        raise CatismaHatasi(f"{AY_ADLARI[ay]} {yil} dönemi zaten yüklü; üzerine yazmak için onaylayın", {"donem_id": d.id})
+        raise CatismaHatasi(f"{AY_ADLARI[ay]} {yil} dönemi zaten yüklü; üzerine yazmak için onaylayın.", {"donem_id": d.id})
     if d is not None:
         kilit_denetle(d)
     mevcut_kalem = (s.scalar(select(func.count()).select_from(m.SmmKalem).where(m.SmmKalem.donem_id == d.id)) or 0) if d is not None else 0
@@ -622,7 +622,7 @@ def son_yuklemeyi_geri_al(s: Session, donem_id: int, kullanici: str = "sistem") 
     if v.get("yeni"):
         devralan = s.scalar(select(m.SmmDonem).where(m.SmmDonem.devir_donem_id == d.id).limit(1))
         if devralan is not None:
-            raise CatismaHatasi(f"{donem_adi(devralan)} açılışını bu dönemden devraldı; önce o dönemi silin", {"donem_id": devralan.id},
+            raise CatismaHatasi(f"{donem_adi(devralan)} açılışını bu dönemden devraldı; önce o dönemi silin.", {"donem_id": devralan.id},
                                 kod="devralan_donem_var")
         yy.geri_alindi_isaretle(s, y)
         donem_sil(s, d.id, kullanici)   # dönemin bütün yükleme yedeklerini de kapatır

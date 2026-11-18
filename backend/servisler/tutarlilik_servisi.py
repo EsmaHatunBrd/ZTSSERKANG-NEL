@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from fiyat_motoru.modeller import GIDER_ELLE_ALANLARI
 from . import aile as aile_servisi, analiz_servisi, gider_servisi, hesap_servisi as hs, senaryo_servisi
-from . import fiyat_egilimi_servisi
+from . import fiyat_egilimi_servisi, parametre_servisi
 from .hatalar import HEDEF_YOK, PARAMETRE_EKSIK
 
 OGE_SINIRI = 200
@@ -46,6 +46,28 @@ def ambalaj_tutarsizliklari(satirlar: list[dict], tolerans: Decimal = AMBALAJ_TO
                                         f"büyük boy %{_tl(fark, 1)} daha pahalı",
                             "yol": f"/karsilastirma?aile={quote(aile, safe='')}"})
             onceki = {"kod": r["kod"], "ml": r["ambalaj_ml"], "birim": birim}
+    return out
+
+
+def _parametre_deger_metni(deger: Decimal, anahtar: str, birim: str | None) -> str:
+    """Kullanıcı biçimi: oran yüzde (%25.000), diğerleri binlik ayraçlı sayı + birim."""
+    if parametre_servisi.yuzde_mi(anahtar, birim):
+        x = (deger * 100).quantize(Decimal("0.01")).normalize()
+        return "%" + f"{x:,f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    x = deger.quantize(Decimal("0.0001")).normalize()
+    metin = f"{x:,f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"{metin} {birim}" if birim and birim != "oran" else metin
+
+
+def olagan_disi_parametreler(s: Session, senaryo_id: int, tarih: date, urunler_id: dict[int, m.Urun]) -> list[dict]:
+    """Kur <= 0, oran %100'ün üstü (enflasyon, satış kârı, faiz, teklif kârı...), eksi kâr gibi olağan dışı parametre değerleri."""
+    out = []
+    for x in parametre_servisi.olagan_disi_degerler(s, senaryo_id, tarih):
+        u = urunler_id.get(x["kapsam_id"]) if x["kapsam_tipi"] == "urun" else None
+        kapsam = "tüm ürünler" if x["kapsam_tipi"] == "genel" else (f"yalnız {u.kod}" if u else "tek ürün")
+        out.append({"etiket": f"{x['ad']} ({kapsam})",
+                    "aciklama": f"değer {_parametre_deger_metni(x['deger'], x['anahtar'], x['birim'])}: {x['neden']}; yanlış birimle girilmiş olabilir",
+                    "yol": "/parametreler"})
     return out
 
 
@@ -172,6 +194,10 @@ def kontroller(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
                  ("Gider Dağıtım", "/gider"), paylar),
         _kontrol("hat", "Gideri eksik hesaplanan ürün", "Hattı, taze/turşu sınıfı ya da ambalajı gider dağıtım tablosunda bulunamayan veya "
                  "vardiya üretim adedi 0 olan ürünler; ilgili gider 0 alınıyor.", ("Gider Dağıtım", "/gider"), hat),
+        _kontrol("olagan_disi_parametre", "Olağan dışı parametre", "Kur 0 ya da eksi, oran %100'ün üstünde (enflasyon, satış kârı, "
+                 "faiz, teklif kârı) ya da kâr oranı eksi. Genelde yüzde yerine oranla (ya da tersi) yazılmış bir değerdir; maliyeti ve "
+                 "fiyatı büyük ölçüde değiştirir.", ("Parametreler", "/parametreler"),
+                 olagan_disi_parametreler(s, sen.id, tarih or date.today(), {u.id: u for u in urunler.values()})),
         _kontrol("parametre_uyari", "Kur / finansman uyarısı", "Kur, faiz ya da stok süresi eksik olduğu için bir tutar 0 alınmış.",
                  ("Parametreler", "/parametreler"), param_uyari),
         _kontrol("recetesiz", "Reçetesi olmayan ürün", "Aktif ürün kartı var ama bu çalışmada reçetesi yok; listelerde görünmez.",

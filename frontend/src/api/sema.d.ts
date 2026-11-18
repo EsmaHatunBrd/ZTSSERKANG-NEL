@@ -476,7 +476,11 @@ export interface paths {
         /** Recete Getir */
         get: operations["recete_getir_api_v1_urunler__kod__recete_get"];
         put?: never;
-        /** Recete Ekle */
+        /**
+         * Recete Ekle
+         * @description Gövde: {satirlar, neden} (ekran; neden zorunlu, günlüğe yazılır) ya da eski biçim yalnız satır listesi (nedensiz; betik/test uyumu).
+         *     Ekran biçiminde yeni eklenen satırın malzeme kartı yoksa 422 (kod malzeme_yok); eski biçim aktarım gibi davranır, denetlenmez.
+         */
         post: operations["recete_ekle_api_v1_urunler__kod__recete_post"];
         delete?: never;
         options?: never;
@@ -5271,6 +5275,8 @@ export interface components {
             marka: string | null;
             /** Aile */
             aile: string | null;
+            /** Aile Anahtari */
+            aile_anahtari?: string | null;
             /** Adet */
             adet: string | null;
             /** Maliyet */
@@ -5644,6 +5650,8 @@ export interface components {
             ad: string;
             /** Aile */
             aile: string | null;
+            /** Aile Anahtari */
+            aile_anahtari?: string | null;
             /** Adet */
             adet: string | null;
             /** Maliyet */
@@ -6044,6 +6052,11 @@ export interface components {
             birim_maliyet?: number | string | null;
             /** Bolen */
             bolen?: number | string | null;
+            /**
+             * Neden
+             * @description Elle ekleme/güncelleme nedeni (zorunlu; boşsa 422 'Neden girin.'). Değişiklik Günlüğü'ne yazılır.
+             */
+            neden: string;
         };
         /** ListeGecmisSatiri */
         ListeGecmisSatiri: {
@@ -6370,6 +6383,10 @@ export interface components {
             gider_elle?: {
                 [key: string]: components["schemas"]["GiderElleGiris"];
             } | null;
+            /** Silinen Satirlar */
+            silinen_satirlar?: number[] | null;
+            /** Eklenen Satirlar */
+            eklenen_satirlar?: components["schemas"]["ReceteSatirGiris"][] | null;
         };
         /** ParametreDegerCikis */
         ParametreDegerCikis: {
@@ -6568,6 +6585,17 @@ export interface components {
             versiyon: number;
             /** Satir Sayisi */
             satir_sayisi: number;
+        };
+        /**
+         * ReceteEkleGiris
+         * @description POST /urunler/{kod}/recete (ekran biçimi): tam satır listesi + zorunlu neden (Değişiklik Günlüğüne yazılır).
+         *     Eski biçim (yalnız satır listesi) betik/test uyumluluğu için kabul edilir; ekran her zaman bu biçimi gönderir.
+         */
+        ReceteEkleGiris: {
+            /** Satirlar */
+            satirlar: components["schemas"]["ReceteSatirGiris"][];
+            /** Neden */
+            neden: string;
         };
         /** ReceteEtkinlestirCikis */
         ReceteEtkinlestirCikis: {
@@ -6795,6 +6823,11 @@ export interface components {
             para_birimi: "TL" | "USD" | "EUR" | "GBP" | "CHF" | "RUB" | "ZAR";
             /** Adet */
             adet: number | string;
+            /**
+             * Neden
+             * @description Elle ekleme nedeni (zorunlu; boşsa 422 'Neden girin.'). Değişiklik Günlüğü'ne yazılır.
+             */
+            neden: string;
         };
         /** SatisListesi */
         SatisListesi: {
@@ -6979,10 +7012,15 @@ export interface components {
              * @default 0
              */
             fire: number;
+            /**
+             * Sablon
+             * @default 0
+             */
+            sablon: number;
         };
         /**
          * SenaryoKopyaSecimleri
-         * @description Altı seçim de açıkça gönderilir (varsayılan yok): neyin kopyalanacağı istemcide belirlenir.
+         * @description İlk altı seçim açıkça gönderilir (varsayılan yok): neyin kopyalanacağı istemcide belirlenir. `sablon` gönderilmezse açıktır.
          */
         SenaryoKopyaSecimleri: {
             /** Receteler */
@@ -6997,6 +7035,8 @@ export interface components {
             uretim: boolean;
             /** Fire Kurallari */
             fire_kurallari: boolean;
+            /** Sablon */
+            sablon?: boolean | null;
         };
         /** SenaryoListesi */
         SenaryoListesi: {
@@ -9801,6 +9841,12 @@ export interface components {
             maliyet: string | null;
             /** Satis */
             satis: string | null;
+            /**
+             * Fiyat Kaynagi
+             * @default hesap
+             * @enum {string}
+             */
+            fiyat_kaynagi: "gecen_yil" | "hesap";
         };
         /** YonetimKontrolSorunu */
         YonetimKontrolSorunu: {
@@ -9891,6 +9937,13 @@ export interface components {
             marj_esigi: string;
             /** Adet Kaynagi */
             adet_kaynagi: string;
+            /** Gecen Yil Agirlikli Ortalama */
+            gecen_yil_agirlikli_ortalama?: string | null;
+            /**
+             * Gecen Yil Urun
+             * @default 0
+             */
+            gecen_yil_urun: number;
         };
         /** YonetimOzetiCikis */
         YonetimOzetiCikis: {
@@ -11678,7 +11731,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReceteSatirGiris"][];
+                "application/json": components["schemas"]["ReceteEkleGiris"] | components["schemas"]["ReceteSatirGiris"][];
             };
         };
         responses: {
@@ -12331,7 +12384,10 @@ export interface operations {
     };
     sil_api_v1_teklifler__teklif_id__delete: {
         parameters: {
-            query?: never;
+            query: {
+                /** @description Silme nedeni (zorunlu; boşsa 422 'Neden girin.') */
+                neden: string;
+            };
             header?: {
                 "x-kullanici"?: string | null;
             };
@@ -13712,7 +13768,10 @@ export interface operations {
     };
     sil_api_v1_satis_gecmisi__id__delete: {
         parameters: {
-            query?: never;
+            query: {
+                /** @description Silme nedeni (zorunlu; boşsa 422 'Neden girin.') */
+                neden: string;
+            };
             header?: {
                 "x-kullanici"?: string | null;
             };
@@ -15567,8 +15626,10 @@ export interface operations {
     };
     sil_api_v1_liste_fiyatlari__urun_kodu___yil__delete: {
         parameters: {
-            query?: {
+            query: {
                 pazar?: "yurtici" | "yurtdisi";
+                /** @description Silme nedeni (zorunlu; boşsa 422 'Neden girin.') */
+                neden: string;
             };
             header?: {
                 "x-kullanici"?: string | null;

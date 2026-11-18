@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { Lock, LockOpen } from "lucide-react";
 import { hataMetni, yanitDinle } from "@/api/istemci";
@@ -6,6 +6,7 @@ import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { duzenlemeKilidiAcildiBildir } from "@/api/sorgular/duzenlemeKilidi";
 import { Button } from "@/bilesenler/ui/button";
 import { cn } from "@/lib/utils";
+import { alanaYazabilir, saltOkunurMetni, type YazmaAlani } from "@/yardimcilar/rolYetkisi";
 import { useOturum } from "./GirisKapisi";
 import { useSenaryoVarsa } from "./SenaryoSecici";
 
@@ -125,9 +126,27 @@ yanitDinle(({ yol, basarili, yazma }) => {
   else if (!yol.startsWith("/api/v1/kimlik/")) duzenlemeSuresiniYenile();
 });
 
+// ---------------------------------------------------------------- yazma alanı
+const YazmaAlaniBaglami = createContext<YazmaAlani>("genel");
+
+/**
+ * Altındaki ekran parçasının yazma alanını bildirir (varsayılan "genel"). Satın alma rolü yalnız `malzeme` alanında kilidi açabilir;
+ * hangi rolün hangi alana yazdığı `yardimcilar/rolYetkisi.ts` dosyasındadır.
+ */
+export function YazmaAlaniSaglayici({ alan, children }: { alan: YazmaAlani; children: ReactNode }) {
+  return <YazmaAlaniBaglami.Provider value={alan}>{children}</YazmaAlaniBaglami.Provider>;
+}
+
+/** Bu bileşenin yazma alanında oturumdaki rol değişiklik yapabilir mi (giriş kapalıysa her zaman evet). */
+export function useAlanaYazabilir(alan?: YazmaAlani): boolean {
+  const baglam = useContext(YazmaAlaniBaglami);
+  const { girisZorunlu, rol } = useOturum();
+  return alanaYazabilir(girisZorunlu, rol, alan ?? baglam);
+}
+
 // ---------------------------------------------------------------- kancalar
 export interface DuzenlemeKilidiDurumu {
-  /** Düzenleme açık mı (izleyici rolünde hiçbir zaman açık değildir). */
+  /** Düzenleme açık mı (rolün yazamadığı alanda — izleyicide hiçbir yerde — hiçbir zaman açık değildir). */
   acik: boolean;
   /** Kilit süre dolduğu için kapandı (kullanıcı kapatmadı). */
   sureDoldu: boolean;
@@ -150,10 +169,14 @@ async function ac(sayfa: string, senaryoId: number | null): Promise<string | nul
   }
 }
 
-/** Uygulama genelindeki düzenleme kilidi. Varsayılan kilitlidir; sağlayıcı olmadan da çalışır (durum sekmenin deposundadır). */
-export function useDuzenlemeKilidi(): DuzenlemeKilidiDurumu {
+/**
+ * Uygulama genelindeki düzenleme kilidi. Varsayılan kilitlidir; sağlayıcı olmadan da çalışır (durum sekmenin deposundadır).
+ * `alan` verilmezse en yakın `YazmaAlaniSaglayici`nın alanı (yoksa "genel") kullanılır: kilit sekme genelinde tek olsa da
+ * rolün yazamadığı alanda `acik` false döner (ör. satın alma Malzeme Fiyatları'nda açıp Parametreler'e geçerse orada kilitli).
+ */
+export function useDuzenlemeKilidi(alan?: YazmaAlani): DuzenlemeKilidiDurumu {
   const durum = useSyncExternalStore(abone, anlik, () => "kilitli" as Durum);
-  const { yazabilir } = useOturum();
+  const yazabilir = useAlanaYazabilir(alan);
   const acik = durum === "acik" && yazabilir;
   return useMemo(
     () => ({ acik, sureDoldu: durum === "doldu", ac, kilitle: duzenlemeyiKilitle, yenile: duzenlemeSuresiniYenile }),
@@ -165,9 +188,14 @@ export function useDuzenlemeKilidi(): DuzenlemeKilidiDurumu {
  * Sayfaların tek "yazılamaz" bayrağı: senaryo kilitliyse ya da düzenleme kilidi açık değilse `kilitli`. `neden` düğme
  * ipuçlarında kullanılır ("Senaryo kilitli" / "Düzenleme kilitli"). SenaryoSaglayici yoksa yalnız düzenleme kilidine bakar.
  */
-export function useYazmaKilidi(): { kilitli: boolean; senaryoKilitli: boolean; duzenlemeKilitli: boolean; neden: string | undefined } {
+export function useYazmaKilidi(alan?: YazmaAlani): {
+  kilitli: boolean;
+  senaryoKilitli: boolean;
+  duzenlemeKilitli: boolean;
+  neden: string | undefined;
+} {
   const senaryoKilitli = useSenaryoVarsa()?.kilitli ?? false;
-  const { acik } = useDuzenlemeKilidi();
+  const { acik } = useDuzenlemeKilidi(alan);
   return {
     kilitli: senaryoKilitli || !acik,
     senaryoKilitli,
@@ -211,9 +239,11 @@ export interface DuzenlemeKilidiOzellikleri {
   className?: string;
   /** Senaryodan bağımsız modül (Maliyet Muhasebesi): senaryo kilidine bakılmaz, günlüğe senaryo_id null yazılır. */
   senaryosuz?: boolean;
-  /** Rolün bu modülde yazma izni (verilmezse oturumdaki genel izin). false ise düğme görünmez, şerit hep kilitli görünür. */
+  /** Şeridin yazma alanı (verilmezse en yakın `YazmaAlaniSaglayici`, yoksa "genel"). Rol bu alana yazamıyorsa düğme görünmez. */
+  alan?: YazmaAlani;
+  /** Rolün bu modülde ek yazma izni (verilmezse yalnız alan kuralı). false ise düğme görünmez, şerit hep kilitli görünür. */
   yazabilir?: boolean;
-  /** `yazabilir` false iken gösterilecek metin (verilmezse izleyici metni). */
+  /** `yazabilir` false iken gösterilecek metin (verilmezse rolün "Salt okunur: …" metni; izleyicide her zaman o). */
   yazamazMetni?: string;
   /** Düzenleme açık olsa da yazmayı engelleyen ek durum (ör. kapatılmış dönem); şeritte ikinci satırda gösterilir. */
   engelMetni?: string | null;
@@ -226,6 +256,7 @@ export interface DuzenlemeKilidiOzellikleri {
 export function DuzenlemeKilidi({
   className,
   senaryosuz = false,
+  alan,
   yazabilir: yazabilirDis,
   yazamazMetni,
   engelMetni,
@@ -235,8 +266,9 @@ export function DuzenlemeKilidi({
   const senaryoId = senaryo?.senaryoId ?? null;
   const senaryoKilitli = senaryo?.kilitli ?? false;
   const oturum = useOturum();
-  const yazabilir = oturum.yazabilir && (yazabilirDis ?? true);
-  const kilit = useDuzenlemeKilidi();
+  const alanaYazar = useAlanaYazabilir(alan);
+  const yazabilir = alanaYazar && (yazabilirDis ?? true);
+  const kilit = useDuzenlemeKilidi(alan);
   const acik = kilit.acik && yazabilir;
   const { sureDoldu: doldu, ac: kilidiAc, kilitle } = kilit;
   const { pathname } = useLocation();
@@ -287,7 +319,7 @@ export function DuzenlemeKilidi({
   }
 
   const metin = !yazabilir
-    ? (oturum.yazabilir && yazamazMetni) || "Düzenleme kilitli. İzleyici rolüyle değişiklik yapılamaz."
+    ? (oturum.yazabilir && yazamazMetni) || saltOkunurMetni(oturum.rol)
     : senaryoKilitli
       ? "Düzenleme kilitli. Bu senaryo kilitli olduğu için düzenleme açılamaz."
       : doldu

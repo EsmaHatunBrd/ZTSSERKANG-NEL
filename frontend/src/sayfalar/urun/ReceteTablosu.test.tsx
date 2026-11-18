@@ -5,7 +5,7 @@ import { urunExcelHesapYaniti } from "@/test/fikstur/urunExcel";
 import { urunReceteleri } from "@/test/fikstur/urunMaliyeti";
 import type { HesapSatiri, ReceteSatiri } from "@/api/tipler";
 import { formulIpucu } from "./formulMetni";
-import { ReceteTablosu, YOGUNLUK_ANAHTARI } from "./ReceteTablosu";
+import { ALT_SATIRLI_SILINEMEZ, ReceteTablosu, URUN_SATIRI_SILINEMEZ, YOGUNLUK_ANAHTARI } from "./ReceteTablosu";
 import { sonrakiHucre, type GezinmeSatiri } from "./receteKlavye";
 
 function kur(ek: Partial<Parameters<typeof ReceteTablosu>[0]> = {}) {
@@ -95,7 +95,8 @@ describe("ReceteTablosu düzeni", () => {
     const tablo = screen.getByRole("table", { name: "Reçete tablosu" });
     const satir = within(tablo).getByText("Salamura Karışımı").closest("tr") as HTMLElement;
     const hucreler = within(satir).getAllByRole("cell");
-    const kaynak = hucreler[hucreler.length - 1];
+    // Son sütun satır işlemleri (Sil); kaynak rozetleri ondan önceki hücrede.
+    const kaynak = hucreler[hucreler.length - 2];
     expect(kaynak.querySelector("[data-kaynaklar]")?.className).toMatch(/flex-row|flex-nowrap/);
   });
 });
@@ -397,5 +398,67 @@ describe("ReceteTablosu klavye gezinme (A3)", () => {
     await u.type(su, "2");
     await u.keyboard("{Escape}");
     expect(onTaslak).toHaveBeenLastCalledWith({ satirlar: { 4: { miktar: undefined } } });
+  });
+});
+
+describe("ReceteTablosu satır ekle / sil (D3)", () => {
+  it("her düzenlenebilir satırda Sil; tıklayınca silinen listesi taslağa yazılır", async () => {
+    const u = userEvent.setup();
+    const onTaslak = kur({ silinen: [3] });
+    const tablo = screen.getByRole("table", { name: "Reçete tablosu" });
+    const salamura = within(tablo).getByText("Salamura Karışımı").closest("tr") as HTMLElement;
+    await u.click(within(salamura).getByRole("button", { name: "Satırı sil — Salamura Karışımı" }));
+    expect(onTaslak).toHaveBeenLastCalledWith({ silinen: [3, 2] });
+  });
+
+  it("silinecek satır üstü çizili ve düzenlenmez; satırda ve alttaki listede 'Geri al' silmeyi kaldırır", async () => {
+    const u = userEvent.setup();
+    const onTaslak = kur({ silinen: [2] });
+    const tablo = screen.getByRole("table", { name: "Reçete tablosu" });
+    const salamura = within(tablo).getByText("Salamura Karışımı").closest("tr") as HTMLElement;
+    expect(salamura).toHaveAttribute("data-taslak", "silinecek");
+    expect(within(salamura).queryByLabelText(/Miktar — /)).toBeNull();
+    await u.click(within(salamura).getByRole("button", { name: "Silmeyi geri al — Salamura Karışımı" }));
+    expect(onTaslak).toHaveBeenLastCalledWith({ silinen: [] });
+    const liste = screen.getByRole("region", { name: "Silinecek satırlar" });
+    expect(liste).toHaveTextContent("Satır 2");
+    expect(liste).toHaveTextContent("M-050");
+    await u.click(within(liste).getByRole("button", { name: "Silmeyi geri al — Satır 2" }));
+    expect(onTaslak).toHaveBeenLastCalledWith({ silinen: [] });
+  });
+
+  it("alt satırı olan ara mamul ve ürün satırı silinemez (pasif, nedeni ipucunda); yaprak alt satır silinebilir", () => {
+    const { satir } = agacKur();
+    const salamura = within(satir("Salamura Karışımı")).getByRole("button", { name: "Satırı sil — Salamura Karışımı" });
+    expect(salamura).toBeDisabled();
+    expect(salamura).toHaveAttribute("title", ALT_SATIRLI_SILINEMEZ);
+    const urun = within(satir("Konserve 400 g")).getByRole("button", { name: "Satırı sil — Konserve 400 g" });
+    expect(urun).toBeDisabled();
+    expect(urun).toHaveAttribute("title", URUN_SATIRI_SILINEMEZ);
+    expect(within(satir("Tuz")).getByRole("button", { name: "Satırı sil — Tuz" })).toBeEnabled();
+  });
+
+  it("canlı hesapta n+1 sıralı satır 'Yeni' rozetiyle çizilir; Kaldır taslaktaki eklenen satırı çıkarır", async () => {
+    const u = userEvent.setup();
+    const yeni = { malzeme_kodu: "M-900", ad: "Etiket", miktar: "1", birim: "adet" };
+    const satirlar: HesapSatiri[] = [
+      ...urunExcelHesapYaniti.satirlar.filter((s) => s.grup === "malzeme"),
+      { ...bosSatir, kalem: "Etiket", kod: "M-900", sira: 4, miktar: "1", brut_miktar: "1", birim_fiyat: "0.2", tutar: "0.2" },
+      ...urunExcelHesapYaniti.satirlar.filter((s) => s.grup !== "malzeme"),
+    ];
+    const onTaslak = kur({ satirlar, eklenen: [yeni] });
+    const tablo = screen.getByRole("table", { name: "Reçete tablosu" });
+    const satir = within(tablo).getByText("Etiket").closest("tr") as HTMLElement;
+    expect(satir).toHaveAttribute("data-taslak", "eklendi");
+    expect(within(satir).getByText("Yeni")).toBeInTheDocument();
+    expect(within(satir).queryByLabelText(/Miktar — /)).toBeNull();
+    await u.click(within(satir).getByRole("button", { name: "Eklenen satırı kaldır — Etiket" }));
+    expect(onTaslak).toHaveBeenLastCalledWith({ eklenen: [] });
+  });
+
+  it("kayıtlı hesap görünümünde (salt okunur) işlem sütunu ve Satır ekle yoktur", () => {
+    kur({ saltOkunur: true });
+    expect(screen.queryByRole("button", { name: /Satırı sil/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Satır ekle" })).toBeNull();
   });
 });

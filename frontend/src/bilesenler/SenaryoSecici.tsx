@@ -4,12 +4,14 @@ import { Ellipsis, Plus } from "lucide-react";
 import { useSenaryoGuncelle, useSenaryolar, useSenaryoSil } from "@/api/sorgular/senaryolar";
 import { hataMetni, hataMetniVarsa, type ApiHatasi } from "@/api/istemci";
 import type { Senaryo } from "@/api/tipler";
+import { useOturum } from "./GirisKapisi";
 import { OnayDiyalogu } from "./OnayDiyalogu";
 import { SenaryoDuzenleDiyalogu } from "./SenaryoDuzenleDiyalogu";
 import { Button, buttonVariants } from "./ui/button";
 import { YeniCalismaDiyalogu, type YeniCalismaSekmesi } from "./YeniCalismaDiyalogu";
 import { cn } from "@/lib/utils";
 import { senaryoEtiketi } from "@/yardimcilar/senaryo";
+import { senaryoYonetebilir } from "@/yardimcilar/rolYetkisi";
 
 const ANAHTAR = "fiyat-calismasi.senaryo";
 
@@ -239,11 +241,14 @@ export function SenaryoSecici() {
   const [silinecek, setSilinecek] = useState<Senaryo | null>(null);
   const guncelle = useSenaryoGuncelle();
   const silme = useSenaryoSil();
+  const { girisZorunlu, rol } = useOturum();
+  // İzleyici ve satın alma senaryo açamaz/düzenleyemez/silemez: düğmeler hiç gösterilmez (sunucu da 403 verir).
+  const yonetebilir = senaryoYonetebilir(girisZorunlu, rol);
 
   if (hata) return <span className="text-sm text-destructive">{hataMetni(hata)}</span>;
   if (yukleniyor) return <span className="text-sm text-muted-foreground">Senaryolar yükleniyor…</span>;
 
-  const yeniDugmesi = (
+  const yeniDugmesi = yonetebilir && (
     <Button type="button" variant="outline" size="sm" onClick={() => yeniCalismaAc("bos")}>
       <Plus aria-hidden />
       Yeni çalışma
@@ -277,7 +282,7 @@ export function SenaryoSecici() {
         ))}
       </select>
       {yeniDugmesi}
-      {senaryo && (
+      {senaryo && yonetebilir && (
         <SenaryoMenusu
           senaryo={senaryo}
           onDuzenle={() => {

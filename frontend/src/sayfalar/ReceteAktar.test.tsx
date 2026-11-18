@@ -14,7 +14,10 @@ import {
   type YakalananImport,
 } from "@/test/msw/isleyiciler-aktar";
 import { SenaryoSaglayici } from "@/bilesenler/SenaryoSecici";
+import { OturumSaglayici } from "@/bilesenler/GirisKapisi";
+import type { GirisKullanicisi, Rol } from "@/api/sorgular/kimlik";
 import ReceteAktar from "./ReceteAktar";
+import { RECETESIZ_KOD } from "@/test/fikstur/urunler";
 
 beforeAll(() => sunucu.listen({ onUnhandledFrame: "error" }));
 let formYakalayici: ReturnType<typeof formAlanlariniYakala> | null = null;
@@ -26,17 +29,23 @@ afterEach(() => {
 afterAll(() => sunucu.close());
 beforeEach(() => localStorage.clear());
 
-function kur() {
+const kullanici = (rol: Rol) =>
+  ({ id: 1, kullanici_adi: "k", ad: "K", rol, aktif: true, sifre_degismeli: false }) as unknown as GirisKullanicisi;
+
+function kur(rol?: Rol) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const sayfa = (
+    <MemoryRouter initialEntries={["/recete-aktar?senaryo=1"]}>
+      <SenaryoSaglayici>
+        <Routes>
+          <Route path="/recete-aktar" element={<ReceteAktar />} />
+        </Routes>
+      </SenaryoSaglayici>
+    </MemoryRouter>
+  );
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/recete-aktar?senaryo=1"]}>
-        <SenaryoSaglayici>
-          <Routes>
-            <Route path="/recete-aktar" element={<ReceteAktar />} />
-          </Routes>
-        </SenaryoSaglayici>
-      </MemoryRouter>
+      {rol ? <OturumSaglayici deger={{ girisZorunlu: true, kullanici: kullanici(rol) }}>{sayfa}</OturumSaglayici> : sayfa}
     </QueryClientProvider>,
   );
 }
@@ -111,7 +120,7 @@ describe("ReceteAktar - tüm çalışma kitabı", () => {
     await userEvent.click(screen.getByRole("button", { name: "İçe aktar" }));
     const uyari = await screen.findByRole("alert");
     expect(uyari).toHaveTextContent("Dosya beklenen çalışma kitabı yapısında değil");
-    expect(uyari).toHaveTextContent("sayfa");
+    expect(uyari).not.toHaveTextContent("—"); // D6: alanlar eki gösterilmez
   });
 });
 
@@ -227,6 +236,22 @@ describe("ReceteAktar - Veri Aktar sekmeleri", () => {
     expect(screen.getByRole("tab", { name: "Ürün reçetesi" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByLabelText("Ürün kodu")).toBeInTheDocument();
   });
+
+  it("satın alma rolü yalnız fiyat listesi sekmesini görür ve o sekme açık gelir", () => {
+    kur("satin_alma");
+    const sekmeler = screen.getAllByRole("tab");
+    expect(sekmeler).toHaveLength(1);
+    expect(sekmeler[0]).toHaveAccessibleName("Satın alma fiyat listesi");
+    expect(sekmeler[0]).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "panel-fiyat");
+    expect(screen.queryByRole("tab", { name: "Tüm çalışma kitabı" })).not.toBeInTheDocument();
+  });
+
+  it("muhasebe rolü tüm sekmeleri görür", () => {
+    kur("muhasebe");
+    expect(screen.getAllByRole("tab")).toHaveLength(7);
+    expect(screen.getByRole("tab", { name: "Tüm çalışma kitabı" })).toHaveAttribute("aria-selected", "true");
+  });
 });
 
 describe("ReceteAktar - elle reçete satırı", () => {
@@ -245,14 +270,19 @@ describe("ReceteAktar - elle reçete satırı", () => {
     await userEvent.type(screen.getByLabelText("Ad 1"), "Salatalık");
     await userEvent.type(screen.getByLabelText("Miktar 1"), "0,45");
     await userEvent.type(screen.getByLabelText("Birim 1"), "kg");
+    await userEvent.type(screen.getByLabelText("Neden (zorunlu)"), "Yeni ürün reçetesi");
     await userEvent.click(screen.getByRole("button", { name: "Reçeteyi kaydet" }));
     const onay = await screen.findByRole("dialog");
+    expect(onay).toHaveTextContent("Neden: Yeni ürün reçetesi");
     await userEvent.click(within(onay).getByRole("button", { name: "Onayla ve kaydet" }));
     expect(await screen.findByText(/Versiyon 4/)).toBeInTheDocument();
     await waitFor(() => expect(yakala).toHaveLength(1));
     expect(yakala[0].kod).toBe("URUN-001");
     expect(yakala[0].senaryo).toBe("1");
-    expect(yakala[0].govde).toEqual([{ malzeme_kodu: "M-001", ad: "Salatalık", miktar: "0.45", birim: "kg", dugum_tipi: "yaprak" }]);
+    expect(yakala[0].govde).toEqual({
+      neden: "Yeni ürün reçetesi",
+      satirlar: [{ malzeme_kodu: "M-001", ad: "Salatalık", miktar: "0.45", birim: "kg", dugum_tipi: "yaprak" }],
+    });
   });
 
   it("zorunlu alanlar boşsa göndermez", async () => {
@@ -263,6 +293,8 @@ describe("ReceteAktar - elle reçete satırı", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reçeteyi kaydet" }));
     expect(await screen.findByText("Ürün kodu zorunlu")).toBeInTheDocument();
     expect(screen.getByText("Malzeme kodu zorunlu")).toBeInTheDocument();
+    expect(screen.getByText("Neden zorunlu: değişikliğin nedenini yazın")).toBeInTheDocument();
+    expect(screen.getByLabelText("Neden (zorunlu)")).toHaveAttribute("aria-invalid", "true");
     expect(yakala).toHaveLength(0);
   });
 
@@ -274,6 +306,7 @@ describe("ReceteAktar - elle reçete satırı", () => {
     await userEvent.type(screen.getByLabelText("Ürün kodu"), "URUN-001");
     await userEvent.type(screen.getByLabelText("Malzeme kodu 1"), "M-001");
     await userEvent.type(screen.getByLabelText("Miktar 1"), "1");
+    await userEvent.type(screen.getByLabelText("Neden (zorunlu)"), "Deneme");
     await userEvent.click(screen.getByRole("button", { name: "Reçeteyi kaydet" }));
     const onay = await screen.findByRole("dialog");
     await waitFor(() => expect(onay).toHaveTextContent("Mevcut reçete 1 satır → yeni 1 satır; tüm reçete değiştirilecek"));
@@ -292,6 +325,7 @@ describe("ReceteAktar - elle reçete satırı", () => {
     await userEvent.type(screen.getByLabelText("Malzeme kodu 1"), "M-001");
     await userEvent.type(screen.getByLabelText("Miktar 1"), "1");
     await userEvent.type(screen.getByLabelText("Fire % 1"), "150");
+    await userEvent.type(screen.getByLabelText("Neden (zorunlu)"), "Fire düzeltmesi");
     await userEvent.click(screen.getByRole("button", { name: "Reçeteyi kaydet" }));
     expect(await screen.findByText("Fire % 0 ile 100 arasında olmalı (100 hariç)")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -300,6 +334,114 @@ describe("ReceteAktar - elle reçete satırı", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reçeteyi kaydet" }));
     await userEvent.click(await screen.findByRole("button", { name: "Onayla ve kaydet" }));
     await waitFor(() => expect(yakala).toHaveLength(1));
-    expect(yakala[0].govde).toEqual([{ malzeme_kodu: "M-001", ad: "", miktar: "1", dugum_tipi: "yaprak", fire_override: "0.055" }]);
+    expect(yakala[0].govde).toEqual({
+      neden: "Fire düzeltmesi",
+      satirlar: [{ malzeme_kodu: "M-001", ad: "", miktar: "1", dugum_tipi: "yaprak", fire_override: "0.055" }],
+    });
+  });
+
+  it("'Mevcut reçeteyi getir' seçili çalışmadaki aktif reçeteyi forma doldurur; düzenlenip gizli alanlar korunarak kaydedilir", async () => {
+    const yakala: { kod: string; senaryo: string | null; govde: unknown }[] = [];
+    const istenen: { kod: string; senaryo: string | null }[] = [];
+    sunucu.use(
+      receteEkleYakala(yakala),
+      http.get("*/api/v1/urunler/:kod/recete", ({ params, request }) => {
+        istenen.push({ kod: String(params.kod), senaryo: new URL(request.url).searchParams.get("senaryo") });
+        return HttpResponse.json({
+          id: 30,
+          versiyon: 5,
+          kaynak: "excel",
+          satirlar: [
+            {
+              sira: 1,
+              malzeme_kodu: "M-001",
+              ad: "Pet Şişe",
+              miktar: "1",
+              birim: "adet",
+              dugum_tipi: "yaprak",
+              fire_override: null,
+              brut_miktar_elle: null,
+              birim_fiyat_elle: null,
+              fire_orani: "0.02",
+              fire_kaynagi: "tip:ambalaj",
+              seviye: 1,
+              zs_elle: null,
+              para_birimi_elle: null,
+            },
+            {
+              sira: 2,
+              malzeme_kodu: "M-050",
+              ad: "Salamura",
+              miktar: "0.35",
+              birim: "kg",
+              dugum_tipi: "yaprak",
+              fire_override: "0.055",
+              brut_miktar_elle: null,
+              birim_fiyat_elle: "12.4",
+              fire_orani: "0.055",
+              fire_kaynagi: "satir",
+              seviye: 1,
+              zs_elle: "Z",
+              para_birimi_elle: "USD",
+            },
+          ],
+        });
+      }),
+    );
+    kur();
+    await waitFor(() => expect(localStorage.getItem("fiyat-calismasi.senaryo")).toBe("1"));
+    await userEvent.click(screen.getByRole("tab", { name: "Ürün reçetesi" }));
+    await userEvent.type(screen.getByLabelText("Ürün kodu"), "URUN-001");
+    await userEvent.click(screen.getByRole("button", { name: "Mevcut reçeteyi getir" }));
+    expect(await screen.findByText("Mevcut reçete getirildi: Versiyon 5, 2 satır. Düzenleyip kaydedin.")).toBeInTheDocument();
+    expect(istenen.at(-1)).toEqual({ kod: "URUN-001", senaryo: "1" });
+    expect(screen.getByLabelText("Malzeme kodu 1")).toHaveValue("M-001");
+    expect(screen.getByLabelText("Fire % 1")).toHaveValue(""); // kuraldan gelen fire forma yazılmaz
+    expect(screen.getByLabelText("Miktar 2")).toHaveValue("0,35");
+    expect(screen.getByLabelText("Fire % 2")).toHaveValue("5,5");
+    expect(screen.getByLabelText("Elle birim fiyat 2")).toHaveValue("12,4");
+
+    // Düzenle: 2. satırın miktarı değişir, 1. satır silinir; dolu formda yeniden getirmek onay ister.
+    await userEvent.clear(screen.getByLabelText("Miktar 2"));
+    await userEvent.type(screen.getByLabelText("Miktar 2"), "0,4");
+    await userEvent.click(screen.getByRole("button", { name: "Mevcut reçeteyi getir" }));
+    const soru = await screen.findByRole("dialog", { name: "Formdaki satırlar değişecek" });
+    await userEvent.click(within(soru).getByRole("button", { name: "Vazgeç" }));
+    expect(screen.getByLabelText("Miktar 2")).toHaveValue("0,4");
+    await userEvent.click(screen.getByRole("button", { name: "Satır 1 sil" }));
+    await userEvent.type(screen.getByLabelText("Neden (zorunlu)"), "Pet şişe çıkarıldı");
+    await userEvent.click(screen.getByRole("button", { name: "Reçeteyi kaydet" }));
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Onayla ve kaydet" }));
+    await waitFor(() => expect(yakala).toHaveLength(1));
+    expect(yakala[0].govde).toEqual({
+      neden: "Pet şişe çıkarıldı",
+      satirlar: [
+        {
+          malzeme_kodu: "M-050",
+          ad: "Salamura",
+          miktar: "0.4",
+          birim: "kg",
+          dugum_tipi: "yaprak",
+          fire_override: "0.055",
+          birim_fiyat_elle: "12.4",
+          seviye: 1,
+          zs_elle: "Z",
+          para_birimi_elle: "USD",
+        },
+      ],
+    });
+  });
+
+  it("reçetesi olmayan ürün için getir bilgi verir; bilinmeyen ürün kodunda hata gösterir", async () => {
+    kur();
+    await waitFor(() => expect(localStorage.getItem("fiyat-calismasi.senaryo")).toBe("1"));
+    await userEvent.click(screen.getByRole("tab", { name: "Ürün reçetesi" }));
+    await userEvent.type(screen.getByLabelText("Ürün kodu"), RECETESIZ_KOD);
+    await userEvent.click(screen.getByRole("button", { name: "Mevcut reçeteyi getir" }));
+    expect(await screen.findByText(RECETESIZ_KOD + " ürününün bu çalışmada reçetesi yok; satırları elle girin.")).toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText("Ürün kodu"));
+    await userEvent.type(screen.getByLabelText("Ürün kodu"), "YOK");
+    await userEvent.click(screen.getByRole("button", { name: "Mevcut reçeteyi getir" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/ürün yok|bulunamadı/i);
   });
 });

@@ -81,7 +81,7 @@ def test_fiyat_excel_sayfalar_ve_kapak(ortam, tum_kitap):
     s, sid, _c, _ = ortam
     r, wb = tum_kitap
     assert r.headers["content-type"].startswith(XLSX)
-    assert re.search(rf'filename="onay-ciktisi-fiyat-2026-2027-{date.today():%m-%d-%Y}\.xlsx"', r.headers["content-disposition"])
+    assert re.search(rf'filename="rapor-fiyat-2026-2027-{date.today():%m-%d-%Y}\.xlsx"', r.headers["content-disposition"])
     hesaplanan = [kod for kod, x in hs.toplu_hesapla(s, sid) if not isinstance(x, Exception)]
     assert wb.sheetnames[:3] == ["Kapak", "Teklif Kapak", "Özet"] and wb.sheetnames[-5:] == FIYAT_SABIT
     kartlar = wb.sheetnames[3:-5]
@@ -165,7 +165,7 @@ def test_fiyat_alt_kume_kilitli_kesin_ve_pdf(ortam):
         assert r.status_code == 200, r.text
         assert r.headers["content-type"] == "application/pdf" and r.content.startswith(b"%PDF") and len(r.content) > 10_000
         assert _pdf_sayfa(r.content) > 1
-        assert re.search(r'filename="onay-ciktisi-fiyat-2026-2027-.*\.pdf"', r.headers["content-disposition"])
+        assert re.search(r'filename="rapor-fiyat-2026-2027-.*\.pdf"', r.headers["content-disposition"])
     finally:
         ar.kilit_ac(s, sid, "onay testi bitti", "test")
         s.commit()
@@ -197,7 +197,7 @@ def test_smm_excel_sayfalar_mutabakat_ve_kesin(istemci, oturum):  # noqa: F811
     assert istemci.put(f"{A}/smm/donemler/{did}/ayarlar", json={"finansman": "10"}, headers={"X-Kullanici": "muhasebe1"}).status_code == 200
     r = istemci.post(f"{A}/onay-ciktisi/smm", json={"donem_id": did, "tur": "excel", "imzalar": {"onaylayan": "Onaylayan Kişi"}})
     assert r.status_code == 200, r.text
-    assert re.search(rf'filename="onay-ciktisi-smm-2026-09-{date.today():%m-%d-%Y}\.xlsx"', r.headers["content-disposition"])
+    assert re.search(rf'filename="rapor-smm-2026-09-{date.today():%m-%d-%Y}\.xlsx"', r.headers["content-disposition"])
     wb = load_workbook(BytesIO(r.content))
     assert wb.sheetnames == SMM_SAYFALARI
     o = so.smm_ozeti(oturum, did)

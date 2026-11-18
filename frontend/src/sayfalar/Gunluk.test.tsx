@@ -22,7 +22,7 @@ beforeEach(() => {
 const akis = () => within(screen.getByRole("region", { name: "Değişiklik akışı" }));
 
 describe("Değişiklik Günlüğü", () => {
-  it("akışı çizer: tür rozeti, ürün, eski → yeni, neden; parametre anahtarı okunur etiketle", async () => {
+  it("akışı çizer: tür rozeti, ürün, eski → yeni, neden; sunucunun okunur başlığı", async () => {
     kurSayfa(<Gunluk />);
     expect(await screen.findByText("Parametre: USD kuru")).toBeInTheDocument();
     const satir = within(screen.getByTestId("gunluk-parametre:12"));

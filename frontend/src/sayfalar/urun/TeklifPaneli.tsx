@@ -209,7 +209,7 @@ export function TeklifPaneli({ kod, senaryoId, sonKayitId }: Props) {
                   <TeklifDurumSecici teklifId={t.id} durum={t.durum} etiket={`Durum — Tur ${t.tur_no}`} />
                 </TableCell>
                 <TableCell>
-                  <TeklifSilDugmesi teklifId={t.id} etiket={`Tur ${t.tur_no}`} />
+                  <TeklifSilDugmesi teklifId={t.id} etiket={`Tur ${t.tur_no}`} durum={t.durum} />
                 </TableCell>
               </TableRow>
             ))

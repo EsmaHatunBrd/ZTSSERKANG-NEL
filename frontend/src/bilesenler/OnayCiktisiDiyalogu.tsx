@@ -33,10 +33,9 @@ export type OnayKapsami =
 
 export type OnayTuru = "excel" | "pdf";
 
-const TURLER: { deger: OnayTuru | "formullu"; etiket: string; ipucu?: string }[] = [
+const TURLER: { deger: OnayTuru; etiket: string }[] = [
   { deger: "excel", etiket: "Excel" },
   { deger: "pdf", etiket: "PDF" },
-  { deger: "formullu", etiket: "Excel (formüllü)", ipucu: "Yakında" },
 ];
 
 const IMZALAR: { alan: keyof OnayCiktisiImzalari; etiket: string }[] = [
@@ -86,7 +85,7 @@ export function onayGovdesi(
 const SECIM_SINIFI = "h-8 rounded-lg border bg-background px-2 text-sm";
 
 /**
- * Yeminli mali müşavire verilecek onay çıktısı: tür (Excel rakamlar / PDF; formüllü Excel yakında), kapsam, ekler ve imza adları.
+ * Yeminli mali müşavire verilecek onay çıktısı: tür (Excel rakamlar / PDF), kapsam, ekler ve imza adları.
  * Çalışma ya da dönem kapatılmadıysa çıktı TASLAK damgalıdır; diyalog bunu açıkça yazar. Dosya sunucuda hazırlanırken
  * "Hazırlanıyor…" görünür; hata `role=alert` ile gösterilir. Veri yazmaz (izleyici de indirebilir).
  */
@@ -373,17 +372,9 @@ export function OnayCiktisiDiyalogu({ kapsam, onKapat }: { kapsam: OnayKapsami; 
               <fieldset className="flex flex-col gap-1.5">
                 <legend className="mb-1 font-medium">Tür</legend>
                 {TURLER.map((t) => (
-                  <label key={t.deger} className={cn("flex items-center gap-2", t.ipucu && "text-muted-foreground")} title={t.ipucu}>
-                    <input
-                      type="radio"
-                      name={`${id}-tur`}
-                      value={t.deger}
-                      disabled={t.deger === "formullu"}
-                      checked={tur === t.deger}
-                      onChange={() => t.deger !== "formullu" && setTur(t.deger)}
-                    />
+                  <label key={t.deger} className="flex items-center gap-2">
+                    <input type="radio" name={`${id}-tur`} value={t.deger} checked={tur === t.deger} onChange={() => setTur(t.deger)} />
                     {t.etiket}
-                    {t.ipucu && <span className="rounded bg-muted px-1.5 text-xs">{t.ipucu}</span>}
                   </label>
                 ))}
               </fieldset>

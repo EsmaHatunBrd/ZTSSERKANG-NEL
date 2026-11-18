@@ -99,11 +99,11 @@ class Ozet:
 # ---------------------------------------------------------------- dosya ve sayfa
 def calisma_kitabi(icerik: bytes, maks_bayt: int, data_only: bool = True):
     if len(icerik) > maks_bayt:
-        raise DogrulamaHatasi(f"dosya {maks_bayt // (1024 * 1024)} MB'den büyük")
+        raise DogrulamaHatasi(f"Dosya {maks_bayt // (1024 * 1024)} MB'den büyük.")
     try:
         return load_workbook(io.BytesIO(icerik), read_only=True, data_only=data_only)
     except (zipfile.BadZipFile, InvalidFileException, KeyError, OSError):
-        raise DogrulamaHatasi("dosya geçerli bir .xlsx değil (Excel'de .xlsx olarak kaydedip yeniden deneyin)", kod="gecersiz_dosya")
+        raise DogrulamaHatasi("Dosya geçerli bir .xlsx değil (Excel'de .xlsx olarak kaydedip yeniden deneyin).", kod="gecersiz_dosya")
 
 
 def veri_sayfalari(wb) -> list[str]:

@@ -42,7 +42,7 @@ def pencere_degisimi(kayitlar: list[tuple[date, Decimal]], bas: date, son: date,
     son_fiyat, son_tarih, kayit_sayisi, degisim_yuzde, yillik_yuzde (Decimal); kayıt yoksa (ya da hepsi `son`dan sonra) None.
     ilk fiyat 0 ise oran tanımsız: degisim_yuzde ve yillik_yuzde None."""
     if ay <= 0:
-        raise DogrulamaHatasi("ay 1 ya da daha büyük olmalı", {"ay": str(ay)})
+        raise DogrulamaHatasi("Ay sayısı 1 ya da daha büyük olmalı.", {"ay": str(ay)})
     ilgili = [k for k in kayitlar if k[0] <= son]
     if not ilgili:
         return None
@@ -92,7 +92,7 @@ def egilim(s: Session, senaryo_id: int, ay: int = 12, tarih: date | None = None,
     Toplam: {senaryo_id, ay, tarih, pencere_basi, enflasyon_yuzde, satirlar, asan_sayisi, toplam}. Sayılar decimal_str ile metin."""
     sen = hs.senaryo_getir(s, senaryo_id)
     if ay <= 0:
-        raise DogrulamaHatasi("ay 1 ya da daha büyük olmalı", {"ay": str(ay)})
+        raise DogrulamaHatasi("Ay sayısı 1 ya da daha büyük olmalı.", {"ay": str(ay)})
     t = tarih or date.today()
     bas = ay_geri(t, ay)
     enf = enflasyon_yuzde(s, sen.id, t)

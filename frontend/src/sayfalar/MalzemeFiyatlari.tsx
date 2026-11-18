@@ -21,7 +21,7 @@ import { GeriAlOnayi } from "./ayarlar/GeriAlOnayi";
 import { hataMetniVarsa, type ApiHatasi } from "@/api/istemci";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
-import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
+import { DuzenlemeKilidi, useYazmaKilidi, YazmaAlaniSaglayici } from "@/bilesenler/DuzenlemeKilidi";
 
 const BOYUT = 100;
 /** Süzgeç onay kutuları: basılabilir rozet görünümü (işaretliyse vurgulu zemin). */
@@ -127,7 +127,16 @@ function FiyatGecmisiPaneli({
   );
 }
 
+/** Malzeme fiyatları "malzeme" yazma alanıdır: satın alma rolü burada da düzenleme kilidini açabilir (bkz. rolYetkisi.ts). */
 export default function MalzemeFiyatlari() {
+  return (
+    <YazmaAlaniSaglayici alan="malzeme">
+      <MalzemeFiyatlariIcerik />
+    </YazmaAlaniSaglayici>
+  );
+}
+
+function MalzemeFiyatlariIcerik() {
   const { senaryoId } = useSenaryo();
   const { kilitli, neden: kilitNedeni } = useYazmaKilidi();
   const [params, setParams] = useSearchParams();

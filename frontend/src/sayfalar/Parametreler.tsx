@@ -14,14 +14,15 @@ import { degerMetni, ParametreDiyalogu } from "./ayarlar/ParametreDiyalogu";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { Girdi } from "@/bilesenler/Girdi";
-import { acikMi, EVET_HAYIR_BIRIMI } from "./ayarlar/ortak";
+import { acikMi, EVET_HAYIR_BIRIMI, okunurAd } from "./ayarlar/ortak";
 import { KilitSeridi } from "@/bilesenler/KilitSeridi";
 import { DuzenlemeKilidi, useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 
 interface Grup {
   baslik: string;
   eslesir: (anahtar: string) => boolean;
-  saltOkunur?: boolean;
+  /** Eşleşen anahtarlar bu sayfada gösterilmez (başka sayfada yönetilir; "Diğer"e de düşmez). */
+  gizli?: boolean;
 }
 
 const GRUPLAR: Grup[] = [
@@ -30,13 +31,15 @@ const GRUPLAR: Grup[] = [
   { baslik: "Faiz", eslesir: (a) => a.startsWith("faiz.") },
   { baslik: "Stok süresi", eslesir: (a) => a.startsWith("stok_ay.") },
   { baslik: "Teklif kâr oranları", eslesir: (a) => a.startsWith("teklif_kar.") },
-  { baslik: "Dağıtım çarpanları", eslesir: (a) => a.startsWith("dagitim_carpani."), saltOkunur: true },
+  // Dağıtım çarpanları Gider Dağıtım sayfasında yönetilir; burada gösterilmez.
+  { baslik: "Dağıtım çarpanları", eslesir: (a) => a.startsWith("dagitim_carpani."), gizli: true },
 ];
 const DIGER: Grup = { baslik: "Diğer", eslesir: () => true };
 
 /** Geçmiş çekmecesi; geri al = onaydan sonra eski değeri bugünden geçerli YENİ kayıt olarak ekler. Kilitliyse yalnız görüntülenir. */
 function GecmisPaneli({
   anahtar,
+  ad,
   birim,
   senaryo,
   kilitli,
@@ -45,6 +48,8 @@ function GecmisPaneli({
   onBasari,
 }: {
   anahtar: string;
+  /** Okunur ad (ör. "Satış fiyatı kâr oranı"). */
+  ad: string;
   birim: string | null;
   senaryo: number;
   kilitli: boolean;
@@ -78,7 +83,7 @@ function GecmisPaneli({
       },
       {
         onSuccess: () => {
-          onBasari(`${anahtar} değeri geri alındı (yeni kayıt olarak eklendi).`);
+          onBasari(`${ad} değeri geri alındı (yeni kayıt olarak eklendi).`);
           setBekleyen(null);
           onKapat();
         },
@@ -91,9 +96,9 @@ function GecmisPaneli({
       <GecmisCekmecesi
         acik
         onAcikDegisti={(a) => !a && onKapat()}
-        baslik={`Parametre geçmişi: ${anahtar}${kilitli ? ` (${kilitNotu ?? "kilitli"})` : ""}`}
+        baslik={`Parametre geçmişi: ${ad}${kilitli ? ` (${kilitNotu ?? "kilitli"})` : ""}`}
         kayitlar={kayitlar}
-        degerGoster={(d) => degerMetni(d, birim)}
+        degerGoster={(d) => degerMetni(d, birim, anahtar)}
         geriAl={
           kilitli
             ? undefined
@@ -105,7 +110,7 @@ function GecmisPaneli({
       />
       {bekleyen && (
         <GeriAlOnayi
-          metin={`${goster(bekleyen.k.gecerlilik_basi)} tarihli ${degerMetni(bekleyen.k.deger, birim)} değeri bugünden itibaren geçerli olacak.`}
+          metin={`${goster(bekleyen.k.gecerlilik_basi)} tarihli ${degerMetni(bekleyen.k.deger, birim, anahtar)} değeri bugünden itibaren geçerli olacak.`}
           hata={hataMetniVarsa(ekle.error)}
           bekliyor={ekle.isPending}
           onOnayla={onayla}
@@ -151,7 +156,8 @@ function AcKapaOnayi({
       }}
     >
       <p>
-        Özet: <strong>{tanim.anahtar}</strong> bugünden itibaren tüm ürünler için <strong>{yeniAcik ? "Açık" : "Kapalı"}</strong> olacak.
+        Özet: <strong>{okunurAd(tanim.anahtar, tanim.aciklama)}</strong> bugünden itibaren tüm ürünler için{" "}
+        <strong>{yeniAcik ? "Açık" : "Kapalı"}</strong> olacak.
       </p>
       <label htmlFor="ac-kapa-neden" className="font-medium">
         Neden (zorunlu)
@@ -192,7 +198,7 @@ export default function Parametreler() {
       const g = GRUPLAR.find((x) => x.eslesir(t.anahtar)) ?? DIGER;
       harita.set(g, [...(harita.get(g) ?? []), t]);
     }
-    return [...GRUPLAR, DIGER].filter((g) => harita.has(g)).map((g) => ({ grup: g, satirlar: harita.get(g) ?? [] }));
+    return [...GRUPLAR, DIGER].filter((g) => !g.gizli && harita.has(g)).map((g) => ({ grup: g, satirlar: harita.get(g) ?? [] }));
   }, [tanimlar.data, degerler.data]);
 
   return (
@@ -222,11 +228,7 @@ export default function Parametreler() {
         <section key={grup.baslik} aria-labelledby={`g-${grup.baslik}`} className="flex flex-col gap-2">
           <h2 id={`g-${grup.baslik}`} className="flex items-center gap-2 text-lg font-medium">
             {grup.baslik}
-            {grup.saltOkunur && <Badge variant="secondary">Faz 3</Badge>}
           </h2>
-          {grup.saltOkunur && (
-            <p className="text-sm text-muted-foreground">Salt okunur: dağıtım çarpanları Faz 3 kapsamında yönetilecek.</p>
-          )}
           <Table className="table-fixed">
             <TableHeader>
               <TableRow>
@@ -252,65 +254,61 @@ export default function Parametreler() {
                       ) : deger === undefined ? (
                         "—"
                       ) : (
-                        degerMetni(deger, t.birim)
+                        degerMetni(deger, t.birim, t.anahtar)
                       )}
                     </TableCell>
                     <TableCell>
-                      {grup.saltOkunur ? (
-                        <span className="text-xs text-muted-foreground">Salt okunur</span>
-                      ) : (
-                        <span className="flex flex-wrap items-center gap-1">
-                          {kilitli ? (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Lock className="size-3" aria-hidden />
-                              Gerçekleşen senaryoda enflasyon kilitlidir: gerçekleşen değerler sonradan değiştirilemez.
-                            </span>
-                          ) : t.birim === EVET_HAYIR_BIRIMI ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              role="switch"
-                              aria-checked={acikMi(deger)}
-                              aria-label={`Aç/Kapat ${t.anahtar}`}
-                              disabled={yazmaKilitli}
-                              title={kilitNedeni}
-                              onClick={() => {
-                                ekle.reset();
-                                setAcKapa(t);
-                              }}
-                            >
-                              {acikMi(deger) ? <ToggleRight className="text-primary" /> : <ToggleLeft />}
-                              {acikMi(deger) ? "Kapat" : "Aç"}
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              aria-label={`Değiştir ${t.anahtar}`}
-                              disabled={yazmaKilitli}
-                              title={kilitNedeni}
-                              onClick={() => {
-                                ekle.reset();
-                                setDuzenlenen(t);
-                              }}
-                            >
-                              <Pencil /> Değiştir
-                            </Button>
-                          )}
+                      <span className="flex flex-wrap items-center gap-1">
+                        {kilitli ? (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Lock className="size-3" aria-hidden />
+                            Gerçekleşen senaryoda enflasyon kilitlidir: gerçekleşen değerler sonradan değiştirilemez.
+                          </span>
+                        ) : t.birim === EVET_HAYIR_BIRIMI ? (
                           <Button
                             type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`Geçmiş ${t.anahtar}`}
-                            title="Değişiklik geçmişi"
-                            onClick={() => setGecmis(t)}
+                            variant="outline"
+                            size="sm"
+                            role="switch"
+                            aria-checked={acikMi(deger)}
+                            aria-label={`Aç/Kapat ${t.anahtar}`}
+                            disabled={yazmaKilitli}
+                            title={kilitNedeni}
+                            onClick={() => {
+                              ekle.reset();
+                              setAcKapa(t);
+                            }}
                           >
-                            <History />
+                            {acikMi(deger) ? <ToggleRight className="text-primary" /> : <ToggleLeft />}
+                            {acikMi(deger) ? "Kapat" : "Aç"}
                           </Button>
-                        </span>
-                      )}
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            aria-label={`Değiştir ${t.anahtar}`}
+                            disabled={yazmaKilitli}
+                            title={kilitNedeni}
+                            onClick={() => {
+                              ekle.reset();
+                              setDuzenlenen(t);
+                            }}
+                          >
+                            <Pencil /> Değiştir
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Geçmiş ${t.anahtar}`}
+                          title="Değişiklik geçmişi"
+                          onClick={() => setGecmis(t)}
+                        >
+                          <History />
+                        </Button>
+                      </span>
                     </TableCell>
                   </TableRow>
                 );
@@ -343,7 +341,7 @@ export default function Parametreler() {
               },
               {
                 onSuccess: () => {
-                  setMesaj(`${duzenlenen.anahtar} değeri kaydedildi.`);
+                  setMesaj(`${okunurAd(duzenlenen.anahtar, duzenlenen.aciklama)} değeri kaydedildi.`);
                   setDuzenlenen(null);
                 },
               },
@@ -369,7 +367,7 @@ export default function Parametreler() {
               },
               {
                 onSuccess: () => {
-                  setMesaj(`${acKapa.anahtar} ${yeniAcik ? "açıldı" : "kapatıldı"}.`);
+                  setMesaj(`${okunurAd(acKapa.anahtar, acKapa.aciklama)} ${yeniAcik ? "açıldı" : "kapatıldı"}.`);
                   setAcKapa(null);
                 },
               },
@@ -381,6 +379,7 @@ export default function Parametreler() {
       {gecmis && senaryoId != null && (
         <GecmisPaneli
           anahtar={gecmis.anahtar}
+          ad={okunurAd(gecmis.anahtar, gecmis.aciklama)}
           birim={gecmis.birim}
           senaryo={senaryoId}
           kilitli={yazmaKilitli || (gerceklesen && gecmis.anahtar === "enflasyon")}

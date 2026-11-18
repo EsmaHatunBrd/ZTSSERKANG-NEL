@@ -44,7 +44,7 @@ def agac(s: Session) -> list[dict]:
 def kayitlar(s: Session, senaryo_id: int, sayfa: int = 1, boyut: int = 50, urun_kodu: str | None = None) -> tuple[list[dict], int]:
     """Senaryonun kayıtlı hesapları, tarih sırasıyla (en yeni önce: hesap_tarihi, sonra kayıt kimliği)."""
     if s.get(m.Senaryo, senaryo_id) is None:
-        raise BulunamadiHatasi("senaryo yok", {"senaryo_id": senaryo_id})
+        raise BulunamadiHatasi("Çalışma bulunamadı.", {"senaryo_id": senaryo_id})
     q = select(m.MaliyetHesabi, m.Urun.kod, m.Urun.ad).join(m.Urun, m.Urun.id == m.MaliyetHesabi.urun_id).where(m.MaliyetHesabi.senaryo_id == senaryo_id)
     if urun_kodu:
         kacis = urun_kodu.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -65,7 +65,7 @@ def kayitlar(s: Session, senaryo_id: int, sayfa: int = 1, boyut: int = 50, urun_
 def _hesap_getir(s: Session, hesap_id: int) -> tuple[m.MaliyetHesabi, m.Urun]:
     h = s.get(m.MaliyetHesabi, hesap_id)
     if h is None:
-        raise BulunamadiHatasi("hesap yok", {"hesap_id": hesap_id})
+        raise BulunamadiHatasi("Kayıtlı hesap bulunamadı.", {"hesap_id": hesap_id})
     return h, s.get(m.Urun, h.urun_id)
 
 
@@ -122,12 +122,12 @@ def kilit_ac(s: Session, senaryo_id: int, neden: str, kullanici: str = "sistem")
 
 def _kilit_degistir(s: Session, senaryo_id: int, kilitli: bool, neden: str, kullanici: str) -> m.Senaryo:
     if not (neden or "").strip():
-        raise DogrulamaHatasi("neden zorunlu", {"neden": "boş olamaz"})
+        raise DogrulamaHatasi("Neden girin.", {"neden": "boş olamaz"})
     sen = s.get(m.Senaryo, senaryo_id)
     if sen is None:
-        raise BulunamadiHatasi("senaryo yok", {"senaryo_id": senaryo_id})
+        raise BulunamadiHatasi("Çalışma bulunamadı.", {"senaryo_id": senaryo_id})
     if bool(sen.kilitli) == kilitli:
-        raise DogrulamaHatasi("senaryo zaten kilitli" if kilitli else "senaryo zaten kilitli değil", {"senaryo_id": senaryo_id})
+        raise DogrulamaHatasi("Çalışma zaten kilitli." if kilitli else "Çalışma zaten kilitli değil.", {"senaryo_id": senaryo_id})
     sen.kilitli = kilitli
     s.add(m.DegisiklikKaydi(tablo="senaryo", kayit_id=sen.id, islem="kilitle" if kilitli else "kilit_ac", eski={"kilitli": not kilitli},
                             yeni={"kilitli": kilitli, "_neden": neden.strip()}, kullanici=kullanici))

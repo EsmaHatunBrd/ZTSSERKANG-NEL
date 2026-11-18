@@ -23,13 +23,14 @@ class SenaryoCikis(BaseModel):
 
 
 class SenaryoKopyaSecimleri(BaseModel):
-    """Altı seçim de açıkça gönderilir (varsayılan yok): neyin kopyalanacağı istemcide belirlenir."""
+    """İlk altı seçim açıkça gönderilir (varsayılan yok): neyin kopyalanacağı istemcide belirlenir. `sablon` gönderilmezse açıktır."""
     receteler: bool
     fiyatlar: bool
     parametreler: bool
     gider: bool
     uretim: bool
     fire_kurallari: bool
+    sablon: bool | None = None   # kaynağın saklanan "Fiyat Çalışması Excel'i" şablonu; gönderilmezse (null) kopyalanır
 
 
 class SenaryoKopyaGiris(BaseModel):
@@ -58,6 +59,7 @@ class SenaryoKopyaSayilari(BaseModel):
     hedef: int = 0
     kapasite: int = 0
     fire: int = 0
+    sablon: int = 0   # 1: Fiyat Çalışması Excel'i şablonu kopyalandı; 0: kaynakta şablon yok ya da seçilmedi
 
 
 class SenaryoKopyaCikis(SenaryoCikis):
@@ -99,7 +101,7 @@ class AnahtarGiris(BaseModel):
     @model_validator(mode="after")
     def _pay_veya_tutar(self):
         if self.pay_orani is None and self.tutar is None:
-            raise ValueError("pay_orani ya da tutar verilmeli")
+            raise ValueError("pay oranı ya da tutar girin")
         return self
 
 
@@ -122,11 +124,11 @@ class HavuzGiris(BaseModel):
     @model_validator(mode="after")
     def _toplam_veya_taban(self):
         if self.toplam_tutar is None and self.taban_tutar is None:
-            raise ValueError("toplam_tutar ya da taban_tutar verilmeli")
+            raise ValueError("toplam tutar ya da taban tutar girin")
         if self.toplam_tutar is not None and self.taban_tutar is not None:
-            raise ValueError("taban_tutar varken toplam_tutar gönderilmez (toplam sunucuda hesaplanır)")
+            raise ValueError("taban tutar girildiğinde toplam tutar ayrıca girilmez (toplam hesaplanır)")
         if self.carpanlar and self.taban_tutar is None:
-            raise ValueError("carpanlar yalnız taban_tutar ile birlikte verilir")
+            raise ValueError("çarpanlar yalnız taban tutarla birlikte girilir")
         return self
 
 
@@ -183,6 +185,21 @@ class ReceteSatirGiris(BaseModel):
     para_birimi_elle: str | None = Field(default=None, max_length=8)   # elle para birimi (Excel O); boşsa kartınki
 
 
+class ReceteEkleGiris(BaseModel):
+    """POST /urunler/{kod}/recete (ekran biçimi): tam satır listesi + zorunlu neden (Değişiklik Günlüğüne yazılır).
+    Eski biçim (yalnız satır listesi) betik/test uyumluluğu için kabul edilir; ekran her zaman bu biçimi gönderir."""
+    model_config = ConfigDict(extra="forbid")
+    satirlar: list[ReceteSatirGiris] = Field(min_length=1)
+    neden: str = Field(min_length=1, max_length=300)
+
+    @field_validator("neden")
+    @classmethod
+    def _neden_dolu(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("neden boş olamaz")
+        return v.strip()
+
+
 class GiderElleGiris(BaseModel):
     """Bir gider satırının elle yazılmış hücreleri (Excel I/K/M/P); boş (null) olan formülle hesaplanır."""
     model_config = ConfigDict(extra="forbid")
@@ -233,6 +250,20 @@ class OverrideGiris(BaseModel):
     gider_oranlari: dict[str, Decimal] = {}        # dolum_iscilik_sn | ... | mal_kabul_iscilik_kg.<sınıf> | elektrik_sn.<hat>; desen serviste
     # Elle gider hücreleri (kalem -> hücreler). Verilirse kayıtlı elle hücrelerin TAMAMI yerine geçer ({} = hepsi formülle).
     gider_elle: dict[str, GiderElleGiris] | None = None
+    # Taslak reçete yapısı (kaydedilmez): silinecek satır sıraları (aktif reçetenin 1 tabanlı sırası) ve sona eklenecek satırlar.
+    # Yanıtta kalan satırlar özgün sıralarını, eklenenler n+1, n+2 ... sırasını taşır (n = aktif reçetenin satır sayısı).
+    silinen_satirlar: list[int] | None = None
+    eklenen_satirlar: list[ReceteSatirGiris] | None = Field(default=None, max_length=200)
+
+    @field_validator("silinen_satirlar")
+    @classmethod
+    def _silinen(cls, v: list[int] | None) -> list[int] | None:
+        if v is None:
+            return None
+        for sira in v:
+            if sira < 1:
+                raise ValueError(f"silinen_satirlar sira >= 1 olmalı: {sira}")
+        return sorted(set(v))
 
     @field_validator("satirlar")
     @classmethod
@@ -274,7 +305,7 @@ def override_sozlugu_yap(override: "OverrideGiris | None") -> dict | None:
     if override is None:
         return None
     d = override.model_dump(exclude_none=True)
-    for k in ("satirlar", "gider_oranlari"):   # yeni alanlar boşsa snapshot'a girmez (eski biçim korunur)
+    for k in ("satirlar", "gider_oranlari", "silinen_satirlar", "eklenen_satirlar"):   # yeni alanlar boşsa snapshot'a girmez (eski biçim korunur)
         if not d.get(k):
             d.pop(k, None)
     for o in (d.get("satirlar") or {}).values():   # kapalı bayraklar gürültü: yalnız true olanlar taşınır
@@ -323,7 +354,7 @@ class TopluKaydetGiris(BaseModel):
     @model_validator(mode="after")
     def _override_hesapsiz_olmaz(self) -> "TopluKaydetGiris":
         if self.override is not None and not self.hesabi_kaydet:
-            raise ValueError("override yalnız hesabi_kaydet=true iken verilebilir (hesap kaydedilmiyorsa override'ın yazılacağı yer yok)")
+            raise ValueError("elle değişiklikler yalnız hesap kaydedilirken gönderilebilir")
         return self
 
     def override_sozlugu(self) -> dict | None:
@@ -1190,6 +1221,7 @@ class SatisGiris(BaseModel):
     fiyat: Decimal = Field(ge=0)
     para_birimi: Literal["TL", "USD", "EUR", "GBP", "CHF", "RUB", "ZAR"]
     adet: Decimal = Field(gt=0)
+    neden: str = Field(max_length=300, description="Elle ekleme nedeni (zorunlu; boşsa 422 'Neden girin.'). Değişiklik Günlüğü'ne yazılır.")
 
 
 class SatisCikis(BaseModel):
@@ -1501,6 +1533,7 @@ class ListeFiyatiGiris(BaseModel):
     liste_fiyati: Decimal = Field(gt=0)
     birim_maliyet: Decimal | None = Field(default=None, gt=0)
     bolen: Decimal | None = Field(default=None, gt=0, le=1)   # boşsa kaydedildiği andaki geçerli bölen yazılır
+    neden: str = Field(max_length=300, description="Elle ekleme/güncelleme nedeni (zorunlu; boşsa 422 'Neden girin.'). Değişiklik Günlüğü'ne yazılır.")
 
 
 class ListeFiyatiCikis(BaseModel):
@@ -2310,7 +2343,8 @@ KarlilikBolgesi = Literal["yuksek_adet_yuksek_marj", "yuksek_adet_dusuk_marj", "
 class KarlilikSatiri(BaseModel):
     kod: str
     ad: str
-    aile: str | None
+    aile: str | None              # görünen aile adı ("Test Karışık Turşu"; elle yazılmış ad varsa o)
+    aile_anahtari: str | None = None   # gruplama/süzme anahtarı (ı/i katlanmış küçük harf; Karşılaştırma `aile` ile aynı)
     adet: str | None
     maliyet: str | None
     satis_fiyati: str | None
@@ -2343,7 +2377,8 @@ class HedefFiyatSatiri(BaseModel):
     kod: str
     ad: str
     marka: str | None
-    aile: str | None
+    aile: str | None              # görünen aile adı
+    aile_anahtari: str | None = None   # gruplama/süzme anahtarı
     adet: str | None
     maliyet: str | None
     hesap_fiyati: str | None      # çalışmanın hesapladığı satış fiyatı
@@ -2475,6 +2510,9 @@ class YonetimMarj(BaseModel):
     hedef: str | None               # genel `satis_kar` parametresi
     marj_esigi: str
     adet_kaynagi: str
+    # Geçen yılın satış fiyatıyla (Kârlılık haritasıyla aynı formül) adet ağırlıklı marj; fiyatı ve adedi bilinen ürün yoksa null.
+    gecen_yil_agirlikli_ortalama: str | None = None
+    gecen_yil_urun: int = 0          # bu ortalamaya giren ürün sayısı
 
 
 class YonetimMaliyetKalemi(BaseModel):
@@ -2497,6 +2535,8 @@ class YonetimHedefAltiSatiri(BaseModel):
     kar_orani: str
     maliyet: str | None
     satis: str | None
+    # Marjın hesaplandığı satış fiyatının kaynağı: "gecen_yil" (geçen yıl satış geçmişi) | "hesap" (satış geçmişi yok; hesaplanan fiyat)
+    fiyat_kaynagi: Literal["gecen_yil", "hesap"] = "hesap"
 
 
 class YonetimHedefAlti(BaseModel):
@@ -2541,7 +2581,7 @@ class YonetimTeklifler(BaseModel):
     toplam: int
     durumlar: dict[str, int]        # taslak / gonderildi / kabul / red
     acik_sayi: int                  # taslak + gonderildi
-    acik_toplam_tl: str
+    acik_toplam_tl: str             # birim fiyatların toplamı: anlamlı bir tutar değil, ekranda gösterilmez (geriye uyum için duruyor)
     en_eski_acik: list[YonetimAcikTeklif]
 
 

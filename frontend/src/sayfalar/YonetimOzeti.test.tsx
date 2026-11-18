@@ -27,7 +27,16 @@ const OZET: Ozet = {
     uretim_zamani: "2026-11-12T09:00:00+00:00",
   },
   urunler: { toplam: 12, hesaplanan: 10, hatali: 2 },
-  marj: { ortalama: "0.22", agirlikli_ortalama: "0.185", adetli_urun: 7, hedef: "0.2", marj_esigi: "0.15", adet_kaynagi: "satis_gecmisi" },
+  marj: {
+    ortalama: "0.22",
+    agirlikli_ortalama: "0.185",
+    adetli_urun: 7,
+    hedef: "0.2",
+    marj_esigi: "0.15",
+    adet_kaynagi: "satis_gecmisi",
+    gecen_yil_agirlikli_ortalama: "0.064",
+    gecen_yil_urun: 6,
+  },
   maliyet_yapisi: {
     urun_sayisi: 10,
     toplam_tl: "1000",
@@ -43,8 +52,8 @@ const OZET: Ozet = {
     esik: "0.15",
     toplam: 4,
     kayitlar: [
-      { kod: "U1", ad: "Biber Turşusu", kar_orani: "0.08", maliyet: "30", satis: "32.4" },
-      { kod: "U2", ad: "Nar Ekşisi", kar_orani: "0.12", maliyet: "50", satis: "56" },
+      { kod: "U1", ad: "Biber Turşusu", kar_orani: "0.08", maliyet: "30", satis: "32.4", fiyat_kaynagi: "gecen_yil" },
+      { kod: "U2", ad: "Nar Ekşisi", kar_orani: "0.12", maliyet: "50", satis: "56", fiyat_kaynagi: "hesap" },
     ],
   },
   kur_riski: {
@@ -131,17 +140,21 @@ describe("Yönetim Özeti", () => {
     expect(within(urun).getByText("12")).toBeInTheDocument();
     expect(urun).toHaveTextContent("10 hesaplanan");
     expect(urun).toHaveTextContent("2 hatalı");
-    const marj = kutu("Ortalama kâr marjı");
-    expect(marj).toHaveTextContent("22,0 %");
-    expect(marj).toHaveTextContent("18,5 %");
-    expect(marj).toHaveTextContent("hedef 20,0 %");
-    expect(within(marj).getByText("Hedefin üstünde")).toBeInTheDocument();
+    // kâr marjı: büyük sayı geçen yılın satış fiyatıyla (Kârlılık haritası), küçük sayı hesaplanan satış fiyatıyla; rozet eşik altı sayısı
+    const marj = kutu("Kâr marjı");
+    expect(marj).toHaveTextContent("6,4 % geçen yılın satış fiyatıyla");
+    expect(marj).toHaveTextContent("adetle ağırlıklı · 6 ürün");
+    expect(marj).toHaveTextContent("Hesaplanan satış fiyatıyla 18,5 %");
+    expect(marj).not.toHaveTextContent("hedef");
+    expect(within(marj).getByText("Marj eşiğinin altında 4 ürün")).toBeInTheDocument();
     const kur_ = kutu("Kur riski");
     expect(kur_).toHaveTextContent("35,0 %");
     expect(kur_).toHaveTextContent("120.000 TL");
-    const teklif = kutu("Açık teklifler");
-    expect(within(teklif).getByText("3")).toBeInTheDocument();
-    expect(teklif).toHaveTextContent("45.000 TL");
+    // açık tekliflerin TL toplamı (birim fiyatların toplamı) gösterilmez; durum sayıları yazılır
+    const teklif = kutu("Teklifler");
+    expect(within(teklif).getByText("3 açık teklif")).toBeInTheDocument();
+    expect(teklif).toHaveTextContent("toplam 9 teklif (5 kabul, 1 red)");
+    expect(teklif).not.toHaveTextContent("TL");
   });
 
   it("maliyet yapısı kalemleri yüzde ve ürün başına TL ile", async () => {
@@ -157,11 +170,14 @@ describe("Yönetim Özeti", () => {
   it("hedef altı tablosu satırları ve toplamı; satır ürün ekranına götürür", async () => {
     kur();
     ciz();
-    const bolum = await screen.findByRole("region", { name: "Hedefin altındaki ürünler" });
+    const bolum = await screen.findByRole("region", { name: "Marj eşiğinin altındaki ürünler" });
     expect(bolum).toHaveTextContent("toplam 4 ürün");
+    expect(bolum).toHaveTextContent(/marj eşiği \d+,\d %/);
     const satir = within(bolum).getByText("Nar Ekşisi").closest("tr") as HTMLElement;
     expect(satir).toHaveTextContent("12,0 %");
     expect(satir).toHaveTextContent("56,00 TL");
+    expect(satir).toHaveTextContent("hesap");
+    expect(within(bolum).getByText("Biber Turşusu").closest("tr")).toHaveTextContent("geçen yıl");
     await userEvent.click(within(bolum).getByText("Nar Ekşisi"));
     expect(await screen.findByTestId("yer")).toHaveTextContent("/urunler/U2?senaryo=1");
   });

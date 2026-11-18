@@ -11,7 +11,7 @@ from fiyat_motoru import excel_okuyucu as eo
 from fiyat_motoru.para import SIFIR
 from ..depo import modeller as m
 from . import fiyat_servisi, gider_servisi, hesap_servisi, kapasite_servisi
-from .hatalar import DogrulamaHatasi
+from .hatalar import DogrulamaHatasi, liste_metni
 from .import_servisi import HAVUZ_ESLEME, MALZEME_KART_ALANLARI, _ondalik, revize_fiyatlarini_oku, revize_ile_fiyat_ekle
 
 SAYFA_URETIM = eo.URETIM_ADETLERI_SAYFA
@@ -52,7 +52,7 @@ def _norm(v) -> str:
 
 
 def _duzen_hatasi(sayfa: str):
-    return DogrulamaHatasi(f"{sayfa} sayfası beklenen düzen değil", {"sayfa": sayfa})
+    return DogrulamaHatasi(f"{sayfa} sayfası beklenen düzende değil.", {"sayfa": sayfa})
 
 
 def _satin_alma_baslik_kontrol(ws) -> None:
@@ -79,12 +79,12 @@ def _oku(islev, *a):
     except DogrulamaHatasi:
         raise
     except OKUMA_HATALARI as e:
-        raise DogrulamaHatasi(f"dosya beklenen sütun düzeninde değil: {e}")
+        raise DogrulamaHatasi(f"Dosya beklenen sütun düzeninde değil: {e}")
 
 
 def _neden_kontrol(neden: str) -> str:
     if not (neden or "").strip():
-        raise DogrulamaHatasi("neden zorunlu")
+        raise DogrulamaHatasi("Neden girin.")
     return neden.strip()
 
 
@@ -305,7 +305,7 @@ def satin_alma_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, gecerlilik_
     neden = _neden_kontrol(neden)
     on = satin_alma_onizle(s, senaryo_id, dosya_yolu, gecerlilik_basi)
     if on["hatali"]:
-        raise DogrulamaHatasi("fiyatı geçersiz satırlar var; düzeltip yeniden yükleyin", {"hatali": ", ".join(on["hatali"])})
+        raise DogrulamaHatasi(f"Fiyatı geçersiz satırlar var ({liste_metni(on['hatali'])}); düzeltip yeniden yükleyin.", {"hatali": ", ".join(on["hatali"])})
     malzemeler = on["_malzemeler"]
     kod_listesi = [y["kod"] for y in on["yeni_malzeme"]]
     if kartlari_guncelle:
@@ -465,7 +465,7 @@ def gider_uygula(s: Session, senaryo_id: int, dosya_yolu: Path, neden: str, kull
     yeni = on["_yeni"]
     for kod, y in yeni.items():   # yazmadan önce doğrula: kısmi yazım olmasın
         if y["baz_tipi"] in ("saniye", "adet") and not y["anahtarlar"] and kod not in gider_servisi.AMBALAJ_BAZLI and (y["baz"] is None or y["baz"] <= 0):
-            raise DogrulamaHatasi(f"{y['ad']}: dağıtım bazı (saniye/adet) 0'dan büyük olmalı", {"kod": kod})
+            raise DogrulamaHatasi(f"{y['ad']}: dağıtım bazı (saniye/adet) 0'dan büyük olmalı.", {"kod": kod})
     yazilan = [h["kod"] for h in on["havuz"] if h["degisti"]]
     amb_degisecek = bool(on["_yeni_ambalaj"] and (amb["degisen"] or amb["eski_adet"] != amb["yeni_adet"]))
     if yazilan or amb_degisecek:

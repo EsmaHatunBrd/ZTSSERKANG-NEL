@@ -6,10 +6,11 @@ from fastapi.responses import FileResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import IntegrityError
 from .depo.veritabani import oturum_ver
 from .servisler import isitici, onbellek
-from .servisler.hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi, KilitliHatasi, KimlikHatasi, YetkiHatasi
+from .servisler.hatalar import NEDEN_GIRIN, BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi, KilitliHatasi, KimlikHatasi, YetkiHatasi
 from .api import senaryolar, parametreler, malzemeler, gider, urunler, teklifler, fire, import_, disa_aktar, kapasite, satis, karsilastirma, aktarim, gunluk, kiyas, tutarlilik, kimlik, liste, analiz, smm, smm_stok, smm_mizan, stok_devri
 from .api import fiyat_egilimi, yonetim, smm_rapor
 from .api import duzenleme_kilidi
@@ -17,6 +18,9 @@ from .api import onay_ciktisi
 from .api import sablonlar
 from .api import musavir_excel
 from .api.bagimliliklar import kimlik_denetle
+
+
+BULUNAMADI_MESAJI = "Aranan sayfa ya da kayıt bulunamadı."
 
 
 def _hata(kod: int, hata: str, mesaj: str, alanlar: dict | None = None, ayrinti_kodu: str | None = None) -> JSONResponse:
@@ -77,7 +81,11 @@ def uygulama_olustur(oturum_bagimliligi=None, giris_zorunlu: bool | None = None)
 
     @app.exception_handler(RequestValidationError)
     async def _422b(_: Request, e: RequestValidationError):
-        return _hata(422, "dogrulama", "istek gövdesi geçersiz", {".".join(str(p) for p in x["loc"]): x["msg"] for x in e.errors()})
+        hatalar = e.errors()
+        alanlar = {".".join(str(p) for p in x["loc"]): x["msg"] for x in hatalar}
+        if hatalar and all(x["loc"] and x["loc"][-1] == "neden" for x in hatalar):   # yalnız neden eksik/boş: okunur tek mesaj
+            return _hata(422, "dogrulama", NEDEN_GIRIN, alanlar)
+        return _hata(422, "dogrulama", "Girilen bilgilerde hata var; işaretli alanları düzeltip yeniden deneyin.", alanlar)
 
     @app.exception_handler(KimlikHatasi)
     async def _401(_: Request, e: KimlikHatasi):
@@ -97,11 +105,19 @@ def uygulama_olustur(oturum_bagimliligi=None, giris_zorunlu: bool | None = None)
 
     @app.exception_handler(IntegrityError)   # oturum_ver oturumu zaten geri alır
     async def _409(_: Request, e: IntegrityError):
-        return _hata(409, "cakisma", "kayıt çakışması (benzersiz alan veya ilişki)")
+        return _hata(409, "cakisma", "Bu kayıt var olan bir kayıtla çakışıyor: aynı kod zaten var ya da kayıt başka bir kayda bağlı.")
+
+    @app.exception_handler(StarletteHTTPException)   # bilinmeyen adres (404) ve desteklenmeyen yöntem (405): {"detail": ...} yerine ortak biçim
+    async def _http(_: Request, e: StarletteHTTPException):
+        if e.status_code == 404:
+            return _hata(404, "bulunamadi", BULUNAMADI_MESAJI)
+        if e.status_code == 405:
+            return _hata(405, "yontem", "Bu işlem burada yapılamaz.")
+        return _hata(e.status_code, "http", str(e.detail) if e.detail else "İstek tamamlanamadı.")
 
     @app.exception_handler(Exception)        # yığın izi yanıta sızmaz
     async def _500(_: Request, e: Exception):
-        return _hata(500, "sunucu", "beklenmeyen hata")
+        return _hata(500, "sunucu", "Beklenmeyen bir hata oluştu. Yeniden deneyin; sürerse sistem sorumlusuna bildirin.")
     _arayuzu_bagla(app)
     return app
 
@@ -121,7 +137,7 @@ def _arayuzu_bagla(app: FastAPI) -> None:
     @app.get("/{yol:path}", include_in_schema=False)
     async def _arayuz(yol: str):
         if yol.startswith("api/"):
-            return _hata(404, "bulunamadi", "uç yok")
+            return _hata(404, "bulunamadi", BULUNAMADI_MESAJI)
         aday = (ARAYUZ_DIZINI / yol) if yol else index
         if yol and aday.is_file() and aday.resolve().is_relative_to(ARAYUZ_DIZINI.resolve()):
             return FileResponse(aday)

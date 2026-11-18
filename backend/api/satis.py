@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from ..servisler import satis_okuyucu, satis_servisi as ss
-from ..servisler.hatalar import DogrulamaHatasi
+from ..servisler.hatalar import DogrulamaHatasi, hatali_satirlar_mesaji, neden_zorunlu
 from .bagimliliklar import OturumDep, kullanici_ver
 from .import_ import geri_al_uclari
 from .semalar import HATA_404_422, SatisCikis, SatisGiris, SatisListesi, SatisOnizleme, SatisYuklemeOzeti
@@ -33,7 +33,7 @@ def listele(s: OturumDep, urun_kodu: str | None = None, musteri: str | None = No
 
 @router.post("/satis-gecmisi", response_model=SatisCikis, status_code=201, responses=HATA_404_422)
 def ekle(s: OturumDep, g: SatisGiris, k: str = Depends(kullanici_ver)):
-    return ss.ekle(s, g.urun_kodu, g.musteri, g.tarih, g.fiyat, g.para_birimi, g.adet, k)
+    return ss.ekle(s, g.urun_kodu, g.musteri, g.tarih, g.fiyat, g.para_birimi, g.adet, k, neden=neden_zorunlu(g.neden))
 
 
 @router.post("/satis-gecmisi/onizle", response_model=SatisOnizleme, responses=HATA_404_422)
@@ -53,7 +53,7 @@ def yukle(s: OturumDep, dosya: UploadFile = File(...), k: str = Depends(kullanic
     eklenen, hatalar, atlanan = ss.toplu_yukle_ayrintili(s, satis_okuyucu.oku(icerik, dosya.filename or ""), k, dosya.filename or "",
                                                          kayitlilari_da_ekle)
     if hatalar:
-        raise DogrulamaHatasi("dosyada hatalı satırlar var; hiçbir satır eklenmedi", {"hatalar": hatalar})
+        raise DogrulamaHatasi(hatali_satirlar_mesaji(hatalar, "eklenmedi"), {"hatalar": hatalar})
     return {"eklenen": eklenen, "hatalar": [], "atlanan_kayitli": atlanan}
 
 
@@ -78,6 +78,7 @@ def sablon():
 
 
 @router.delete("/satis-gecmisi/{id}", status_code=204, responses=HATA_404_422)
-def sil(s: OturumDep, id: int, k: str = Depends(kullanici_ver)):
-    ss.sil(s, id, k)
+def sil(s: OturumDep, id: int, neden: str = Query(..., max_length=300, description="Silme nedeni (zorunlu; boşsa 422 'Neden girin.')"),
+        k: str = Depends(kullanici_ver)):
+    ss.sil(s, id, k, neden=neden_zorunlu(neden))
     return Response(status_code=204)

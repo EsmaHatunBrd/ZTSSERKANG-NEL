@@ -21,6 +21,7 @@ veri/
 *.db-shm
 *.db-wal
 *.xlsx
+*.xls
 fixtures/
 docs/parite-raporu-*.md
 docs/ozel/

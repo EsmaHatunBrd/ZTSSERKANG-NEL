@@ -128,7 +128,7 @@ function govdedenHata(error: unknown, durum: number): ApiHatasi {
       return new ApiHatasi("dogrulama", "İstek gövdesi geçersiz", { detail: g.detail }, durum);
     }
   }
-  return new ApiHatasi("sunucu", `Beklenmeyen sunucu yanıtı (HTTP ${durum})`, {}, durum);
+  return new ApiHatasi("sunucu", `Sunucu beklenmeyen bir yanıt verdi (hata kodu ${durum}). Lütfen tekrar deneyin.`, {}, durum);
 }
 
 /**
@@ -149,14 +149,12 @@ export async function cagir<D>(p: Promise<Yanit<D>>): Promise<NonNullable<D>> {
   return sonuc.data as NonNullable<D>;
 }
 
-/** Kullanıcıya gösterilecek tek hata metni: mesaj + (varsa) "alan: değer" ayrıntıları. */
+/**
+ * Kullanıcıya gösterilecek tek hata metni: yalnız backend'in `mesaj`ı. `alanlar` teknik ayrıntıdır
+ * (anahtar adları, kimlikler); ekrana yazılmaz, yalnız form alanı vurgusu gibi kullanımlar için okunur.
+ */
 export function hataMetni(e: unknown): string {
-  if (e instanceof ApiHatasi) {
-    const girdiler = Object.entries(e.alanlar ?? {});
-    if (girdiler.length === 0) return e.mesaj;
-    const ayrinti = girdiler.map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`).join("; ");
-    return `${e.mesaj} — ${ayrinti}`;
-  }
+  if (e instanceof ApiHatasi) return e.mesaj;
   return e instanceof Error ? e.message : "Beklenmeyen hata";
 }
 

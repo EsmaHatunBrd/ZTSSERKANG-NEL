@@ -111,22 +111,23 @@ export function HedefAltiKarti({ ozet, sorgu }: KartProps) {
   const h = ozet.hedef_alti;
   return (
     <YonetimKarti
-      baslik="Hedefin altındaki ürünler"
-      aciklama={`Kâr oranı ${yuzdeBicimle(h.esik)} eşiğinin altında kalanlar · toplam ${h.toplam} ürün${h.toplam > h.kayitlar.length ? ` (ilk ${h.kayitlar.length})` : ""}`}
+      baslik="Marj eşiğinin altındaki ürünler"
+      aciklama={`Geçen yılın satış fiyatıyla (satış geçmişi yoksa hesaplanan fiyatla) kâr oranı marj eşiği ${yuzdeBicimle(h.esik)} altında kalanlar · toplam ${h.toplam} ürün${h.toplam > h.kayitlar.length ? ` (ilk ${h.kayitlar.length})` : ""}`}
       bagla={`/hedef-fiyat${sorgu}`}
       baglaMetni="Marjı koruyan fiyat"
     >
       <OzetTablosu
-        etiket="Hedefin altındaki ürünler"
+        etiket="Marj eşiğinin altındaki ürünler"
         satirlar={h.kayitlar}
         anahtar={(r) => r.kod}
         hedef={(r) => `/urunler/${encodeURIComponent(r.kod)}${sorgu}`}
-        bos="Hedefin altında ürün yok."
+        bos="Marj eşiğinin altında ürün yok."
         sutunlar={[
           { baslik: "Ürün", hucre: (r) => urunHucresi(r.ad, r.kod) },
           { baslik: "Kâr %", hucre: (r) => <span className="font-semibold text-destructive">{yuzdeBicimle(r.kar_orani)}</span>, sag: true },
           { baslik: "Maliyet", hucre: (r) => para(r.maliyet), sag: true },
           { baslik: "Satış", hucre: (r) => para(r.satis), sag: true },
+          { baslik: "Fiyat", hucre: (r) => (r.fiyat_kaynagi === "gecen_yil" ? "geçen yıl" : "hesap") },
         ]}
       />
     </YonetimKarti>

@@ -109,10 +109,10 @@ def aile_degistir(s: Session, kod: str, aile: str | None, kullanici: str = "sist
     aile=None (veya boş): addan yeniden türet, elle ad kalkar. Değişiklik DegisiklikKaydi'na yazılır."""
     u = s.scalar(select(m.Urun).where(m.Urun.kod == kod))
     if u is None:
-        raise BulunamadiHatasi(f"ürün yok: {kod}", {"kod": kod})
+        raise BulunamadiHatasi(f"{kod} kodlu ürün bulunamadı.", {"kod": kod})
     ad = " ".join((aile or "").split())
     if len(ad) > MAKS_UZUNLUK:
-        raise DogrulamaHatasi(f"aile {MAKS_UZUNLUK} karakterden uzun olamaz", {"aile": aile})
+        raise DogrulamaHatasi(f"Aile adı en fazla {MAKS_UZUNLUK} karakter olabilir.", {"aile": aile})
     yeni, yeni_ad = (aile_anahtari(ad), ad) if ad else (aile_turet(u.ad), None)
     if yeni_ad is not None and yeni == u.aile and u.aile_ad is None and yeni_ad in (aile_gorunen_ad(u.aile, [u]), aile_ad_turet(u.ad)):
         return u   # türetilen ad değiştirilmeden kaydedildi: yazım ve günlük kaydı yok

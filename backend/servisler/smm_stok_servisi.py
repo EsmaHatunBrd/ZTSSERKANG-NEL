@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from ..depo import modeller as m
 from .donusum import decimal_str
-from .hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi
+from .hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi, alan_adi, liste_metni
 from .smm_servisi import _alim_toplami, donem_adi, donem_getir, kilit_denetle, stok_hesabi
 
 METIN_ALANLAR = ("ad", "birim", "tur", "mizan_kodu")
@@ -25,7 +25,7 @@ TABLO = "smm_kalem"
 
 def _neden(neden: str | None) -> str:
     if not (neden or "").strip():
-        raise DogrulamaHatasi("neden zorunlu")
+        raise DogrulamaHatasi("Neden girin.")
     return neden.strip()
 
 
@@ -33,16 +33,16 @@ def _sayi(alan: str, v) -> Decimal:
     try:
         d = Decimal(str(v).replace(",", ".").strip())
     except (InvalidOperation, ValueError):
-        raise DogrulamaHatasi(f"{alan} sayı olmalı", {alan: str(v)})
+        raise DogrulamaHatasi(f"{alan_adi(alan)} bir sayı olmalı.", {alan: str(v)})
     if d < 0:
-        raise DogrulamaHatasi(f"{alan} negatif olamaz", {alan: str(v)})
+        raise DogrulamaHatasi(f"{alan_adi(alan)} eksi olamaz.", {alan: str(v)})
     return d
 
 
 def kalem_getir(s: Session, donem_id: int, kod: str) -> m.SmmKalem:
     k = s.scalar(select(m.SmmKalem).where(m.SmmKalem.donem_id == donem_id, m.SmmKalem.kod == kod))
     if k is None:
-        raise BulunamadiHatasi("stok kalemi bulunamadı", {"donem_id": donem_id, "kod": kod})
+        raise BulunamadiHatasi(f"Bu dönemde {kod} stok kalemi bulunamadı.", {"donem_id": donem_id, "kod": kod})
     return k
 
 
@@ -63,7 +63,7 @@ def kalem_guncelle(s: Session, donem_id: int, kod: str, alanlar: dict, neden: st
     k = kalem_getir(s, donem_id, kod)
     bilinmeyen = sorted(set(alanlar) - set(DUZENLENEBILIR))
     if bilinmeyen:
-        raise DogrulamaHatasi("düzenlenemeyen alan", {"alanlar": bilinmeyen})
+        raise DogrulamaHatasi(f"Düzenlenemeyen alan: {liste_metni(bilinmeyen)}.", {"alanlar": bilinmeyen})
     eski, yeni = {}, {}
     for alan, v in alanlar.items():
         if v is None and alan in SAYISAL_ALANLAR and alan != "sahit_miktar":
@@ -90,9 +90,9 @@ def kalem_ekle(s: Session, donem_id: int, kod: str, ad: str | None, birim: str |
     kilit_denetle(d)   # kapanmış (kilitli) dönem değiştirilemez
     kod = (kod or "").strip()
     if not kod:
-        raise DogrulamaHatasi("kod zorunlu")
+        raise DogrulamaHatasi("Kod girin.")
     if s.scalar(select(m.SmmKalem).where(m.SmmKalem.donem_id == donem_id, m.SmmKalem.kod == kod)) is not None:
-        raise CatismaHatasi("bu kod dönemde zaten var", {"kod": kod})
+        raise CatismaHatasi(f"{kod} kodu bu dönemde zaten var.", {"kod": kod})
     degerler = {a: _sayi(a, sayisal[a]) for a in SAYISAL_ALANLAR if sayisal.get(a) is not None}
     k = m.SmmKalem(donem_id=d.id, kod=kod, ad=(ad or "").strip() or None, birim=(birim or "").strip() or None, tur=(tur or "").strip() or None,
                    mizan_kodu=(mizan_kodu or "").strip() or None, envanterde=True, **degerler)

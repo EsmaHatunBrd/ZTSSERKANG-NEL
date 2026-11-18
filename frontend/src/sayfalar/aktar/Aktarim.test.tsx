@@ -158,7 +158,7 @@ describe("Veri Aktar - üretim adetleri", () => {
     await userEvent.click(screen.getByRole("button", { name: "Önizle" }));
     const uyari = await screen.findByRole("alert");
     expect(uyari).toHaveTextContent("Üretim Adetleri sayfası bulunamadı");
-    expect(uyari).toHaveTextContent("sayfa: Üretim Adetleri");
+    expect(uyari).not.toHaveTextContent("sayfa: Üretim Adetleri"); // D6: alanlar eki gösterilmez
   });
 
   it("uygulama 422 verirse hata listelenir ve özet görünmez", async () => {

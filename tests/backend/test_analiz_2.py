@@ -1,5 +1,5 @@
 """Analizler 2. dalga: kur riski (döviz payı, birim/yıllık etki) ve kârlılık haritası (adet x marj bölgeleri)."""
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal as D_
 from backend.depo import modeller as m
 from backend.servisler import hesap_servisi as hs, karsilastirma_servisi as ks, satis_servisi
@@ -104,9 +104,34 @@ def test_karlilik_haritasi(istemci, oturum):
     assert [x["kod"] for x in d["kayitlar"]] == ["T4", "TEST", "T2", "T3"]   # yıllık kâr büyükten küçüğe, null sonda
     assert d["ozet"] == {"yuksek_adet_yuksek_marj": 2, "yuksek_adet_dusuk_marj": 0, "dusuk_adet_yuksek_marj": 0, "dusuk_adet_dusuk_marj": 1,
                          "adetsiz": 1, "hatali": 0}
-    # marj eşiği parametresi bölgeyi değiştirir
-    assert istemci.post(f"{A}/parametreler/marj_esigi/degerler?senaryo={sid}", json={"deger": "100", "gecerlilik_basi": "2026-06-01",
-                                                                                     "neden": "eşik"}).status_code == 201
+    # marj eşiği parametresi bölgeyi değiştirir. TEST'in marjı %300'ün üstünde (kayıt sınırı), eşik doğrudan tabloya yazılır.
+    pid = oturum.query(m.Parametre).filter_by(anahtar="marj_esigi").one().id
+    oturum.add(m.ParametreDegeri(parametre_id=pid, senaryo_id=sid, kapsam_tipi="genel", deger=D_(100), gecerlilik_basi=date(2026, 6, 1), neden="eşik"))
+    oturum.commit()
     k2 = {x["kod"]: x for x in istemci.get(f"{A}/analiz/karlilik?senaryo={sid}").json()["kayitlar"]}
     assert k2["TEST"]["bolge"] == "yuksek_adet_dusuk_marj"
     assert istemci.get(f"{A}/analiz/karlilik?senaryo=99999").status_code == 404
+
+
+def test_karlilik_aile_gorunen_ad(istemci, oturum):
+    """B4: aile alanı görünen addır (baş harfler büyük, ı/İ korunur); gruplama anahtarı `aile_anahtari` ayrı ve katlanmış kalır."""
+    sid = _senaryo(istemci); _kurulum(istemci, sid, oturum)
+    kav = {"malzeme_kodu": "KAV", "ad": "Kavanoz", "miktar": "1", "birim": "AD", "fire_override": "0.02"}
+    for kod, ad, hacim in (("KT1", "Test Karışık Turşu 2,5 kg", "2.5"), ("KT2", "TEST KARIŞIK TURŞU 370 ml", "370")):
+        assert istemci.put(f"{A}/urunler/{kod}", json={"ad": ad, "ambalaj_hacmi": hacim, "hat": "Niko", "taze_tursu_sinifi": "Turşu/Turşu",
+                                                       "suzme_kg": "0.18"}).status_code == 200
+        assert istemci.put(f"{A}/urunler/{kod}/uretim-hedefi?senaryo={sid}", json=URETIM).status_code == 200
+        assert istemci.post(f"{A}/urunler/{kod}/recete?senaryo={sid}", json=[kav]).status_code == 201
+    k = {x["kod"]: x for x in istemci.get(f"{A}/analiz/karlilik?senaryo={sid}").json()["kayitlar"]}
+    # iki ambalaj tek aile: aynı anahtar, aynı görünen ad (küçük boy önce: 370 ml üyesinin adından)
+    assert k["KT1"]["aile_anahtari"] == k["KT2"]["aile_anahtari"] == "test karişik turşu"
+    assert k["KT1"]["aile"] == k["KT2"]["aile"] == "Test Karışık Turşu"
+    h = {x["kod"]: x for x in istemci.get(f"{A}/analiz/hedef-fiyat?senaryo={sid}").json()["kayitlar"]}
+    assert h["KT1"]["aile"] == "Test Karışık Turşu" and h["KT1"]["aile_anahtari"] == "test karişik turşu"
+    # elle yazılmış aile adı tüm ailede görünür, anahtar değişmez
+    assert istemci.patch(f"{A}/urunler/KT1/aile", json={"aile": "Test Karışık Turşu (Özel)"}).status_code == 200
+    k = {x["kod"]: x for x in istemci.get(f"{A}/analiz/karlilik?senaryo={sid}").json()["kayitlar"]}
+    assert k["KT1"]["aile"] == "Test Karışık Turşu (Özel)" and k["KT1"]["aile_anahtari"] == "test karişik turşu (özel)"
+    # Karşılaştırma ekranındaki aile anahtarıyla eşleşir (süzme/bağlantı bozulmaz)
+    aileler = {a["aile"]: a for a in istemci.get(f"{A}/karsilastirma/aileler?senaryo={sid}").json()}
+    assert k["KT2"]["aile_anahtari"] in aileler and aileler[k["KT2"]["aile_anahtari"]]["aile_ad"] == k["KT2"]["aile"]

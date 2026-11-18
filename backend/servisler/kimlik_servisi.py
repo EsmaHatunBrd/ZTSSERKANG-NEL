@@ -59,7 +59,7 @@ def _belirtec_karma(belirtec: str) -> str:
 
 def _sifre_denetle(sifre: str) -> None:
     if len(sifre) < EN_KISA_SIFRE:
-        raise DogrulamaHatasi(f"şifre en az {EN_KISA_SIFRE} karakter olmalı", {"sifre": "kısa"})
+        raise DogrulamaHatasi(f"Şifre en az {EN_KISA_SIFRE} karakter olmalı.", {"sifre": "kısa"})
 
 
 def yazabilir_mi(rol: str, yontem: str, yol: str) -> bool:
@@ -80,14 +80,14 @@ def kullanici_olustur(s: Session, kullanici_adi: str, ad: str, rol: str, gecici_
                       sifre_degismeli: bool = True) -> m.Kullanici:
     kullanici_adi = kullanici_adi.strip().lower()
     if not _KULLANICI_ADI.match(kullanici_adi):
-        raise DogrulamaHatasi("kullanıcı adı 3-64 karakter; yalnız küçük harf, rakam, nokta, tire, alt çizgi", {"kullanici_adi": kullanici_adi})
+        raise DogrulamaHatasi("Kullanıcı adı 3-64 karakter olmalı; yalnız küçük harf, rakam, nokta, tire ve alt çizgi kullanılabilir.", {"kullanici_adi": kullanici_adi})
     if rol not in ROLLER:
-        raise DogrulamaHatasi(f"bilinmeyen rol: {rol}", {"rol": rol})
+        raise DogrulamaHatasi(f"Bilinmeyen rol: {rol}.", {"rol": rol})
     if not ad.strip():
-        raise DogrulamaHatasi("ad boş olamaz", {"ad": ""})
+        raise DogrulamaHatasi("Ad boş olamaz.", {"ad": ""})
     _sifre_denetle(gecici_sifre)
     if s.scalar(select(m.Kullanici.id).where(m.Kullanici.kullanici_adi == kullanici_adi)) is not None:
-        raise CatismaHatasi("bu kullanıcı adı zaten var", {"kullanici_adi": kullanici_adi})
+        raise CatismaHatasi(f"{kullanici_adi} kullanıcı adı zaten var; başka bir ad seçin.", {"kullanici_adi": kullanici_adi})
     k = m.Kullanici(kullanici_adi=kullanici_adi, ad=ad.strip(), rol=rol, sifre_karma=sifre_karma(gecici_sifre), aktif=True,
                     sifre_degismeli=sifre_degismeli, hatali_deneme=0, olusturan=olusturan)
     s.add(k); s.flush()
@@ -101,16 +101,16 @@ def giris(s: Session, kullanici_adi: str, sifre: str) -> tuple[m.Kullanici, str]
     k = s.scalar(select(m.Kullanici).where(m.Kullanici.kullanici_adi == kullanici_adi.strip().lower()))
     simdi = _simdi()
     if k is None or not k.aktif:
-        raise KimlikHatasi("kullanıcı adı ya da şifre yanlış")
+        raise KimlikHatasi("Kullanıcı adı ya da şifre yanlış.")
     if k.kilit_bitis is not None and k.kilit_bitis > simdi:
         dakika = max(1, int((k.kilit_bitis - simdi).total_seconds() // 60) + 1)
-        raise KimlikHatasi(f"çok fazla hatalı deneme; {dakika} dakika sonra tekrar deneyin", kod="kilitli")
+        raise KimlikHatasi(f"Çok fazla hatalı deneme; {dakika} dakika sonra tekrar deneyin.", kod="kilitli")
     if not sifre_dogru(sifre, k.sifre_karma):
         k.hatali_deneme = (k.hatali_deneme or 0) + 1
         if k.hatali_deneme >= HATALI_SINIR:
             k.kilit_bitis, k.hatali_deneme = simdi + timedelta(minutes=KILIT_DAKIKA), 0
         s.flush()
-        raise KimlikHatasi("kullanıcı adı ya da şifre yanlış")
+        raise KimlikHatasi("Kullanıcı adı ya da şifre yanlış.")
     k.hatali_deneme, k.kilit_bitis, k.son_giris = 0, None, simdi
     belirtec = secrets.token_urlsafe(32)
     s.add(m.GirisOturumu(belirtec_karma=_belirtec_karma(belirtec), kullanici_id=k.id, acik=True, son_kullanim=simdi,
@@ -121,10 +121,10 @@ def giris(s: Session, kullanici_adi: str, sifre: str) -> tuple[m.Kullanici, str]
 
 def oturumdaki_kullanici(s: Session, belirtec: str | None) -> m.Kullanici:
     if not belirtec:
-        raise KimlikHatasi("giriş yapılmamış")
+        raise KimlikHatasi("Giriş yapılmamış; lütfen giriş yapın.")
     o = s.scalar(select(m.GirisOturumu).where(m.GirisOturumu.belirtec_karma == _belirtec_karma(belirtec)))
     if o is None or not o.acik or not o.kullanici.aktif:
-        raise KimlikHatasi("oturum kapanmış; yeniden giriş yapın")
+        raise KimlikHatasi("Oturumunuz kapanmış; yeniden giriş yapın.")
     simdi = _simdi()
     if o.son_kullanim is None or simdi - o.son_kullanim > timedelta(minutes=5):   # her istekte yazmamak için seyrek güncellenir
         o.son_kullanim = simdi
@@ -148,10 +148,10 @@ def _oturumlari_kapat(s: Session, kullanici_id: int, haric_belirtec: str | None 
 def sifre_degistir(s: Session, k: m.Kullanici, eski: str, yeni: str, belirtec: str | None) -> None:
     """Kendi şifresi. Bu oturum açık kalır, diğer cihazlardaki oturumlar kapanır."""
     if not sifre_dogru(eski, k.sifre_karma):
-        raise DogrulamaHatasi("mevcut şifre yanlış", {"eski_sifre": "yanlış"})
+        raise DogrulamaHatasi("Mevcut şifre yanlış.", {"eski_sifre": "yanlış"})
     _sifre_denetle(yeni)
     if eski == yeni:
-        raise DogrulamaHatasi("yeni şifre eskisiyle aynı olamaz", {"yeni_sifre": "aynı"})
+        raise DogrulamaHatasi("Yeni şifre eskisiyle aynı olamaz.", {"yeni_sifre": "aynı"})
     k.sifre_karma, k.sifre_degismeli = sifre_karma(yeni), False
     _oturumlari_kapat(s, k.id, haric_belirtec=belirtec)
     s.add(m.DegisiklikKaydi(tablo="kullanici", kayit_id=k.id, islem="sifre_degistir", eski=None, yeni={}, kullanici=k.kullanici_adi))
@@ -160,7 +160,7 @@ def sifre_degistir(s: Session, k: m.Kullanici, eski: str, yeni: str, belirtec: s
 
 def yonetici_denetle(k: m.Kullanici) -> None:
     if k.rol != YONETICI_ROL:
-        raise YetkiHatasi("kullanıcı yönetimi yalnız Genel Direktör'e açık")
+        raise YetkiHatasi("Kullanıcı yönetimi yalnız Genel Direktör'e açık.")
 
 
 def listele(s: Session) -> list[m.Kullanici]:
@@ -170,7 +170,7 @@ def listele(s: Session) -> list[m.Kullanici]:
 def _getir(s: Session, kullanici_id: int) -> m.Kullanici:
     k = s.get(m.Kullanici, kullanici_id)
     if k is None:
-        raise BulunamadiHatasi("kullanıcı yok", {"kullanici_id": kullanici_id})
+        raise BulunamadiHatasi("Kullanıcı bulunamadı.", {"kullanici_id": kullanici_id})
     return k
 
 
@@ -184,12 +184,12 @@ def guncelle(s: Session, kullanici_id: int, yapan: str, ad: str | None = None, r
     k = _getir(s, kullanici_id)
     eski = {"ad": k.ad, "rol": k.rol, "aktif": k.aktif}
     if rol is not None and rol not in ROLLER:
-        raise DogrulamaHatasi(f"bilinmeyen rol: {rol}", {"rol": rol})
+        raise DogrulamaHatasi(f"Bilinmeyen rol: {rol}.", {"rol": rol})
     if ad is not None and not ad.strip():
-        raise DogrulamaHatasi("ad boş olamaz", {"ad": ""})
+        raise DogrulamaHatasi("Ad boş olamaz.", {"ad": ""})
     yonetici_gidiyor = k.rol == YONETICI_ROL and k.aktif and ((rol is not None and rol != YONETICI_ROL) or aktif is False)
     if yonetici_gidiyor and _aktif_yonetici_sayisi(s) <= 1:
-        raise CatismaHatasi("son aktif Genel Direktör'ün rolü değiştirilemez ya da pasifleştirilemez")
+        raise CatismaHatasi("Son aktif Genel Direktör'ün rolü değiştirilemez ya da pasifleştirilemez.")
     if ad is not None:
         k.ad = ad.strip()
     if rol is not None:

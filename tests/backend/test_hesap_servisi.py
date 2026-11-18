@@ -82,7 +82,7 @@ def test_gerceklesen_enflasyon_sifir(oturum, ortam):
 def test_gerceklesen_enflasyon_override_reddedilir(oturum, ortam):
     sen, u = ortam
     g = _gerceklesen(oturum, sen, u)
-    with pytest.raises(DogrulamaHatasi, match="gerçekleşen senaryoda enflasyon"):
+    with pytest.raises(DogrulamaHatasi, match="Gerçekleşen çalışmada enflasyon"):
         hs.hesapla(oturum, "TEST", g.id, date(2026, 10, 21), override={"parametreler": {"enflasyon": D_("0.3")}})
     c = hs.hesapla(oturum, "TEST", g.id, date(2026, 10, 21), override={"parametreler": {"kur.USD": D_(55)}})
     assert c.parametreler.enflasyon == D_(0) and c.parametreler.kurlar["USD"] == D_(55)
@@ -205,7 +205,7 @@ def test_elle_brut_satira_fire_override_reddedilir_ve_firesiz_sonuc(oturum, orta
     assert kav.miktar_kaynagi == "elle" and kav.brut_miktar == D_("1.1") and kav.tutar_firesiz < kav.tutar
     assert taz.fiyat_kaynagi == "elle" and taz.birim_fiyat == D_(70)
     assert c.sonuc.firesiz is not None and c.sonuc.firesiz.malzeme_toplami < c.sonuc.malzeme_toplami
-    with pytest.raises(DogrulamaHatasi, match="elle brüt"):
+    with pytest.raises(DogrulamaHatasi, match="brüt miktarı elle girilmiş"):
         hs.hesapla(oturum, "TEST", sen.id, date(2026, 10, 21), override={"fire": {1: "0.1"}})
     c2 = hs.hesapla(oturum, "TEST", sen.id, date(2026, 10, 21), override={"fire": {2: "0.1"}})   # elle brütsüz satır serbest
     assert c2.fire_kaynaklari[1] == "satir"

@@ -9,6 +9,8 @@ interface Props {
   fiyatlar: Fiyatlar;
   /** Sonuç son geçerli hesaptan (taslak hesaplanamadı): soluk gösterilir. */
   bayat?: boolean;
+  /** Satış fiyatı stokta kalanla ağırlıklı ortalama maliyetten hesaplandıysa o maliyet (TL); değilse yok. */
+  ortalamaMaliyet?: string | null;
 }
 
 const para = (d: string | null | undefined, pb: string, basamak = 2) => (d == null ? "—" : paraBicimle(d, pb, basamak));
@@ -39,7 +41,7 @@ function Kutu({ baslik, deger, alt, vurgu }: { baslik: string; deger: ReactNode;
  * Ürün ekranının cevabı en üstte: finansman dahil birim maliyet, satış fiyatı (TL ve döviz), malzeme/gider dağılımı.
  * Ayrıntı (Toplamlar, Satış fiyatı tabloları) sayfanın aşağısında kalır; buradaki rakamlar onlarla aynı alanlardır.
  */
-export function SonucSeridi({ toplamlar: t, toplamlarFiresiz: tf, fiyatlar: f, bayat }: Props) {
+export function SonucSeridi({ toplamlar: t, toplamlarFiresiz: tf, fiyatlar: f, bayat, ortalamaMaliyet }: Props) {
   const kar = oranMetni(f.satis_kar_orani);
   return (
     <section aria-label="Hesap sonucu" className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4", bayat && "opacity-60")}>
@@ -48,7 +50,12 @@ export function SonucSeridi({ toplamlar: t, toplamlarFiresiz: tf, fiyatlar: f, b
         deger={para(t.maliyet_tl, "TL")}
         alt={tf ? `Firesiz: ${para(tf.maliyet_tl, "TL")}` : undefined}
       />
-      <Kutu baslik={kar ? `Satış fiyatı (kâr ${kar})` : "Satış fiyatı"} deger={para(f.satis_tl, "TL")} vurgu />
+      <Kutu
+        baslik={kar ? `Satış fiyatı (kâr ${kar})` : "Satış fiyatı"}
+        deger={para(f.satis_tl, "TL")}
+        alt={ortalamaMaliyet != null ? `Ortalama maliyetten (stokta kalan dahil): ${para(ortalamaMaliyet, "TL")}` : undefined}
+        vurgu
+      />
       <Kutu baslik="Satış fiyatı (döviz)" deger={para(f.satis_usd, "USD", 3)} alt={`EUR: ${para(f.satis_eur, "EUR", 3)}`} />
       <Kutu
         baslik="Maliyet dağılımı"

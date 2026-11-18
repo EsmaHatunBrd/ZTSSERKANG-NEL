@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from . import fiyat_servisi as fs, gider_servisi as gs, gunluk_servisi as gl, hesap_servisi as hs, parametre_servisi as ps
 from . import senaryo_servisi, smm_mizan_servisi as mz, smm_ozet_servisi as so, smm_servisi as ss, smm_veri_servisi as sv
-from .hatalar import DogrulamaHatasi
+from .hatalar import DogrulamaHatasi, liste_metni
 from .smm_asama_servisi import _Baglam, uretim_maliyeti
 
 PROJE = Path(__file__).resolve().parents[2]
@@ -379,17 +379,17 @@ def fiyat_kitabi(s: Session, senaryo_id: int, kodlar: list[str] | None, ekler: E
     if kodlar is not None:
         secili = {k.strip() for k in kodlar if k and k.strip()}
         if not secili:
-            raise DogrulamaHatasi("en az bir ürün seçin", {"urunler": "boş"})
+            raise DogrulamaHatasi("En az bir ürün seçin.", {"urunler": "boş"})
         yok = sorted(secili - uyeler)
         if yok:
-            raise DogrulamaHatasi("seçilen ürünlerden bazıları bu çalışmada yok", {"urunler": yok[:20]})
+            raise DogrulamaHatasi(f"Seçilen ürünlerden bazıları bu çalışmada yok: {liste_metni(yok)}.", {"urunler": yok[:20]})
     kapatan, kapanis = _senaryo_kilidi(s, sen)
     kapsam = (f"Çalışma: {sen.sezon.ad} — {sen.ad}; "
               + (f"tüm ürünler ({len(uyeler)})" if secili is None or secili == uyeler else f"seçili {len(secili)} ürün (çalışmada {len(uyeler)})"))
     kaynaklar = [["Fiyat çalışması dosyası", sen.kaynak_dosya, _zaman_tr(_yerel(sen.olusturma_zamani)), sen.olusturan, None]] if sen.kaynak_dosya else []
     sezon = "".join(ch if ch.isalnum() else "-" for ch in sen.sezon.ad).strip("-") or "sezon"
     c = Cikti("fiyat", BELGE["fiyat"], bool(sen.kilitli), kapsam, f"{sen.sezon.ad} — {sen.ad}", t, kapatan, kapanis, alan,
-              datetime.now().astimezone(), surum(), kaynaklar, imzalar, ekler, f"onay-ciktisi-fiyat-{sezon}-{t:%m-%d-%Y}")
+              datetime.now().astimezone(), surum(), kaynaklar, imzalar, ekler, f"rapor-fiyat-{sezon}-{t:%m-%d-%Y}")
     wb = _bos_kitap(c)
     sabit = {"kapak", "teklif kapak", "satın alma fiyatları", "parametreler", "gider dağıtım", "elle değişiklikler", "günlük özeti"}
 
@@ -501,7 +501,7 @@ def smm_kitabi(s: Session, donem_id: int, ekler: Ekler, imzalar: Imzalar, alan: 
     kapanis = ss.kilit_zamani(d)
     c = Cikti("smm", BELGE["smm"], bool(d.kilitli), f"Maliyet muhasebesi, {ad} dönemi", ad, t, d.kilitleyen,
               datetime.fromisoformat(kapanis) if kapanis else None, alan, datetime.now().astimezone(), surum(), kaynaklar, imzalar, ekler,
-              f"onay-ciktisi-smm-{d.yil}-{d.ay:02d}-{t:%m-%d-%Y}")
+              f"rapor-smm-{d.yil}-{d.ay:02d}-{t:%m-%d-%Y}")
     wb = _bos_kitap(c)
     o = so.smm_ozeti(s, d.id)
 
@@ -658,7 +658,7 @@ def uret(wb: Workbook, c: Cikti, tur: str) -> tuple[bytes, str, str]:
     if tur == "pdf":
         from .onay_pdf import pdf_uret
         return pdf_uret(wb, c), "application/pdf", c.dosya_koku + ".pdf"
-    raise DogrulamaHatasi("tür 'excel' ya da 'pdf' olmalı", {"tur": tur})
+    raise DogrulamaHatasi("Çıktı türü Excel ya da PDF olmalı.", {"tur": tur})
 
 
 def fiyat_ciktisi(s: Session, senaryo_id: int, tur: str, kodlar: list[str] | None = None, ekler: Ekler | None = None,

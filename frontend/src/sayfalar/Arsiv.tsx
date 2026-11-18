@@ -27,8 +27,8 @@ function KiyasTablosu({ baslik, satirlar }: { baslik: string; satirlar: ArsivKiy
         <TableHeader>
           <TableRow>
             <TableHead>Alan</TableHead>
-            <TableHead className="text-right">A</TableHead>
-            <TableHead className="text-right">B</TableHead>
+            <TableHead className="text-right">A (önce)</TableHead>
+            <TableHead className="text-right">B (sonra)</TableHead>
             <TableHead className="text-right">Fark (B − A)</TableHead>
           </TableRow>
         </TableHeader>
@@ -54,6 +54,14 @@ function KiyasTablosu({ baslik, satirlar }: { baslik: string; satirlar: ArsivKiy
 }
 
 const DURUM_ADI = { ortak: "Her ikisinde", sadece_a: "Yalnız A", sadece_b: "Yalnız B" } as const;
+
+type SeciliKayit = { id: number; hesap_tarihi: string };
+
+/** Kıyas sırası seçim sırasından bağımsızdır: A = eski (hesap tarihi, eşitse kayıt no küçük olan), B = yeni. Böylece artış artı görünür. */
+function eskiYeniSirala(x: SeciliKayit, y: SeciliKayit): { a: number; b: number } {
+  const xEski = x.hesap_tarihi === y.hesap_tarihi ? x.id < y.id : x.hesap_tarihi < y.hesap_tarihi;
+  return xEski ? { a: x.id, b: y.id } : { a: y.id, b: x.id };
+}
 
 function KiyasKarti({ a, b, onKapat }: { a: number; b: number; onKapat: () => void }) {
   const kiyas = useArsivKiyas(a, b);
@@ -89,8 +97,8 @@ function KiyasKarti({ a, b, onKapat }: { a: number; b: number; onKapat: () => vo
           <div className="grid gap-3 sm:grid-cols-2">
             {(
               [
-                ["A", k.a],
-                ["B", k.b],
+                ["A (önce)", k.a],
+                ["B (sonra)", k.b],
               ] as const
             ).map(([e, h]) => (
               <div key={e} className="rounded-md border p-3 text-sm">
@@ -112,8 +120,8 @@ function KiyasKarti({ a, b, onKapat }: { a: number; b: number; onKapat: () => vo
                 <TableRow>
                   <TableHead>Malzeme</TableHead>
                   <TableHead>Durum</TableHead>
-                  <TableHead className="text-right">A tutar</TableHead>
-                  <TableHead className="text-right">B tutar</TableHead>
+                  <TableHead className="text-right">A tutar (önce)</TableHead>
+                  <TableHead className="text-right">B tutar (sonra)</TableHead>
                   <TableHead className="text-right">Fark (B − A)</TableHead>
                 </TableRow>
               </TableHeader>
@@ -188,8 +196,10 @@ export default function Arsiv() {
   const sayfaNo = sayfa.senaryo === senaryoId ? sayfa.no : 1; // senaryo değişince 1. sayfa
   const [urunGirdi, setUrunGirdi] = useState("");
   const kayitlar = useArsivKayitlari(senaryoId, sayfaNo, BOYUT, urunGirdi.trim());
-  const [secili, setSecili] = useState<{ senaryo: number | null; idler: number[] }>({ senaryo: senaryoId, idler: [] });
-  const idler = secili.senaryo === senaryoId ? secili.idler : [];
+  const [secili, setSecili] = useState<{ senaryo: number | null; kayitlar: SeciliKayit[] }>({ senaryo: senaryoId, kayitlar: [] });
+  const seciliKayitlar = secili.senaryo === senaryoId ? secili.kayitlar : [];
+  const idler = seciliKayitlar.map((x) => x.id);
+  const kiyasCifti = seciliKayitlar.length === 2 ? eskiYeniSirala(seciliKayitlar[0], seciliKayitlar[1]) : null;
   const [kiyasAcik, setKiyasAcik] = useState(false);
   const [kilitHedefi, setKilitHedefi] = useState<ArsivSenaryosu | null>(null);
 
@@ -199,9 +209,14 @@ export default function Arsiv() {
   const toplam = kayitlar.data?.toplam ?? 0;
   const sayfaSayisi = Math.max(1, Math.ceil(toplam / BOYUT));
 
-  const isaretle = (id: number, acik: boolean) => {
+  const isaretle = (kayit: SeciliKayit, acik: boolean) => {
     setKiyasAcik(false);
-    setSecili({ senaryo: senaryoId, idler: acik ? [...idler, id].slice(0, 2) : idler.filter((x) => x !== id) });
+    setSecili({
+      senaryo: senaryoId,
+      kayitlar: acik
+        ? [...seciliKayitlar, { id: kayit.id, hesap_tarihi: kayit.hesap_tarihi }].slice(0, 2)
+        : seciliKayitlar.filter((x) => x.id !== kayit.id),
+    });
   };
 
   return (
@@ -252,7 +267,9 @@ export default function Arsiv() {
                   {s.kaynak_dosya && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <FileSpreadsheet className="size-3 shrink-0" aria-hidden />
-                      <span className="truncate">{s.kaynak_dosya}</span>
+                      <span className="truncate" title={s.kaynak_dosya}>
+                        Son yükleme: {s.kaynak_dosya}
+                      </span>
                     </span>
                   )}
                   <span className="text-xs text-muted-foreground">
@@ -303,7 +320,7 @@ export default function Arsiv() {
               </div>
               {idler.length === 1 && <p className="text-xs text-muted-foreground">Kıyaslamak için bir kayıt daha seçin.</p>}
 
-              {kiyasAcik && idler.length === 2 && <KiyasKarti a={idler[0]} b={idler[1]} onKapat={() => setKiyasAcik(false)} />}
+              {kiyasAcik && kiyasCifti && <KiyasKarti a={kiyasCifti.a} b={kiyasCifti.b} onKapat={() => setKiyasAcik(false)} />}
 
               {kayitlar.error && (
                 <p role="alert" className="text-sm text-destructive">
@@ -351,7 +368,7 @@ export default function Arsiv() {
                               aria-label={`Kıyas için seç ${r.urun_kodu} ${r.hesap_tarihi}`}
                               checked={isaretli}
                               disabled={!isaretli && idler.length >= 2}
-                              onChange={(e) => isaretle(r.id, e.target.checked)}
+                              onChange={(e) => isaretle(r, e.target.checked)}
                             />
                           </TableCell>
                           <TableCell className="whitespace-nowrap">{goster(r.hesap_tarihi)}</TableCell>

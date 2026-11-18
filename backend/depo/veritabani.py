@@ -54,7 +54,7 @@ EKSIK_KOLONLAR = (("recete_satiri", "seviye", "INTEGER"), ("urun", "aile", "VARC
                  ("smm_kalem", "satis_miktar", "VARCHAR(48)"), ("smm_kalem", "sahit_miktar", "VARCHAR(48)"), ("smm_donem", "excel_ozet", "JSON"),
                  ("smm_donem", "recete_kaynagi", "VARCHAR(10) DEFAULT 'excel'"), ("smm_donem", "devir_donem_id", "INTEGER"),
                  ("smm_donem", "veri_kaynaklari", "JSON"), ("smm_donem", "kilitli", "BOOLEAN DEFAULT 0"), ("smm_donem", "kilitleyen", "VARCHAR(64)"),
-                 ("urun", "marka", "VARCHAR(64)"))
+                 ("urun", "marka", "VARCHAR(64)"), ("recete", "neden", "VARCHAR(300)"))
 
 
 def eksik_kolonlari_tamamla(engine: Engine) -> list[str]:

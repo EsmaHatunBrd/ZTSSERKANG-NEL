@@ -28,7 +28,7 @@ def _hazirla(c, oturum, sid):
     assert c.put(f"{A}/uretim-kapasitesi/TEST?senaryo={sid}", json={**KAP, "neden": "ilk kapasite", "urun_ad": "Test 2"}, headers=h).status_code == 200
     assert c.put(f"{A}/gider-havuzlari/pazarlama?senaryo={sid}", json={"ad": "Pazarlama", "neden": "bütçe revizyonu", "toplam_tutar": "17000000", "baz_tipi": "adet"}, headers=h).status_code == 200
     assert c.put(f"{A}/ambalaj-siniflari?senaryo={sid}", json={"siniflar": [{"ad": "370 ml", "hacim": "370", "uretim_adedi": "100", "katsayi": "0.5"}], "neden": "yeniden"}, headers=h).status_code == 200
-    assert c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": "Örnek Müşteri A", "tarih": "2026-05-01", "fiyat": "10", "para_birimi": "TL", "adet": "5"}, headers=h).status_code == 201
+    assert c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": "Örnek Müşteri A", "tarih": "2026-05-01", "fiyat": "10", "para_birimi": "TL", "adet": "5", "neden": "elle giriş"}, headers=h).status_code == 201
     assert c.post(f"{A}/urunler/TEST/recete?senaryo={sid}", json=[{"malzeme_kodu": "KAV", "ad": "Kavanoz", "miktar": "2", "birim": "AD"}], headers=h).status_code == 201
     r = c.post(f"{A}/urunler/TEST/hesaplar", json={"senaryo_id": sid, "tarih": "2026-10-21"}, headers=h)
     assert r.status_code == 201, r.text
@@ -68,10 +68,10 @@ def test_satir_alanlari_ve_urun_kodu(veri):
     g = _gunluk(c, senaryo=sid, boyut=500)["kayitlar"]
     hesap = next(x for x in g if x["id"] == f"hesap:{hid}")
     assert hesap["urun_kodu"] == "TEST" and hesap["senaryo_id"] == sid and hesap["kullanici"] == "esma" and hesap["tur"] == "hesap"
-    par = next(x for x in g if x["tur"] == "parametre" and x["baslik"] == "Parametre: kur.USD")
+    par = next(x for x in g if x["tur"] == "parametre" and x["baslik"] == "Parametre: USD kuru")
     assert (par["neden"], par["kullanici"]) == ("kur güncellemesi", "esma") and D_(par["eski"]) == D_("50") and D_(par["yeni"]) == D_("55")
     urun = next(x for x in g if x["tur"] == "urun")
-    assert urun["urun_kodu"] == "TEST" and "ad" in urun["yeni"]
+    assert urun["urun_kodu"] == "TEST" and "Ad: Test 2" in urun["yeni"]
     kap = next(x for x in g if x["tur"] == "kapasite")
     assert kap["urun_kodu"] == "TEST" and kap["neden"] == "ilk kapasite"
     satis = next(x for x in g if x["tur"] == "satis")
@@ -129,11 +129,11 @@ def test_geri_alinabilir_kurali(veri):
             assert x["tur"] in ("parametre", "fiyat", "fire", "recete") and x["geri_al"]["yol"].startswith("/api/v1/") and x["geri_al"]["govde"]
         else:
             assert x["geri_al"] is None
-    par = next(x for x in g if x["baslik"] == "Parametre: kur.USD")
+    par = next(x for x in g if x["baslik"] == "Parametre: USD kuru")
     assert par["geri_alinabilir"] and par["geri_al"]["yol"] == f"/api/v1/parametreler/kur.USD/degerler?senaryo={sid}"
     assert D_(par["geri_al"]["govde"]["deger"]) == D_("50") and par["geri_al"]["govde"]["gecerlilik_basi"] == date.today().isoformat()
     # ilk kayıtların (eski değeri yok) geri alması yok; yalnız en son kayıt geri alınabilir
-    kur_satirlari = [x for x in g if x["baslik"] == "Parametre: kur.USD"]
+    kur_satirlari = [x for x in g if x["baslik"] == "Parametre: USD kuru"]
     assert sum(x["geri_alinabilir"] for x in kur_satirlari) == 1 and len(kur_satirlari) == 2
     fire = [x for x in g if x["tur"] == "fire"]
     assert sorted(x["geri_alinabilir"] for x in fire) == [False, True]
@@ -210,7 +210,7 @@ def test_xlsx(veri):
     ws = load_workbook(BytesIO(r.content)).active
     satirlar = list(ws.iter_rows(values_only=True))
     assert satirlar[0][:4] == ("Zaman", "Kullanıcı", "Tür", "Başlık") and len(satirlar) == 3
-    assert {x[2] for x in satirlar[1:]} == {"fire"}
+    assert {x[2] for x in satirlar[1:]} == {"Fire kuralı"}
     assert c.get(f"{A}/disa-aktar/gunluk.xlsx", params={"tur": "olmayan"}).status_code == 422
 
 
@@ -261,6 +261,7 @@ def test_kaynak_dosya_import_ve_aktarim(istemci, oturum, excel_yolu):
 
 def test_kiyas_decimal_farklar(veri):
     c, oturum, sid, hid = veri
+    oturum.add(m.Malzeme(kod="KAP", ad="Kapak")); oturum.commit()   # ekrandan eklenen satırın malzeme kartı olmalı (D3b)
     assert c.post(f"{A}/urunler/TEST/recete?senaryo={sid}", json=[{"malzeme_kodu": "KAV", "ad": "Kavanoz", "miktar": "3", "birim": "AD"},
                                                                   {"malzeme_kodu": "KAP", "ad": "Kapak", "miktar": "1", "birim": "AD", "birim_fiyat_elle": "1.5"}]).status_code == 201
     h2 = c.post(f"{A}/urunler/TEST/hesaplar", json={"senaryo_id": sid, "tarih": "2026-10-22"}).json()["id"]
@@ -312,7 +313,7 @@ def test_kilit_akisi(veri):
                   c.post(f"{A}/urunler/TEST/kaydet", json={"senaryo_id": sid, "tarih": "2026-10-21", "neden": "x", "hesabi_kaydet": True}),
                   c.post(f"{A}/hesaplar/{hid}/teklifler", json={"kar_orani": "0.3"}),
                   c.put(f"{A}/gider-havuzlari/pazarlama?senaryo={sid}", json={"ad": "P", "neden": "x", "toplam_tutar": "1", "baz_tipi": "adet"})):
-        assert yanit.status_code == 409 and yanit.json()["mesaj"] == "senaryo kilitli", yanit.text
+        assert yanit.status_code == 409 and yanit.json()["mesaj"] == "A çalışması kilitli; değişiklik için önce kilidi açın.", yanit.text
     teklif_id = c.get(f"{A}/hesaplar/{hid}/teklifler").json()["kayitlar"][0]["id"]
     assert c.patch(f"{A}/teklifler/{teklif_id}/durum", json={"durum": "gonderildi"}).status_code == 409
     assert c.post(f"{A}/urunler/TEST/hesapla", json={"senaryo_id": sid, "tarih": "2026-10-21"}).status_code == 200
@@ -348,7 +349,7 @@ def test_kilitli_senaryoda_aktarim_ve_import_409(veri, excel_yolu):
                        (f"{A}/import/fiyat-listesi/uygula", {"senaryo": sid, "neden": "x", "gecerlilik_basi": "2026-07-01"}),
                        (f"{A}/import/excel-tam", {"senaryo_id": sid})):
         r = c.post(yol, data=veri_, files=dosya)
-        assert r.status_code == 409 and r.json()["mesaj"] == "senaryo kilitli", (yol, r.text)
+        assert r.status_code == 409 and r.json()["mesaj"] == "A çalışması kilitli; değişiklik için önce kilidi açın.", (yol, r.text)
     assert c.post(f"{A}/import/fiyat-listesi", data={"senaryo": sid}, files=dosya).status_code != 409   # önizleme salt okunur
 
 
@@ -398,5 +399,100 @@ def test_havuz_carpanlari_gunlukte_okunur(veri):
                     "carpanlar": [{"ad": "SGK işveren payı", "deger": "1.35"}, {"ad": "zam", "deger": "1.30"}, {"ad": "ikramiye", "deger": "1.10"}]})
     assert r.status_code == 200, r.text
     satir = max((x for x in _gunluk(c, senaryo=sid, tur="havuz")["kayitlar"]), key=lambda x: x["zaman"])
-    assert satir["yeni"].endswith("= 32.818.500,00"), satir["yeni"]
+    assert satir["yeni"].endswith("= 32.818.500,00 TL"), satir["yeni"]
     assert "17.000.000,00 × 1,35 (SGK işveren payı) × 1,30 (zam) × 1,10 (ikramiye)" in satir["yeni"]
+
+
+# ------------------------------------------------------------------ D5: günlükte okunur metin (ham Python/JSON yok)
+def test_fark_metni_okunur_turkce():
+    from backend.servisler.gunluk_servisi import fark_metni
+    adlar = {2: "Test Bütçe 2026-2027"}
+    _, y, n = fark_metni(None, {"recete": 12, "kaynak_senaryo_id": 2, "_neden": "sezon"}, tablo="senaryo", senaryo_adlari=adlar)
+    assert y == "Kopyalanan reçete: 12; Kaynak çalışma: Test Bütçe 2026-2027" and n == "sezon"
+    _, y, _ = fark_metni(None, {"adet": "10", "birim_maliyet": "30.81388087306671547542783930", "enflasyon": None, "senaryo_id": 2,
+                                "_neden": "sayım"}, tablo="stok_devri")
+    assert y == "Adet: 10; Birim maliyet: 30,8139 TL"   # boş alan ve kimlik yazılmaz, birim fiyat 4 hane
+    _, y, _ = fark_metni(None, {"eklenen": 5, "atlanan_kayitli": 0}, tablo="satis_gecmisi")
+    assert y == "Eklenen satır: 5"
+    _, y, _ = fark_metni(None, {"yazilan": 3, "bolenler": {"yurtici": "0.63", "yurtdisi": "0.85"}}, tablo="liste_fiyati")
+    assert y == "Yazılan satır: 3; Bölenler: Yurtiçi 0,63, Yurtdışı 0,85"
+    e, y, _ = fark_metni({"liste_fiyati": "6.4"}, {"urun_kodu": "T", "yil": 2025, "liste_fiyati": "7.36"}, tablo="liste_fiyati")
+    assert (e, y) == ("Liste fiyatı: 6,40 TL", "Liste fiyatı: 7,36 TL")
+    _, y, _ = fark_metni(None, {"anahtarlar": [["Kavanoz Hattı", "0.55", "18000000"], ["Teneke Hattı", "0.25", "1"], ["Sos Hattı", "0.2", "1"]]},
+                         tablo="gider_havuzu")
+    assert y == "Dağıtım anahtarları: Kavanoz Hattı %55, Teneke Hattı %25, Sos Hattı %20"
+    e, y, n = fark_metni({"tur_no": 2, "kar_orani": "0.2", "fiyat_tl": "35.4359630040267227", "hesap_id": 5, "senaryo_id": 2, "durum": "taslak"},
+                         {"_neden": "yanlış tur"}, tablo="teklif")
+    assert e == "Tur: 2; Kâr oranı: %20; Fiyat: 35,436 TL; Durum: Taslak" and y is None and n == "yanlış tur"
+    for metin in (e, y or ""):
+        assert "{" not in metin and "[" not in metin and "None" not in metin and "_id" not in metin
+
+
+def test_gunluk_ucu_okunur_metin(veri):
+    c, _, sid, _ = veri
+    for x in _gunluk(c, senaryo=sid, boyut=500)["kayitlar"]:
+        for alan in ("eski", "yeni"):
+            metin = x[alan] or ""
+            assert not any(p in metin for p in ("{", "[[", "None", "senaryo_id", "_neden", "'")), (x["baslik"], metin)
+    g = _gunluk(c, senaryo=sid, tur="hesap")["kayitlar"][0]
+    assert g["yeni"].startswith("Maliyet: ") and g["yeni"].endswith(" TL") and "," in g["yeni"]
+    t = _gunluk(c, senaryo=sid, tur="teklif")["kayitlar"][0]
+    assert "Kâr oranı: %20" in t["yeni"] and "(Taslak)" in t["baslik"]
+    f = next(x for x in _gunluk(c, senaryo=sid, tur="fiyat")["kayitlar"] if x["eski"])
+    assert f["yeni"].endswith(" TL") and "," in f["yeni"]
+
+
+# ------------------------------------------------------------------ D7: elle ekleme/silme uçlarında zorunlu neden
+def test_satis_elle_ekle_sil_neden_zorunlu_ve_gunlukte(veri):
+    c, _, sid, _ = veri
+    govde = {"urun_kodu": "TEST", "musteri": "Örnek Müşteri B", "tarih": "2026-06-01", "fiyat": "12.5", "para_birimi": "TL", "adet": "3"}
+    for g in (govde, {**govde, "neden": "  "}):
+        r = c.post(f"{A}/satis-gecmisi", json=g)
+        assert r.status_code == 422 and r.json()["mesaj"] == "Neden girin.", r.text
+    kid = c.post(f"{A}/satis-gecmisi", json={**govde, "neden": "faturadan elle"}).json()["id"]
+    for yol in (f"{A}/satis-gecmisi/{kid}", f"{A}/satis-gecmisi/{kid}?neden="):
+        r = c.delete(yol)
+        assert r.status_code == 422 and r.json()["mesaj"] == "Neden girin."
+    assert c.delete(f"{A}/satis-gecmisi/{kid}?neden=m%C3%BCkerrer").status_code == 204
+    satirlar = _gunluk(c, tur="satis", boyut=50)["kayitlar"]
+    sil = next(x for x in satirlar if x["baslik"] == "Satış geçmişi silindi")
+    assert sil["neden"] == "mükerrer" and sil["urun_kodu"] == "TEST" and "Fiyat: 12,50" in sil["eski"] and sil["yeni"] is None
+    ekle = next(x for x in satirlar if x["neden"] == "faturadan elle")
+    assert "Tarih: 01.06.2026" in ekle["yeni"] and "Müşteri: Örnek Müşteri B" in ekle["yeni"]
+
+
+def test_teklif_sil_neden_zorunlu_ve_gunlukte(veri):
+    c, _, sid, hid = veri
+    tid = c.post(f"{A}/hesaplar/{hid}/teklifler", json={"kar_orani": "0.25"}).json()["id"]
+    r = c.delete(f"{A}/teklifler/{tid}")
+    assert r.status_code == 422 and r.json()["mesaj"] == "Neden girin."
+    assert c.delete(f"{A}/teklifler/{tid}?neden=hatal%C4%B1%20tur").status_code == 204
+    sil = next(x for x in _gunluk(c, senaryo=sid, tur="teklif")["kayitlar"] if x["baslik"] == "Teklif turu silindi")
+    assert sil["neden"] == "hatalı tur" and "Kâr oranı: %25" in sil["eski"] and "hesap" not in sil["eski"].lower()
+
+
+# ------------------------------------------------------------------ D6: hata mesajları kendi başına anlaşılır
+def test_hata_mesajlari_okunur(veri):
+    c, oturum, sid, _ = veri
+    from backend.servisler import hesap_servisi as hs, kimlik_servisi as ks, liste_kurallari as lk
+    from backend.servisler.hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi
+    r = c.delete(f"{A}/senaryolar/{sid}")
+    assert r.status_code == 409 and r.json()["mesaj"] == "Bu çalışmada 1 kayıtlı hesap var; kayıtlı hesabı olan çalışma silinemez."
+    assert r.json()["alanlar"]["hesap_sayisi"] == 1   # alanlar makine için korunur
+    assert c.put(f"{A}/urunler/YENI", json={"ad": "Yeni", "ambalaj_hacmi": "370", "hat": "Niko", "taze_tursu_sinifi": "Turşu/Turşu",
+                                             "suzme_kg": "0.18"}).status_code == 200
+    r = c.post(f"{A}/urunler/YENI/hesapla", json={"senaryo_id": sid, "tarih": "2026-10-21"})
+    assert r.status_code == 404 and r.json()["kod"] == "hedef_yok"
+    assert r.json()["mesaj"] == "YENI ürününün bu çalışmada üretim bilgisi yok; Üretim bilgileri bölümünden girin."
+    with pytest.raises(DogrulamaHatasi) as e:
+        lk.bolen_dogrula("1.5")
+    assert e.value.mesaj == "Bölen 0'dan büyük ve en fazla 1 olmalı (ör. 0,63); girilen değer 1,5."
+    ks.kullanici_olustur(oturum, "muhasebe1", "Muhasebe", "muhasebe", "gecici-sifre-123")
+    with pytest.raises(CatismaHatasi) as e:
+        ks.kullanici_olustur(oturum, "muhasebe1", "Muhasebe", "muhasebe", "gecici-sifre-123")
+    assert e.value.mesaj == "muhasebe1 kullanıcı adı zaten var; başka bir ad seçin."
+    with pytest.raises(DogrulamaHatasi, match="^Kullanıcı adı 3-64 karakter olmalı; "):
+        ks.kullanici_olustur(oturum, "A", "Muhasebe", "muhasebe", "gecici-sifre-123")
+    with pytest.raises(BulunamadiHatasi) as e:
+        hs.urun_getir(oturum, "YOK-1")
+    assert e.value.mesaj == "YOK-1 kodlu ürün bulunamadı."

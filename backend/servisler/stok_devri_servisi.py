@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from fiyat_motoru.para import SIFIR
 from ..depo import modeller as m
 from .donusum import decimal_str
-from .hatalar import DogrulamaHatasi
+from .hatalar import DogrulamaHatasi, alan_adi, hatali_satirlar_mesaji
 
 TABLO = "stok_devri"
 PARAMETRE = "satis_ortalama_maliyetten"   # 0/1; girilmezse 0
@@ -31,13 +31,13 @@ def _ondalik(ad: str, v) -> Decimal | None:
     if v is None or v == "":
         return None
     if isinstance(v, bool):
-        raise DogrulamaHatasi(f"{ad} sayı olmalı", {ad: str(v)})
+        raise DogrulamaHatasi(f"{alan_adi(ad)} bir sayı olmalı.", {ad: str(v)})
     try:
         d = Decimal(str(v).strip().replace(",", ".")) if isinstance(v, str) else Decimal(str(v))
     except ArithmeticError:
-        raise DogrulamaHatasi(f"{ad} sayı olmalı", {ad: str(v)})
+        raise DogrulamaHatasi(f"{alan_adi(ad)} bir sayı olmalı.", {ad: str(v)})
     if not d.is_finite():
-        raise DogrulamaHatasi(f"{ad} sonlu bir sayı olmalı", {ad: str(v)})
+        raise DogrulamaHatasi(f"{alan_adi(ad)} geçerli bir sayı olmalı.", {ad: str(v)})
     return d
 
 
@@ -48,15 +48,15 @@ def dogrula(adet, birim_maliyet, enflasyon=None, uretim_adedi=None) -> dict[str,
     enflasyon = _ondalik("enflasyon", enflasyon)
     uretim_adedi = _ondalik("uretim_adedi", uretim_adedi)
     if adet < 0:
-        raise DogrulamaHatasi("stok adedi 0 ya da daha büyük olmalı", {"adet": str(adet)})
+        raise DogrulamaHatasi("Stok adedi 0 ya da daha büyük olmalı.", {"adet": str(adet)})
     if birim_maliyet is not None and birim_maliyet < 0:
-        raise DogrulamaHatasi("stok birim maliyeti negatif olamaz", {"birim_maliyet": str(birim_maliyet)})
+        raise DogrulamaHatasi("Stok birim maliyeti eksi olamaz.", {"birim_maliyet": str(birim_maliyet)})
     if adet > 0 and (birim_maliyet is None or birim_maliyet <= 0):
-        raise DogrulamaHatasi("stok adedi varken birim maliyet 0'dan büyük olmalı", {"birim_maliyet": None if birim_maliyet is None else str(birim_maliyet)})
+        raise DogrulamaHatasi("Stok adedi varken birim maliyet 0'dan büyük olmalı.", {"birim_maliyet": None if birim_maliyet is None else str(birim_maliyet)})
     if enflasyon is not None and not (Decimal(-1) < enflasyon <= EN_COK_ENFLASYON):
-        raise DogrulamaHatasi("enflasyon oran olarak -%100 ile +%500 arasında olmalı (0,40 = %40)", {"enflasyon": str(enflasyon)})
+        raise DogrulamaHatasi("Enflasyon -%100 ile +%500 arasında olmalı (0,40 = %40).", {"enflasyon": str(enflasyon)})
     if uretim_adedi is not None and uretim_adedi < 0:
-        raise DogrulamaHatasi("üretim adedi 0 ya da daha büyük olmalı", {"uretim_adedi": str(uretim_adedi)})
+        raise DogrulamaHatasi("Üretim adedi 0 ya da daha büyük olmalı.", {"uretim_adedi": str(uretim_adedi)})
     return {"adet": adet, "birim_maliyet": birim_maliyet, "enflasyon": enflasyon, "uretim_adedi": uretim_adedi}
 
 
@@ -180,7 +180,7 @@ def _gunluk(s: Session, kayit_id: int, islem: str, eski: dict | None, yeni: dict
 
 def _neden(neden: str | None) -> str:
     if not (neden or "").strip():
-        raise DogrulamaHatasi("neden zorunlu", {"neden": None})
+        raise DogrulamaHatasi("Neden girin.", {"neden": None})
     return neden.strip()[:300]
 
 
@@ -256,7 +256,7 @@ def _hucre_sayi(v, oran: bool = False) -> Decimal | None:
         metin = v.strip().replace(" ", "")
         yuzde = "%" in metin
         if yuzde and not oran:
-            raise DogrulamaHatasi("yüzde işareti yalnız enflasyonda kullanılabilir")
+            raise DogrulamaHatasi("Yüzde işareti yalnız enflasyonda kullanılabilir.")
         metin = metin.strip("%")
         if "," in metin and "." in metin:   # 1.234,56
             metin = metin.replace(".", "").replace(",", ".")
@@ -276,7 +276,7 @@ def aktarim_oku(dosya_yolu) -> tuple[dict[str, str | None], list[dict], list[dic
     ws = sayfa_sec(wb, "Stokta Kalan", ("Stok Devri", "Stokta Kalanlar"), ilk_sayfaya_dus=True, kanonik_ad=False)
     satirlar_ham = [list(r) for r in ws.iter_rows(values_only=True)]
     if not satirlar_ham:
-        raise DogrulamaHatasi("dosya boş; mevcut veri değiştirilmedi", kod="bos_dosya")
+        raise DogrulamaHatasi("Dosya boş; mevcut veri değiştirilmedi.", kod="bos_dosya")
     alanlar = [Alan(a, (a,) + ESANLAMLAR.get(a, ()), zorunlu=a in ZORUNLU_SUTUNLAR) for a in SUTUNLAR]
     e = baslik_satirini_bul(iter(satirlar_ham), alanlar, ne="stokta kalan dosyası")
     baslik = satirlar_ham[e.satir - 1]
@@ -296,7 +296,7 @@ def aktarim_oku(dosya_yolu) -> tuple[dict[str, str | None], list[dict], list[dic
                 try:
                     r[alan] = _hucre_sayi(hucre(sutun), oran=(alan == "enflasyon"))
                 except DogrulamaHatasi:
-                    raise DogrulamaHatasi(f"{sutun} sayı değil: {hucre(sutun)!s}"[:200])
+                    raise DogrulamaHatasi(f"{sutun} sütunu sayı değil: {hucre(sutun)!s}"[:200])
             r.update(dogrula(r["adet"], r["birim_maliyet"], r["enflasyon"], r["uretim_adedi"]))
         except DogrulamaHatasi as e:
             hatalar.append({"satir_no": no, "mesaj": f"{kod}: {e.mesaj}"}); continue
@@ -347,7 +347,7 @@ def aktarim_uygula(s: Session, sen: m.Senaryo, dosya_yolu, neden: str, kullanici
     neden = _neden(neden)
     on = aktarim_onizle(s, sen, dosya_yolu)
     if on["hatalar"]:
-        raise DogrulamaHatasi("dosyada hatalı satırlar var; hiçbir satır yazılmadı", {"hatalar": on["hatalar"]})
+        raise DogrulamaHatasi(hatali_satirlar_mesaji(on["hatalar"], "yazılmadı"), {"hatalar": on["hatalar"]})
     yazilacak = [r for r in on["satirlar"] if r["durum"] != "ayni"]
     if yazilacak:
         mevcut = kayitlar(s, sen.id)

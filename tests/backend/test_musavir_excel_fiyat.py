@@ -234,6 +234,20 @@ def test_yalniz_sakla_onizleme_ve_red(istemci):
     assert istemci.get(f"{URL}/durum", params={"senaryo_id": sid}).json()["sablon"]["olusturan"] == "esma"
 
 
+def test_kopyada_sablon_indirilir(istemci):
+    """B7: "Geçen sezondan kopyala" ile açılan çalışmada Fiyat Çalışması Excel'i iner (şablon kopyalandı)."""
+    sid = _yukle(istemci, BUTCE)["senaryo_id"]
+    secim = {k: False for k in ("receteler", "fiyatlar", "parametreler", "gider", "uretim", "fire_kurallari")}
+    r = istemci.post(f"/api/v1/senaryolar/{sid}/kopyala", json={"sezon_ad": "2027-2028", "ad": "Kopya", "tur": "fiyat_calismasi",
+                                                               "neden": "sezon", "kopyala": {**secim, "receteler": True, "fiyatlar": True,
+                                                                                             "parametreler": True, "gider": True, "uretim": True}})
+    assert r.status_code == 201, r.text
+    assert r.json()["kopyalanan"]["sablon"] == 1
+    yeni = r.json()["id"]
+    assert istemci.get(f"{URL}/durum", params={"senaryo_id": yeni}).json()["sablon"]["dosya_adi"] == BUTCE.name
+    assert istemci.get(f"{URL}.xlsx", params={"senaryo_id": yeni}).status_code == 200
+
+
 def test_senaryo_silinince_sablon_silinir(istemci, oturum):
     sid = _yukle(istemci, BUTCE)["senaryo_id"]
     assert mx.sablon(oturum, sid) is not None

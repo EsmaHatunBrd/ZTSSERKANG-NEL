@@ -245,18 +245,46 @@ describe("Liste Çalışması", () => {
     expect(cekmece).toHaveTextContent("2026 yurtdışı liste fiyatı");
     expect(within(cekmece).getByLabelText("Liste fiyatı 2025")).toHaveValue("50");
     expect(within(cekmece).getByText("Bölen 0,63")).toBeInTheDocument();
-    await userEvent.click(within(cekmece).getByRole("button", { name: "Gerçek olarak kaydet" }));
+    // D7: her yazma işleminde neden zorunlu; boşken düğme pasif ve "Neden girin" ipucu görünür
+    const gercek = within(cekmece).getByRole("button", { name: "Gerçek olarak kaydet" });
+    expect(gercek).toBeDisabled();
+    await userEvent.type(within(cekmece).getByLabelText("Neden (zorunlu) — 2025"), "Eski fiyat listesinden");
+    await userEvent.click(gercek);
     await waitFor(() =>
-      expect(yazilan[0]).toEqual({ urun_kodu: "URUN-001", yil: 2025, pazar: "yurtdisi", liste_fiyati: "50", birim_maliyet: "24.5" }),
+      expect(yazilan[0]).toEqual({
+        urun_kodu: "URUN-001",
+        yil: 2025,
+        pazar: "yurtdisi",
+        liste_fiyati: "50",
+        birim_maliyet: "24.5",
+        neden: "Eski fiyat listesinden",
+      }),
     );
     expect(within(cekmece).getByLabelText("Yıl")).toHaveValue("2024");
     await userEvent.type(within(cekmece).getByLabelText("Yeni liste fiyatı"), "35,9");
-    await userEvent.click(within(cekmece).getByRole("button", { name: "Ekle" }));
+    const ekle = within(cekmece).getByRole("button", { name: "Ekle" });
+    expect(ekle).toBeDisabled();
+    expect(within(within(cekmece).getByRole("form", { name: "Yıl ekle" })).getByText("Neden girin")).toBeInTheDocument();
+    await userEvent.type(within(cekmece).getByLabelText("Neden (zorunlu)"), "2024 listesi");
+    await userEvent.click(ekle);
     await waitFor(() =>
-      expect(yazilan[1]).toEqual({ urun_kodu: "URUN-001", yil: 2024, pazar: "yurtdisi", liste_fiyati: "35.9", birim_maliyet: null }),
+      expect(yazilan[1]).toEqual({
+        urun_kodu: "URUN-001",
+        yil: 2024,
+        pazar: "yurtdisi",
+        liste_fiyati: "35.9",
+        birim_maliyet: null,
+        neden: "2024 listesi",
+      }),
     );
+    // Sil artık onay penceresi açar; neden girilmeden silmez
     await userEvent.click(within(cekmece).getByRole("button", { name: "Sil" }));
-    await waitFor(() => expect(silinen).toEqual(["URUN-001/2025?pazar=yurtdisi"]));
+    const onay = await screen.findByRole("dialog", { name: "2025 yurtdışı liste fiyatı silinsin mi?" });
+    expect(silinen).toEqual([]);
+    expect(within(onay).getByRole("button", { name: "Sil" })).toBeDisabled();
+    await userEvent.type(within(onay).getByLabelText("Neden (zorunlu)"), "Hatalı yıl");
+    await userEvent.click(within(onay).getByRole("button", { name: "Sil" }));
+    await waitFor(() => expect(silinen).toEqual(["URUN-001/2025?pazar=yurtdisi&neden=Hatal%C4%B1+y%C4%B1l"]));
   });
 
   it("geçmiş yoksa örnek veriyle göster düğmesi örnek üretir", async () => {

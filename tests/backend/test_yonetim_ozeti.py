@@ -55,6 +55,8 @@ def test_gercek_kitap_uc_sema_ve_tutarlilik(ortam):
     assert D_(mj["hedef"]) == D_("0.2") and D_(mj["marj_esigi"]) == D_("0.10") and mj["adet_kaynagi"] == "satis_gecmisi"
     assert abs(D_(mj["ortalama"]) - D_("0.2")) < D_("1e-9")
     assert mj["agirlikli_ortalama"] is None and mj["adetli_urun"] == 0   # satış geçmişi yüklü değil
+    assert mj["gecen_yil_agirlikli_ortalama"] is None and mj["gecen_yil_urun"] == 0
+    assert all(x["fiyat_kaynagi"] == "hesap" for x in d["hedef_alti"]["kayitlar"])
     # hedef altı sayısı Veri Kontrolü ile aynı (kitapta 0)
     kontrol = {k["kod"]: k for k in c.get(f"{A}/tutarlilik?senaryo={sid}").json()["kontroller"]}
     assert d["hedef_alti"]["toplam"] == kontrol["hedef_alti"]["sayi"] == 0 and D_(d["hedef_alti"]["esik"]) == D_("0.10")
@@ -93,6 +95,19 @@ def test_teklif_ve_stok_etkisi(istemci, oturum):
     assert d["teklifler"]["acik_sayi"] == 0 and d["stok_etkisi"] is None
     # ağırlıklı marj: adedi bilinen 2 ürün (TEST 1000, T2 100); kâr oranı her üründe 0,20 -> ağırlıklı da 0,20
     assert d["marj"]["adetli_urun"] == 2 and abs(D_(d["marj"]["agirlikli_ortalama"]) - D_("0.2")) < D_("1e-9")
+    # geçen yılın satış fiyatıyla marj: Kârlılık haritasıyla aynı kaynak ve formül (adetle ağırlıklı, yalnız satış geçmişi olan ürünler)
+    kh = {x["kod"]: x for x in istemci.get(f"{A}/analiz/karlilik?senaryo={sid}").json()["kayitlar"]}
+    gy = [x for x in kh.values() if x["fiyat_kaynagi"] == "satis_gecmisi" and x["adet"] is not None]
+    beklenen = sum((D_(x["satis_fiyati"]) - D_(x["maliyet"])) * D_(x["adet"]) for x in gy) / sum(D_(x["maliyet"]) * D_(x["adet"]) for x in gy)
+    assert d["marj"]["gecen_yil_urun"] == len(gy) == 2 and D_(d["marj"]["gecen_yil_agirlikli_ortalama"]) == beklenen
+    # marj eşiği altı: Kârlılık haritasının marjıyla (geçen yıl fiyatı; yoksa hesaplanan) eşiğin altında kalanlar, kaynağı satırda
+    ha = d["hedef_alti"]
+    alti = sorted((x for x in kh.values() if x["marj"] is not None and D_(x["marj"]) < D_(ha["esik"])), key=lambda x: (D_(x["marj"]), x["kod"]))
+    assert ha["toplam"] == len(alti) >= 1 and [x["kod"] for x in ha["kayitlar"]] == [x["kod"] for x in alti]
+    for x in ha["kayitlar"]:
+        assert D_(x["kar_orani"]) == D_(kh[x["kod"]]["marj"]) and D_(x["satis"]) == D_(kh[x["kod"]]["satis_fiyati"])
+        assert x["fiyat_kaynagi"] == ("gecen_yil" if kh[x["kod"]]["fiyat_kaynagi"] == "satis_gecmisi" else "hesap")
+    assert ha["kayitlar"][0]["kod"] == "T2" and ha["kayitlar"][0]["fiyat_kaynagi"] == "gecen_yil"   # 1 TL'ye satılmış: eksi marj
     # teklif ekle (taslak): açık sayı ve açık toplam artar; en eski açık listede
     hid = istemci.post(f"{A}/urunler/TEST/hesaplar", json={"senaryo_id": sid, "tarih": "2026-10-21"}).json()["id"]
     r = istemci.post(f"{A}/hesaplar/{hid}/teklifler", json={"kar_orani": "0.2", "musteri": "Müşteri A"})

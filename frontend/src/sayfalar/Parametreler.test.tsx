@@ -23,15 +23,17 @@ beforeEach(() => {
 });
 
 describe("Parametreler", () => {
-  it("grupları ve değerleri gösterir; dağıtım çarpanı salt okunurdur", async () => {
+  it("grupları ve değerleri gösterir; dağıtım çarpanları bu sayfada gösterilmez", async () => {
     kurSayfa(<Parametreler />);
     expect(await screen.findByRole("heading", { name: "Genel" })).toBeInTheDocument();
-    for (const g of ["Kurlar", "Faiz", "Stok süresi", "Teklif kâr oranları", "Dağıtım çarpanları"]) {
+    for (const g of ["Kurlar", "Faiz", "Stok süresi", "Teklif kâr oranları"]) {
       expect(screen.getByRole("heading", { name: new RegExp(g) })).toBeInTheDocument();
     }
     const satir = screen.getByText("enflasyon").closest("tr") as HTMLElement;
     expect(await within(satir).findByText("25,00 %")).toBeInTheDocument();
-    expect(screen.getByText("Faz 3")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Dağıtım çarpanları/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("dagitim_carpani.uretim")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Faz/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Değiştir dagitim_carpani.uretim" })).not.toBeInTheDocument();
   });
 
@@ -52,14 +54,14 @@ describe("Parametreler", () => {
     await u.clear(d);
     await u.type(d, "52,5");
     await u.type(screen.getByLabelText("Neden"), "Kur güncellemesi");
-    expect(screen.getByText(/kur\.USD.*52,5/)).toBeInTheDocument();
+    expect(screen.getByText(/Özet: USD\/TL kuru 52,5 TL olacak/)).toBeInTheDocument();
     await u.click(screen.getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(kayit.parametre).toHaveLength(1));
     expect(kayit.parametre[0]).toEqual({
       anahtar: "kur.USD",
       govde: { deger: "52.5", gecerlilik_basi: bugunIso(), neden: "Kur güncellemesi", kapsam_tipi: "genel" },
     });
-    expect(await screen.findByRole("status")).toHaveTextContent(/kur\.USD değeri kaydedildi/);
+    expect(await screen.findByRole("status")).toHaveTextContent("USD/TL kuru değeri kaydedildi.");
   });
 
   it("ürün kapsamında kapsam_id gönderir", async () => {
@@ -70,7 +72,7 @@ describe("Parametreler", () => {
     await u.selectOptions(await screen.findByLabelText("Ürün"), "URUN-001");
     const d = screen.getByLabelText(/Yeni değer/);
     await u.clear(d);
-    await u.type(d, "0,3");
+    await u.type(d, "30");
     await u.type(screen.getByLabelText("Neden"), "Özel fiyat");
     await waitFor(() => expect(screen.getByRole("button", { name: "Kaydet" })).toBeEnabled());
     await u.click(screen.getByRole("button", { name: "Kaydet" }));
@@ -133,13 +135,13 @@ describe("Parametreler", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/geçersiz/);
   });
 
-  it("negatif parametre değeri (-0,05) kabul edilir ve POST edilir", async () => {
+  it("negatif parametre değeri (-%5) kabul edilir ve oran olarak POST edilir", async () => {
     const u = userEvent.setup();
     kurSayfa(<Parametreler />);
     await u.click(await screen.findByRole("button", { name: "Değiştir enflasyon" }));
     const d = await screen.findByLabelText(/Yeni değer/);
     await u.clear(d);
-    await u.type(d, "-0,05");
+    await u.type(d, "-5");
     await u.type(screen.getByLabelText("Neden"), "Deflasyon tahmini");
     await u.click(screen.getByRole("button", { name: "Kaydet" }));
     await waitFor(() => expect(kayit.parametre).toHaveLength(1));
@@ -194,6 +196,78 @@ describe("Parametreler", () => {
       anahtar: "satis_ortalama_maliyetten",
       govde: { deger: "1", gecerlilik_basi: bugunIso(), neden: "Stok kararı", kapsam_tipi: "genel" },
     });
-    expect(await screen.findByRole("status")).toHaveTextContent("satis_ortalama_maliyetten açıldı.");
+    expect(await screen.findByRole("status")).toHaveTextContent("Satış fiyatı ortalama maliyetten açıldı.");
+  });
+
+  it("oran parametresi yüzde olarak girilir: kutu mevcut değeri yüzde gösterir, 30 yazınca 0.3 gider", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Değiştir satis_kar" }));
+    const d = await screen.findByLabelText(/Yeni değer \(yüzde/);
+    expect(d).toHaveValue("20");
+    expect(screen.getByText("%")).toBeInTheDocument();
+    await u.clear(d);
+    await u.type(d, "30");
+    await u.type(screen.getByLabelText("Neden"), "Yeni kâr");
+    expect(screen.getByText(/Özet: Satış kâr oranı 30,00 % olacak/)).toBeInTheDocument();
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    await waitFor(() => expect(kayit.parametre).toHaveLength(1));
+    expect(kayit.parametre[0]).toMatchObject({ anahtar: "satis_kar", govde: { deger: "0.3", kapsam_tipi: "genel" } });
+    expect(screen.queryByRole("heading", { name: "Değer olağan dışı görünüyor" })).not.toBeInTheDocument();
+  });
+
+  it("%100'ün üstündeki oran 'Yine de kaydet' onayı ister; Vazgeç gönderMEZ, onay 2.5 gönderir", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Değiştir enflasyon" }));
+    const d = await screen.findByLabelText(/Yeni değer/);
+    expect(d).toHaveValue("25");
+    await u.clear(d);
+    await u.type(d, "250");
+    await u.type(screen.getByLabelText("Neden"), "Yanlış yazım");
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    const onay = await screen.findByRole("dialog", { name: "Değer olağan dışı görünüyor" });
+    expect(onay).toHaveTextContent("25,00 % → 250,00 %");
+    expect(onay).toHaveTextContent(/%100'ün üstünde/);
+    await u.click(within(onay).getByRole("button", { name: "Vazgeç" }));
+    expect(kayit.parametre).toHaveLength(0);
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    await u.click(
+      within(await screen.findByRole("dialog", { name: "Değer olağan dışı görünüyor" })).getByRole("button", { name: "Yine de kaydet" }),
+    );
+    await waitFor(() => expect(kayit.parametre).toHaveLength(1));
+    expect(kayit.parametre[0]).toMatchObject({ anahtar: "enflasyon", govde: { deger: "2.5" } });
+  });
+
+  it("kur önceki değerden %50'den fazla değişirse onay ister", async () => {
+    const u = userEvent.setup();
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Değiştir kur.USD" }));
+    const d = await screen.findByLabelText(/Yeni değer/);
+    await u.clear(d);
+    await u.type(d, "5");
+    await u.type(screen.getByLabelText("Neden"), "Deneme");
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    const onay = await screen.findByRole("dialog", { name: "Değer olağan dışı görünüyor" });
+    expect(onay).toHaveTextContent("50 TL → 5 TL");
+    expect(onay).toHaveTextContent(/%50'den fazla/);
+    expect(kayit.parametre).toHaveLength(0);
+  });
+
+  it("sunucunun sınır hatası (422) diyalogda gösterilir", async () => {
+    const u = userEvent.setup();
+    sunucu.use(
+      http.post("*/api/v1/parametreler/:anahtar/degerler", () =>
+        HttpResponse.json({ hata: "dogrulama", mesaj: "USD/TL kuru 0'dan büyük olmalı.", alanlar: {} }, { status: 422 }),
+      ),
+    );
+    kurSayfa(<Parametreler />);
+    await u.click(await screen.findByRole("button", { name: "Değiştir kur.USD" }));
+    const d = await screen.findByLabelText(/Yeni değer/);
+    await u.clear(d);
+    await u.type(d, "45");
+    await u.type(screen.getByLabelText("Neden"), "Deneme");
+    await u.click(screen.getByRole("button", { name: "Kaydet" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("USD/TL kuru 0'dan büyük olmalı.");
   });
 });

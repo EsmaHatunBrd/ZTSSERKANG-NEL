@@ -8,7 +8,7 @@ from ..servisler.donusum import decimal_str, zaman_iso
 from ..servisler.hatalar import BulunamadiHatasi, ServisHatasi
 from fiyat_motoru.para import SIFIR
 from .bagimliliklar import OturumDep, SenaryoDep, kullanici_ver
-from .semalar import AileDegisCikis, AileGiris, DegisiklikListesi, HATA_404_409_422, HATA_404_422, HesapKaydiYaniti, HesapKayitCikis, HesapListesi, HesapYaniti, HesaplaGiris, KodDegistirCikis, KodDegistirGiris, KurallaraBirakCikis, KurallaraBirakGiris, PasifCikis, ReceteCikis, ReceteDetayCikis, ReceteEkleCikis, ReceteSatirGiris, ReceteVersiyonListesi, TopluKaydetCikis, TopluKaydetGiris, UretimHedefiCikis, UretimHedefiGiris, UretimHedefiNedenliGiris, UrunCikis, UrunGiris, UrunListesi, UyariListesi
+from .semalar import AileDegisCikis, AileGiris, DegisiklikListesi, HATA_404_409_422, HATA_404_422, HesapKaydiYaniti, HesapKayitCikis, HesapListesi, HesapYaniti, HesaplaGiris, KodDegistirCikis, KodDegistirGiris, KurallaraBirakCikis, KurallaraBirakGiris, PasifCikis, ReceteCikis, ReceteDetayCikis, ReceteEkleCikis, ReceteEkleGiris, ReceteSatirGiris, ReceteVersiyonListesi, TopluKaydetCikis, TopluKaydetGiris, UretimHedefiCikis, UretimHedefiGiris, UretimHedefiNedenliGiris, UrunCikis, UrunGiris, UrunListesi, UyariListesi
 
 router = APIRouter(tags=["urunler"])
 
@@ -118,10 +118,12 @@ def _parametre_ozeti(parametreler: dict | None, kullanilan: dict) -> dict | None
 def _gorunum(urun_kodu: str, senaryo_id: int, tarih: date, sonuc: dict, recete: list[dict], fire_kaynaklari: list, kullanilan: dict,
              para_birimleri: dict[str, str | None] | None = None, zs_haritasi: dict[str, str | None] | None = None,
              uretim: dict | None = None, parametreler: dict | None = None, notlar: list[str] | None = None,
-             seviyeler: list[int | None] | None = None, stok_devri: dict | None = None, satis_ortalamadan: bool = False) -> dict:
+             seviyeler: list[int | None] | None = None, stok_devri: dict | None = None, satis_ortalamadan: bool = False,
+             siralar: list[int] | None = None) -> dict:
     """Tek çizici: canlı hesap ve kayıtlı hesap aynı sözlük biçimlerinden (decimal_str çıktısı) bu yanıtı üretir.
     Firesiz bloklar `sonuc["firesiz"]`dan gelir; firesiz alanı olmayan eski snapshot'larda None döner.
-    uretim/parametreler/notlar/zs/birim eski snapshot'larda bulunmayabilir (None / boş)."""
+    uretim/parametreler/notlar/zs/birim eski snapshot'larda bulunmayabilir (None / boş).
+    siralar: taslak reçete yapısında (silinen/eklenen satır) malzeme satırlarının reçete sıraları; None ise sıra = indeks + 1."""
     def elle(i: int, alan: str):
         return recete[i].get(alan) if i < len(recete) else None
     malzeme_satiri = lambda s_: s_.get("grup") == "malzeme"
@@ -139,7 +141,11 @@ def _gorunum(urun_kodu: str, senaryo_id: int, tarih: date, sonuc: dict, recete: 
         if not malzeme_satiri(s_):
             return None
         return elle(i, "zs_elle") or (zs_haritasi.get(s_.get("kod")) if zs_haritasi is not None else None)
-    satirlar = [dict(s_, sira=(i + 1) if malzeme_satiri(s_) else None, doviz=doviz(i, s_),
+    def sira(i: int, s_: dict):
+        if not malzeme_satiri(s_):
+            return None
+        return siralar[i] if siralar is not None and i < len(siralar) else i + 1
+    satirlar = [dict(s_, sira=sira(i, s_), doviz=doviz(i, s_),
                      fire_orani=recete[i]["fire_orani"] if i < len(recete) else None,
                      fire_kaynagi=fire_kaynaklari[i] if i < len(fire_kaynaklari) else None,
                      tutar_firesiz=s_.get("tutar_firesiz"), miktar_kaynagi=s_.get("miktar_kaynagi"), fiyat_kaynagi=s_.get("fiyat_kaynagi"),
@@ -163,7 +169,8 @@ def _hesap_yaniti(c, urun_kodu, senaryo_id, tarih):
     pb = {k: mz.para_birimi for k, mz in (c.malzemeler or {}).items()}
     zs = {k: mz.zs for k, mz in (c.malzemeler or {}).items()}
     return _gorunum(urun_kodu, senaryo_id, tarih, decimal_str(c.sonuc), decimal_str(list(c.girdi.recete)), c.fire_kaynaklari, decimal_str(c.kullanilan_parametreler), pb,
-                    zs, decimal_str(c.girdi.uretim), decimal_str(c.parametreler), c.notlar, c.seviyeler, decimal_str(c.stok_devri), c.satis_ortalamadan)
+                    zs, decimal_str(c.girdi.uretim), decimal_str(c.parametreler), c.notlar, c.seviyeler, decimal_str(c.stok_devri), c.satis_ortalamadan,
+                    c.siralar)
 
 
 def _hedef_dict(h) -> dict:
@@ -280,9 +287,15 @@ def recete_getir(s: OturumDep, kod: str, sen: SenaryoDep, tarih: date | None = N
 
 
 @router.post("/urunler/{kod}/recete", status_code=201, response_model=ReceteEkleCikis, responses=HATA_404_409_422)
-def recete_ekle(s: OturumDep, kod: str, g: list[ReceteSatirGiris], sen: SenaryoDep, k: str = Depends(kullanici_ver)):
+def recete_ekle(s: OturumDep, kod: str, g: ReceteEkleGiris | list[ReceteSatirGiris], sen: SenaryoDep, k: str = Depends(kullanici_ver)):
+    """Gövde: {satirlar, neden} (ekran; neden zorunlu, günlüğe yazılır) ya da eski biçim yalnız satır listesi (nedensiz; betik/test uyumu).
+    Ekran biçiminde yeni eklenen satırın malzeme kartı yoksa 422 (kod malzeme_yok); eski biçim aktarım gibi davranır, denetlenmez."""
     u = hs.urun_getir(s, kod)
-    r = rs.yeni_versiyon(s, u.id, sen.id, [x.model_dump() for x in g], "elle", k)
+    satirlar, neden = (g.satirlar, g.neden) if isinstance(g, ReceteEkleGiris) else (g, None)
+    dokum = [x.model_dump() for x in satirlar]
+    if isinstance(g, ReceteEkleGiris):
+        rs.kartsiz_malzeme_denetle(s, dokum, rs.aktif_recete_veya_none(s, u.id, sen.id))
+    r = rs.yeni_versiyon(s, u.id, sen.id, dokum, "elle", k, neden)
     return {"id": r.id, "versiyon": r.versiyon, "satir_sayisi": len(r.satirlar)}
 
 

@@ -265,7 +265,7 @@ def test_api_urun_karsilastirma(istemci, oturum):
     assert c.get(u).json() == {"gecen_yil": None, "enflasyon_esigi": None, "uretim_adedi_etkisi": None, "hesap_hatasi": None}
     tl = D_(c.post(f"{A}/urunler/TEST/hesapla", json={"senaryo_id": sid, "tarih": "2026-10-21"}).json()["fiyatlar"]["satis_tl"])
     for tarih, fiyat, adet, mus in (("2025-08-01", "10", "100", "A"), ("2026-02-01", "20", "300", "B")):
-        assert c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": mus, "tarih": tarih, "fiyat": fiyat, "para_birimi": "TL", "adet": adet}).status_code == 201
+        assert c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": mus, "tarih": tarih, "fiyat": fiyat, "para_birimi": "TL", "adet": adet, "neden": "test"}).status_code == 201
     _kapasite(oturum, sid, "TEST", "130000")
     r = c.get(u)
     assert r.status_code == 200, r.text
@@ -307,9 +307,9 @@ def test_dashboard_yeni_alanlar_null_ve_dolu(istemci, oturum):
     satirlar = {x["kod"]: x for x in c.get(f"{A}/urunler?senaryo={sid}&tarih=2026-10-21&tum=1").json()["kayitlar"]}   # Faz 5c: BOS reçetesiz, tum=1
     assert all(satirlar["TEST"][a] is None for a in yeni) and all(satirlar["BOS"][a] is None for a in yeni)
     for tarih, fiyat, adet in (("2025-08-01", "10", "100"), ("2026-02-01", "20", "300")):
-        c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": "A", "tarih": tarih, "fiyat": fiyat, "para_birimi": "TL", "adet": adet})
+        c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": "A", "tarih": tarih, "fiyat": fiyat, "para_birimi": "TL", "adet": adet, "neden": "test"})
     _kapasite(oturum, sid, "TEST", "130000"); _kapasite(oturum, sid, "BOS", "1000")
-    c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "BOS", "musteri": "A", "tarih": "2025-08-01", "fiyat": "1", "para_birimi": "TL", "adet": "1"})  # yazma -> önbellek boşalır
+    c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "BOS", "musteri": "A", "tarih": "2025-08-01", "fiyat": "1", "para_birimi": "TL", "adet": "1", "neden": "test"})  # yazma -> önbellek boşalır
     satirlar = {x["kod"]: x for x in c.get(f"{A}/urunler?senaryo={sid}&tarih=2026-10-21&tum=1").json()["kayitlar"]}
     t = satirlar["TEST"]
     assert D_(t["gecen_yil_tl"]) == D_("17.5") and t["enflasyon_durumu"] == "altinda" and D_(t["enflasyon_fark_yuzde"]) < 0
@@ -346,7 +346,7 @@ def test_api_urun_karsilastirma_override_hesabi_patlarsa_500_degil(istemci, otur
     from decimal import InvalidOperation
     c = istemci
     sid = _senaryo(c); _kur(c, sid, oturum)
-    c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": "A", "tarih": "2025-08-01", "fiyat": "10", "para_birimi": "TL", "adet": "100"})
+    c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": "A", "tarih": "2025-08-01", "fiyat": "10", "para_birimi": "TL", "adet": "100", "neden": "test"})
     _kapasite(oturum, sid, "TEST", "130000")
     gercek = hs.hesapla
 
@@ -406,7 +406,7 @@ def test_dashboard_enflasyon_altinda_toplam_tum_satirlar(istemci, oturum):
     c = istemci
     sid = _senaryo(c); _kur(c, sid, oturum)
     assert c.get(f"{A}/urunler?senaryo={sid}&tarih=2026-10-21").json()["enflasyon_altinda_toplam"] == 0
-    c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": "A", "tarih": "2025-08-01", "fiyat": "20", "para_birimi": "TL", "adet": "10"})  # önbellek boşalır
+    c.post(f"{A}/satis-gecmisi", json={"urun_kodu": "TEST", "musteri": "A", "tarih": "2025-08-01", "fiyat": "20", "para_birimi": "TL", "adet": "10", "neden": "test"})  # önbellek boşalır
     r = c.get(f"{A}/urunler?senaryo={sid}&tarih=2026-10-21&boyut=1&sayfa=2")   # TEST ilk sayfada değil/boş sayfa: yine de toplam tüm satırlardan
     assert r.json()["kayitlar"] == [] and r.json()["enflasyon_altinda_toplam"] == 1
 

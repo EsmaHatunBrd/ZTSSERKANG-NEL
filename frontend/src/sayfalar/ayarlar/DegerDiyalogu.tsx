@@ -10,13 +10,9 @@ import { sayiApi, sayiGecerli, sayiKurali } from "./ortak";
 
 const semaYap = (negatifIzin: boolean) =>
   z.object({
-  deger: z
-    .string()
-    .trim()
-    .min(1, "Değer zorunlu")
-    .superRefine(sayiKurali(negatifIzin)),
-  tarih: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Geçerlilik tarihi zorunlu"),
-  neden: z.string().trim().min(1, "Neden zorunlu"),
+    deger: z.string().trim().min(1, "Değer zorunlu").superRefine(sayiKurali(negatifIzin)),
+    tarih: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Geçerlilik tarihi zorunlu"),
+    neden: z.string().trim().min(1, "Neden zorunlu"),
   });
 type Form = z.infer<ReturnType<typeof semaYap>>;
 
@@ -44,6 +40,8 @@ interface Props {
   engel?: string | null;
   /** Parametre değerleri gibi eksi olabilen değerler için. Varsayılan: negatif reddedilir. */
   negatifIzin?: boolean;
+  /** Değer kutusunun sağında gösterilen birim (ör. "%"). */
+  birimEki?: string;
 }
 
 /** Değer + geçerlilik tarihi + zorunlu neden alan diyalog; fiyat ve parametre yazımında ortak kullanılır. */
@@ -60,6 +58,7 @@ export function DegerDiyalogu({
   children,
   engel,
   negatifIzin = false,
+  birimEki,
 }: Props) {
   const id = useId();
   const bugun = useMemo(() => bugunIso(), []);
@@ -90,7 +89,16 @@ export function DegerDiyalogu({
             <label htmlFor={`${id}-deger`} className="text-sm font-medium">
               {degerEtiketi}
             </label>
-            <Girdi id={`${id}-deger`} inputMode="decimal" aria-invalid={!!errors.deger} {...register("deger")} />
+            {birimEki ? (
+              <span className="flex items-center gap-2">
+                <Girdi id={`${id}-deger`} inputMode="decimal" aria-invalid={!!errors.deger} {...register("deger")} />
+                <span className="text-sm text-muted-foreground" aria-hidden>
+                  {birimEki}
+                </span>
+              </span>
+            ) : (
+              <Girdi id={`${id}-deger`} inputMode="decimal" aria-invalid={!!errors.deger} {...register("deger")} />
+            )}
             {errors.deger && (
               <p role="alert" className="text-sm text-destructive">
                 {errors.deger.message}

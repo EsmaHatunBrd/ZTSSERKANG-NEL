@@ -2,6 +2,9 @@ import { useState, type FormEvent } from "react";
 import { hataMetni } from "@/api/istemci";
 import { useListeFiyatiKaydet, useListeFiyatiSil } from "@/api/sorgular/liste";
 import { useDuzenlemeKilidi } from "@/bilesenler/DuzenlemeKilidi";
+import { NedenAlani } from "@/bilesenler/NedenAlani";
+import { NEDEN_IPUCU, nedenGecerli } from "@/yardimcilar/neden";
+import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import type { ListeCalismaSatiri, ListePazari } from "@/api/tipler";
 import { Button } from "@/bilesenler/ui/button";
@@ -34,11 +37,16 @@ function YilSatiri({ kod, yil, pazar, liste, maliyet, bolen, ornek }: SatirProps
   const sil = useListeFiyatiSil();
   const [l, setL] = useState(kutuMetni(liste));
   const [mal, setMal] = useState(kutuMetni(maliyet));
+  const [neden, setNeden] = useState("");
+  const [silOnayi, setSilOnayi] = useState(false);
+  const [silmeNedeni, setSilmeNedeni] = useState("");
   const degisti = l !== kutuMetni(liste) || mal !== kutuMetni(maliyet);
   const lApi = sayiApi(l);
   const malApi = mal.trim() === "" ? null : sayiApi(mal);
   const gecerli = lApi !== null && D(lApi).gt(0) && (mal.trim() === "" || (malApi !== null && D(malApi).gt(0)));
-  const hata = kaydet.error ?? sil.error;
+  const hata = kaydet.error;
+  // Kaydedilecek bir şey varsa (değişiklik ya da örnek satırın gerçeğe çevrilmesi) neden sorulur.
+  const kaydedilebilir = degisti || ornek;
   return (
     <li className="flex flex-col gap-2 rounded-lg border p-3">
       <div className="flex items-center justify-between gap-2">
@@ -64,6 +72,7 @@ function YilSatiri({ kod, yil, pazar, liste, maliyet, bolen, ornek }: SatirProps
           />
         </label>
       </div>
+      {kaydedilebilir && <NedenAlani etiket={`Neden (zorunlu) — ${yil}`} deger={neden} onDegis={setNeden} disabled={kilitli} />}
       <div className="flex justify-end gap-2">
         <Button
           type="button"
@@ -71,16 +80,22 @@ function YilSatiri({ kod, yil, pazar, liste, maliyet, bolen, ornek }: SatirProps
           variant="outline"
           disabled={sil.isPending || kilitli}
           title={kilitNotu}
-          onClick={() => sil.mutate({ urun_kodu: kod, yil, pazar })}
+          onClick={() => {
+            sil.reset();
+            setSilmeNedeni("");
+            setSilOnayi(true);
+          }}
         >
           Sil
         </Button>
         <Button
           type="button"
           size="sm"
-          disabled={(!degisti && !ornek) || !gecerli || kaydet.isPending || kilitli}
-          title={kilitNotu}
-          onClick={() => kaydet.mutate({ urun_kodu: kod, yil, pazar, liste_fiyati: lApi as string, birim_maliyet: malApi })}
+          disabled={!kaydedilebilir || !gecerli || !nedenGecerli(neden) || kaydet.isPending || kilitli}
+          title={kilitNotu ?? (kaydedilebilir && !nedenGecerli(neden) ? NEDEN_IPUCU : undefined)}
+          onClick={() =>
+            kaydet.mutate({ urun_kodu: kod, yil, pazar, liste_fiyati: lApi as string, birim_maliyet: malApi, neden: neden.trim() })
+          }
         >
           {ornek && !degisti ? "Gerçek olarak kaydet" : "Kaydet"}
         </Button>
@@ -89,6 +104,22 @@ function YilSatiri({ kod, yil, pazar, liste, maliyet, bolen, ornek }: SatirProps
         <p role="alert" className="text-sm text-destructive">
           {hataMetni(hata)}
         </p>
+      )}
+      {silOnayi && (
+        <OnayDiyalogu
+          baslik={`${yil} ${PAZAR_ADI[pazar].toLocaleLowerCase("tr")} liste fiyatı silinsin mi?`}
+          onayMetni="Sil"
+          bekliyor={sil.isPending}
+          onayPasif={!nedenGecerli(silmeNedeni)}
+          hata={sil.error ? hataMetni(sil.error) : null}
+          onOnayla={() => sil.mutate({ urun_kodu: kod, yil, pazar, neden: silmeNedeni.trim() }, { onSuccess: () => setSilOnayi(false) })}
+          onVazgec={() => setSilOnayi(false)}
+        >
+          <p>
+            {kod} için {yil} yılının liste fiyatı ve birim maliyeti silinecek. Silinen değer Değişiklik Günlüğünde saklanır.
+          </p>
+          <NedenAlani deger={silmeNedeni} onDegis={setSilmeNedeni} autoFocus />
+        </OnayDiyalogu>
       )}
     </li>
   );
@@ -102,6 +133,7 @@ function YilEkle({ kod, pazar, varsayilanYil }: { kod: string; pazar: ListePazar
   const [yil, setYil] = useState(String(varsayilanYil));
   const [l, setL] = useState("");
   const [mal, setMal] = useState("");
+  const [neden, setNeden] = useState("");
   const [uyari, setUyari] = useState<string | null>(null);
 
   function gonder(e: FormEvent) {
@@ -112,13 +144,15 @@ function YilEkle({ kod, pazar, varsayilanYil }: { kod: string; pazar: ListePazar
     if (!Number.isInteger(y) || y < 2000 || y > 2100) return setUyari("Yıl 2000–2100 arasında olmalı");
     if (lApi === null || !D(lApi).gt(0)) return setUyari("Liste fiyatı 0'dan büyük bir sayı olmalı");
     if (mal.trim() !== "" && (malApi === null || !D(malApi).gt(0))) return setUyari("Birim maliyet 0'dan büyük bir sayı olmalı");
+    if (!nedenGecerli(neden)) return setUyari(NEDEN_IPUCU);
     setUyari(null);
     kaydet.mutate(
-      { urun_kodu: kod, yil: y, pazar, liste_fiyati: lApi, birim_maliyet: malApi },
+      { urun_kodu: kod, yil: y, pazar, liste_fiyati: lApi, birim_maliyet: malApi, neden: neden.trim() },
       {
         onSuccess: () => {
           setL("");
           setMal("");
+          setNeden("");
           setYil(String(y - 1));
         },
       },
@@ -148,8 +182,14 @@ function YilEkle({ kod, pazar, varsayilanYil }: { kod: string; pazar: ListePazar
           />
         </label>
       </div>
+      <NedenAlani deger={neden} onDegis={setNeden} disabled={kilitli} />
       <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={kaydet.isPending || kilitli} title={kilitNotu}>
+        <Button
+          type="submit"
+          size="sm"
+          disabled={kaydet.isPending || kilitli || !nedenGecerli(neden)}
+          title={kilitNotu ?? (nedenGecerli(neden) ? undefined : NEDEN_IPUCU)}
+        >
           Ekle
         </Button>
       </div>

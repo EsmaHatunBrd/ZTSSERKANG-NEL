@@ -6,15 +6,16 @@ from sqlalchemy.engine import Row
 from sqlalchemy.orm import Session
 from ..depo import modeller as m
 from .donusum import decimal_str
-from .hatalar import BulunamadiHatasi, DogrulamaHatasi
+from .hatalar import BulunamadiHatasi, CatismaHatasi, DogrulamaHatasi
 
 DURUMLAR = ("taslak", "gonderildi", "kabul", "red")
+KABUL_SILINEMEZ = "Kabul edilmiş teklif silinemez; önce durumunu değiştirin."
 
 
 def tur_ekle(s: Session, hesap_id: int, kar_orani: Decimal, musteri: str | None = None, notu: str | None = None, kullanici: str = "sistem") -> m.Teklif:
     h = s.get(m.MaliyetHesabi, hesap_id)
     if h is None:
-        raise BulunamadiHatasi("hesap yok", {"hesap_id": hesap_id})
+        raise BulunamadiHatasi("Kayıtlı hesap bulunamadı.", {"hesap_id": hesap_id})
     kar = Decimal(kar_orani); carpan = 1 + kar
     sn = h.sonuc_snapshot
     doviz = sn.get("doviz_maliyet", {})
@@ -65,15 +66,17 @@ def _silinen_son_tur(s: Session, hesap_id: int) -> int:
     return max((e.get("tur_no") or 0 for e in s.scalars(q) if isinstance(e, dict) and e.get("hesap_id") == hesap_id), default=0)
 
 
-def sil(s: Session, teklif_id: int, kullanici: str = "sistem") -> None:
+def sil(s: Session, teklif_id: int, kullanici: str = "sistem", neden: str | None = None) -> None:
     """Teklif turu kalıcı silinir; içeriği (ürün, tur, kâr, fiyat, müşteri, durum) Değişiklik Günlüğünde saklanır.
-    Diğer turların numarası değişmez."""
+    Diğer turların numarası değişmez. Kabul edilmiş teklif silinmez (409); önce durumu değiştirilmelidir."""
     t = s.get(m.Teklif, teklif_id)
     if t is None:
-        raise BulunamadiHatasi("teklif yok", {"teklif_id": teklif_id})
+        raise BulunamadiHatasi("Teklif turu bulunamadı.", {"teklif_id": teklif_id})
+    if t.durum == "kabul":
+        raise CatismaHatasi(KABUL_SILINEMEZ)
     h = s.get(m.MaliyetHesabi, t.maliyet_hesabi_id)
     u = s.get(m.Urun, h.urun_id) if h else None
-    s.add(m.DegisiklikKaydi(tablo="teklif", kayit_id=t.id, islem="sil", yeni=None, kullanici=kullanici,
+    s.add(m.DegisiklikKaydi(tablo="teklif", kayit_id=t.id, islem="sil", yeni={"_neden": neden} if neden else None, kullanici=kullanici,
                             eski=decimal_str({"urun_kodu": u.kod if u else None, "senaryo_id": h.senaryo_id if h else None,
                                               "hesap_id": t.maliyet_hesabi_id, "tur_no": t.tur_no, "kar_orani": t.kar_orani,
                                               "fiyat_tl": t.fiyat_tl, "musteri": t.musteri, "durum": t.durum})))
@@ -83,9 +86,9 @@ def sil(s: Session, teklif_id: int, kullanici: str = "sistem") -> None:
 
 def durum_guncelle(s: Session, teklif_id: int, durum: str) -> m.Teklif:
     if durum not in DURUMLAR:
-        raise DogrulamaHatasi("durum geçersiz", {"durum": durum, "izinli": list(DURUMLAR)})
+        raise DogrulamaHatasi("Teklif durumu taslak, gönderildi, kabul ya da red olmalı.", {"durum": durum, "izinli": list(DURUMLAR)})
     t = s.get(m.Teklif, teklif_id)
     if t is None:
-        raise BulunamadiHatasi("teklif yok", {"teklif_id": teklif_id})
+        raise BulunamadiHatasi("Teklif turu bulunamadı.", {"teklif_id": teklif_id})
     t.durum = durum; s.flush()
     return t

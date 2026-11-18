@@ -14,7 +14,7 @@ import { Button, buttonVariants } from "@/bilesenler/ui/button";
 import { VeriTablosu, type SutunTanimi } from "@/bilesenler/VeriTablosu";
 import { YuzdeHucresi } from "@/bilesenler/YuzdeHucresi";
 import { cn } from "@/lib/utils";
-import { D, paraBicimle, yuzdeBicimle } from "@/yardimcilar/para";
+import { D, paraBicimle, topla, yuzdeBicimle } from "@/yardimcilar/para";
 
 interface BolgeTanimi {
   ad: KarlilikBolgesi;
@@ -44,6 +44,17 @@ const EKSEN = { fontSize: 12, fill: "var(--muted-foreground)" };
 const OLCU = { width: 720, height: 380 };
 const sayi = (x: string | null) => (x === null ? null : Number(x));
 const adetBicimle = (x: string | number) => paraBicimle(String(x), "", 0);
+
+/** Görünen (bölge ve arama süzgecinden geçmiş) satırların toplamı; Decimal ile, boş değerler atlanır. */
+function toplamSatiri(satirlar: KarlilikSatiri[]) {
+  const adet = topla(satirlar.flatMap((r) => (r.adet === null ? [] : [r.adet])));
+  const kar = topla(satirlar.flatMap((r) => (r.yillik_kar === null ? [] : [r.yillik_kar])));
+  return {
+    ad: `Toplam (${satirlar.length} ürün)`,
+    adet: <ParaHucresi deger={adet.toString()} paraBirimi="" basamak={0} />,
+    yillik_kar: <ParaHucresi deger={kar.toString()} basamak={0} className="font-semibold" />,
+  };
+}
 
 interface Nokta {
   kod: string;
@@ -338,6 +349,7 @@ export default function KarlilikHaritasi() {
         hata={q.error as ApiHatasi | null}
         bosMetin={secili ? `"${BOLGE[secili].etiket}" bölgesinde ürün yok` : "Ürün yok"}
         aramaAlani="ad"
+        toplamSatiri={toplamSatiri}
         satirTikla={(r) => gezin(`/urunler/${encodeURIComponent(r.kod)}${senaryoId === null ? "" : `?senaryo=${senaryoId}`}`)}
       />
     </section>

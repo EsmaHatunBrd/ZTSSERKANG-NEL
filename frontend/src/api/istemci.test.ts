@@ -19,15 +19,10 @@ describe("api istemcisi", () => {
   it("404 gövdesini ApiHatasi'ne çevirir", async () => {
     sunucu.use(
       http.get("*/api/v1/urunler/:kod", () =>
-        HttpResponse.json(
-          { hata: "bulunamadi", mesaj: "Ürün bulunamadı", alanlar: { kod: "X" } },
-          { status: 404 },
-        ),
+        HttpResponse.json({ hata: "bulunamadi", mesaj: "Ürün bulunamadı", alanlar: { kod: "X" } }, { status: 404 }),
       ),
     );
-    const hata = await cagir(api.GET("/api/v1/urunler/{kod}", { params: { path: { kod: "X" } } })).catch(
-      (e: unknown) => e,
-    );
+    const hata = await cagir(api.GET("/api/v1/urunler/{kod}", { params: { path: { kod: "X" } } })).catch((e: unknown) => e);
     expect(hata).toBeInstanceOf(ApiHatasi);
     const h = hata as ApiHatasi;
     expect(h.hata).toBe("bulunamadi");
@@ -40,15 +35,10 @@ describe("api istemcisi", () => {
   it("kararlı hata kodunu (kod) taşır", async () => {
     sunucu.use(
       http.get("*/api/v1/urunler/:kod", () =>
-        HttpResponse.json(
-          { hata: "bulunamadi", mesaj: "metin değişebilir", alanlar: {}, kod: "hedef_yok" },
-          { status: 404 },
-        ),
+        HttpResponse.json({ hata: "bulunamadi", mesaj: "metin değişebilir", alanlar: {}, kod: "hedef_yok" }, { status: 404 }),
       ),
     );
-    const h = (await cagir(api.GET("/api/v1/urunler/{kod}", { params: { path: { kod: "X" } } })).catch(
-      (e: unknown) => e,
-    )) as ApiHatasi;
+    const h = (await cagir(api.GET("/api/v1/urunler/{kod}", { params: { path: { kod: "X" } } })).catch((e: unknown) => e)) as ApiHatasi;
     expect(h.kod).toBe("hedef_yok");
   });
 
@@ -56,15 +46,12 @@ describe("api istemcisi", () => {
     kullanici.kaydet("Eşma");
     sunucu.use(
       http.post("*/api/v1/senaryolar", () =>
-        HttpResponse.json(
-          { hata: "dogrulama", mesaj: "istek gövdesi geçersiz", alanlar: { ad: "zorunlu" } },
-          { status: 422 },
-        ),
+        HttpResponse.json({ hata: "dogrulama", mesaj: "istek gövdesi geçersiz", alanlar: { ad: "zorunlu" } }, { status: 422 }),
       ),
     );
-    const hata = (await cagir(
-      api.POST("/api/v1/senaryolar", { body: { sezon_ad: "2026", tur: "fiyat_calismasi", ad: "" } }),
-    ).catch((e: unknown) => e)) as ApiHatasi;
+    const hata = (await cagir(api.POST("/api/v1/senaryolar", { body: { sezon_ad: "2026", tur: "fiyat_calismasi", ad: "" } })).catch(
+      (e: unknown) => e,
+    )) as ApiHatasi;
     expect(hata.hata).toBe("dogrulama");
     expect(hata.alanlar).toEqual({ ad: "zorunlu" });
     expect(hata.durum).toBe(422);
@@ -112,13 +99,14 @@ describe("hataMetni", () => {
     expect(hataMetni(new ApiHatasi("x", "Bir şey oldu"))).toBe("Bir şey oldu");
   });
 
-  it("alanlar doluysa mesajın ardına 'alan: değer' çiftlerini ekler", () => {
+  it("alanlar doluysa da yalnızca mesajı verir (teknik ek yok)", () => {
     const e = new ApiHatasi("dogrulama", "İstek geçersiz", { fire: "0-100 olmalı", ad: "zorunlu" }, 422);
-    expect(hataMetni(e)).toBe("İstek geçersiz — fire: 0-100 olmalı; ad: zorunlu");
+    expect(hataMetni(e)).toBe("İstek geçersiz");
+    expect(hataMetni(new ApiHatasi("x", "Kullanıcı zaten var", { kullanici_adi: "muhasebe1" }, 409))).toBe("Kullanıcı zaten var");
   });
 
-  it("nesne değerleri JSON olarak yazılır, bilinmeyen hata için genel mesaj döner", () => {
-    expect(hataMetni(new ApiHatasi("d", "M", { detail: [1] }))).toBe("M — detail: [1]");
+  it("bilinmeyen hata için genel mesaj döner", () => {
+    expect(hataMetni(new ApiHatasi("d", "M", { detail: [1] }))).toBe("M");
     expect(hataMetni(new Error("düz"))).toBe("düz");
     expect(hataMetni("garip")).toBe("Beklenmeyen hata");
   });
@@ -134,9 +122,9 @@ describe("kullanıcı adı olmadan yazma", () => {
         return HttpResponse.json({ id: 3 }, { status: 201 });
       }),
     );
-    const h = (await cagir(
-      api.POST("/api/v1/senaryolar", { body: { sezon_ad: "2026-2027", tur: "fiyat_calismasi", ad: "x" } }),
-    ).catch((e: unknown) => e)) as ApiHatasi;
+    const h = (await cagir(api.POST("/api/v1/senaryolar", { body: { sezon_ad: "2026-2027", tur: "fiyat_calismasi", ad: "x" } })).catch(
+      (e: unknown) => e,
+    )) as ApiHatasi;
     expect(h).toBeInstanceOf(ApiHatasi);
     expect(h.mesaj).toBe("Önce üst bardan adınızı girin");
     expect(h.durum).toBe(400);
@@ -153,10 +141,7 @@ describe("kullanıcı adı olmadan yazma", () => {
   it("ad girilince yazma isteği gider", async () => {
     sunucu.use(http.post("*/api/v1/senaryolar", () => HttpResponse.json({ id: 3 }, { status: 201 })));
     kullanici.kaydet("Eşma");
-    const v = await cagir(
-      api.POST("/api/v1/senaryolar", { body: { sezon_ad: "2026-2027", tur: "fiyat_calismasi", ad: "x" } }),
-    );
+    const v = await cagir(api.POST("/api/v1/senaryolar", { body: { sezon_ad: "2026-2027", tur: "fiyat_calismasi", ad: "x" } }));
     expect(v).toBeTruthy();
   });
 });
-

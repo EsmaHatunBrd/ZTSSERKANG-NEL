@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from fiyat_motoru.modeller import ReceteSatiri as MotorSatir
 from fiyat_motoru.para import SIFIR
 from ..depo import modeller as m
-from .hatalar import BulunamadiHatasi, DogrulamaHatasi
+from .hatalar import BulunamadiHatasi, DogrulamaHatasi, liste_metni
 
 ONCELIK = {"grup": 10, "malzeme": 20, "tip": 30}
 
@@ -21,13 +21,16 @@ def _metin_veya_none(x) -> str | None:
     return x or None
 
 
-def yeni_versiyon(s: Session, urun_id: int, senaryo_id: int, satirlar: list[dict], kaynak: str, kullanici: str = "sistem") -> m.Recete:
+def yeni_versiyon(s: Session, urun_id: int, senaryo_id: int, satirlar: list[dict], kaynak: str, kullanici: str = "sistem",
+                  neden: str | None = None) -> m.Recete:
+    """neden: elle/ekrandan açılan sürümün nedeni (Değişiklik Günlüğünde görünür); Excel aktarımı vermez (None)."""
     if not satirlar:
-        raise DogrulamaHatasi("reçete boş olamaz")
+        raise DogrulamaHatasi("Reçete boş olamaz; en az bir satır girin.")
     for eski in s.scalars(select(m.Recete).where(m.Recete.urun_id == urun_id, m.Recete.senaryo_id == senaryo_id, m.Recete.aktif == True)):
         eski.aktif = False
     son = s.scalar(select(func.max(m.Recete.versiyon)).where(m.Recete.urun_id == urun_id, m.Recete.senaryo_id == senaryo_id)) or 0
-    r = m.Recete(urun_id=urun_id, senaryo_id=senaryo_id, versiyon=son + 1, kaynak=kaynak, aktif=True, olusturan=kullanici)
+    r = m.Recete(urun_id=urun_id, senaryo_id=senaryo_id, versiyon=son + 1, kaynak=kaynak, aktif=True, olusturan=kullanici,
+                 neden=((neden or "").strip()[:300] or None))
     r.satirlar = [m.ReceteSatiri(sira=i + 1, malzeme_kodu=d["malzeme_kodu"], ad=d.get("ad", ""), miktar=Decimal(d["miktar"]), birim=d.get("birim"),
                                  fire_override=None if d.get("fire_override") is None else Decimal(d["fire_override"]),
                                  dugum_tipi=d.get("dugum_tipi", "yaprak"),
@@ -47,7 +50,7 @@ def kurallara_birak(s: Session, urun_id: int, senaryo_id: int, siralar: list[int
     secili = set(range(1, len(r.satirlar) + 1)) if siralar is None else set(siralar)
     gecersiz = sorted(secili - {x.sira for x in r.satirlar})
     if gecersiz:
-        raise DogrulamaHatasi("reçetede olmayan satır sırası", {"siralar": gecersiz})
+        raise DogrulamaHatasi(f"Reçetede olmayan satır: {liste_metni(gecersiz)}.", {"siralar": gecersiz})
     satirlar = [{"malzeme_kodu": x.malzeme_kodu, "ad": x.ad, "miktar": x.miktar, "birim": x.birim, "dugum_tipi": x.dugum_tipi,
                  "fire_override": None if x.sira in secili else x.fire_override,
                  "brut_miktar_elle": None if (elle_degerleri_kaldir and x.sira in secili) else x.brut_miktar_elle,
@@ -63,7 +66,7 @@ def versiyonlar(s: Session, urun_id: int, senaryo_id: int) -> list[m.Recete]:
 def recete_getir(s: Session, recete_id: int) -> m.Recete:
     r = s.get(m.Recete, recete_id)
     if r is None:
-        raise BulunamadiHatasi("reçete yok", {"recete_id": recete_id})
+        raise BulunamadiHatasi("Reçete bulunamadı.", {"recete_id": recete_id})
     return r
 
 
@@ -76,17 +79,34 @@ def aktif_recete_veya_none(s: Session, urun_id: int, senaryo_id: int) -> m.Recet
     return s.scalar(select(m.Recete).where(m.Recete.urun_id == urun_id, m.Recete.senaryo_id == senaryo_id, m.Recete.aktif == True))
 
 
+MALZEME_YOK = "malzeme_yok"   # hata kodu: reçeteye ekrandan eklenen kodun malzeme kartı yok
+
+
+def kartsiz_malzeme_denetle(s: Session, satirlar: list[dict], mevcut: m.Recete | None = None) -> None:
+    """Ekrandan eklenen reçete satırlarının malzeme kartı olmalı (yoksa satır 0 TL ile sessizce hesaba girer). 422 MALZEME_YOK.
+    Denetlenmez: ara mamul satırları (fiyatsız olması bilinçli) ve aktif reçetede zaten bulunan kodlar (Excel/Canias aktarımından gelen
+    kartsız eski satırlar kaydetmeyi engellemesin). Excel reçete aktarımı bu denetimi çağırmaz."""
+    eski = {x.malzeme_kodu for x in mevcut.satirlar} if mevcut is not None else set()
+    kodlar = {str(d.get("malzeme_kodu") or "").strip() for d in satirlar if (d.get("dugum_tipi") or "yaprak") != "ara_mamul"} - eski - {""}
+    if not kodlar:
+        return
+    eksik = sorted(kodlar - set(s.scalars(select(m.Malzeme.kod).where(m.Malzeme.kod.in_(kodlar)))))
+    if eksik:
+        mesaj = (f"{eksik[0]} kodlu malzeme yok" if len(eksik) == 1 else f"{', '.join(eksik[:10])} kodlu malzemeler yok")
+        raise DogrulamaHatasi(f"{mesaj}; önce Veri Girişi › Yeni malzeme ile açın.", {"malzeme_kodu": eksik}, kod=MALZEME_YOK)
+
+
 def aktif_recete(s: Session, urun_id: int, senaryo_id: int) -> m.Recete:
     r = aktif_recete_veya_none(s, urun_id, senaryo_id)
     if r is None:
-        raise BulunamadiHatasi("aktif reçete yok", {"urun_id": urun_id, "senaryo_id": senaryo_id})
+        raise BulunamadiHatasi("Ürünün bu çalışmada aktif reçetesi yok.", {"urun_id": urun_id, "senaryo_id": senaryo_id})
     return r
 
 
 def fire_kurali_ekle(s: Session, senaryo_id: int, kapsam_tipi: str, kapsam_deger: str, oran: Decimal, gecerlilik_basi: date, neden: str,
                      oncelik: int | None = None, olusturan: str = "sistem") -> m.FireKurali:
     if kapsam_tipi not in ONCELIK:
-        raise DogrulamaHatasi("kapsam_tipi tip|grup|malzeme olmalı", {"kapsam_tipi": kapsam_tipi})
+        raise DogrulamaHatasi("Fire kuralı kapsamı tip, grup ya da malzeme olmalı.", {"kapsam_tipi": kapsam_tipi})
     k = m.FireKurali(senaryo_id=senaryo_id, kapsam_tipi=kapsam_tipi, kapsam_deger=kapsam_deger, oran=Decimal(oran),
                      oncelik=ONCELIK[kapsam_tipi] if oncelik is None else oncelik, gecerlilik_basi=gecerlilik_basi, neden=neden, olusturan=olusturan)
     s.add(k); s.flush()

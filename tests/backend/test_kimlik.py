@@ -57,8 +57,8 @@ def test_yanlis_sifre_ayni_mesaj_ve_bes_denemede_kilit(uygulama, oturum):
     c = _istemci(uygulama)
     for _ in range(ks.HATALI_SINIR):
         r = c.post(f"{API}/kimlik/giris", json={"kullanici_adi": "genel", "sifre": "yanlis"})
-        assert r.status_code == 401 and r.json()["mesaj"] == "kullanıcı adı ya da şifre yanlış"
-    assert c.post(f"{API}/kimlik/giris", json={"kullanici_adi": "yok", "sifre": "x"}).json()["mesaj"] == "kullanıcı adı ya da şifre yanlış"
+        assert r.status_code == 401 and r.json()["mesaj"] == "Kullanıcı adı ya da şifre yanlış."
+    assert c.post(f"{API}/kimlik/giris", json={"kullanici_adi": "yok", "sifre": "x"}).json()["mesaj"] == "Kullanıcı adı ya da şifre yanlış."
     r = c.post(f"{API}/kimlik/giris", json={"kullanici_adi": "genel", "sifre": "gecici-sifre"})
     assert r.status_code == 401 and r.json()["kod"] == "kilitli"   # doğru şifre de kilit süresince reddedilir
     k = oturum.query(m.Kullanici).filter_by(kullanici_adi="genel").one()

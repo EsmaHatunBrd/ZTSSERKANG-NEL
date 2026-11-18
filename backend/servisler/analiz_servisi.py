@@ -10,7 +10,7 @@ from fiyat_motoru.para import SIFIR
 from ..depo import modeller as m
 from . import fiyat_servisi, hesap_servisi as hs, parametre_servisi as ps, senaryo_servisi
 from .donusum import decimal_str
-from .hatalar import BulunamadiHatasi, DogrulamaHatasi, ServisHatasi
+from .hatalar import BulunamadiHatasi, DogrulamaHatasi, ServisHatasi, alan_adi
 
 AMBALAJ_TIPI = "0008-Ambalaj Malzeme"
 HAMMADDE_TIPI = "0001-Hammadde"
@@ -33,7 +33,7 @@ def marj_esigi(s: Session, senaryo_id: int) -> Decimal:
 def _oran_dogrula(ad: str, v) -> Decimal:
     v = Decimal(str(v or 0))
     if not (Decimal(-1) < v <= EN_COK_ORAN):
-        raise DogrulamaHatasi(f"{ad} -%100 ile +%500 arasında olmalı", {ad: str(v)})
+        raise DogrulamaHatasi(f"{alan_adi(ad)} -%100 ile +%500 arasında olmalı.", {ad: str(v)})
     return v
 
 
@@ -120,7 +120,7 @@ def zam_etkisi(s: Session, senaryo_id: int, malzeme_kodu: str, oran: Decimal, ta
     sen = hs.senaryo_getir(s, senaryo_id)
     mz = s.scalar(select(m.Malzeme).where(m.Malzeme.kod == (malzeme_kodu or "").strip()))
     if mz is None:
-        raise BulunamadiHatasi("malzeme bulunamadı", {"malzeme_kodu": malzeme_kodu})
+        raise BulunamadiHatasi(f"{malzeme_kodu} kodlu malzeme bulunamadı.", {"malzeme_kodu": malzeme_kodu})
     oran = _oran_dogrula("oran", oran)
     t = tarih or date.today()
     fiyat = fiyat_servisi.gecerli_fiyatlar(s, sen.id, t).get(mz.kod)
@@ -313,11 +313,19 @@ def _karlilik_satirlari(s: Session, sen: m.Senaryo, t: date) -> tuple[list[dict]
     urunler = {u.kod: u for u in s.scalars(select(m.Urun).where(m.Urun.kod.in_([k for k, _ in hesaplar])))}
     gecen = _gecen_yil(s, sen, {u.id for u in urunler.values()})
     adetler = yillik_adetler(s, sen, list(urunler.values()), gecen)
+    # Aile: `aile_anahtari` gruplama/süzme anahtarıdır (ı/i katlanmış küçük harf), `aile` kullanıcıya gösterilen ad ("Test Karışık Turşu").
+    # Görünen ad ailenin tüm üyelerine bakılarak bir kez seçilir (Karşılaştırma ekranıyla aynı ad; elle yazılmış ad varsa o).
+    uyeler: dict[str, list] = {}
+    for u in urunler.values():
+        uyeler.setdefault(u.aile or aile_servisi.aile_turet(u.ad), []).append(u)
+    aile_adlari = {a: aile_servisi.aile_gorunen_ad(a, sorted(us, key=lambda u: (aile_servisi.ambalaj_ml(u.ad, u.ambalaj_hacmi), u.kod)))
+                   for a, us in uyeler.items()}
     satirlar = []
     for kod, c in hesaplar:
         u = urunler[kod]
         adet = adetler.get(kod)
-        r = {"kod": kod, "ad": u.ad, "aile": u.aile or aile_servisi.aile_turet(u.ad), "adet": adet, "maliyet": None, "satis_fiyati": None,
+        anahtar = u.aile or aile_servisi.aile_turet(u.ad)
+        r = {"kod": kod, "ad": u.ad, "aile": aile_adlari[anahtar], "aile_anahtari": anahtar, "adet": adet, "maliyet": None, "satis_fiyati": None,
              "marj": None, "fiyat_kaynagi": None, "yillik_kar": None, "bolge": None, "hata": None, "maliyet_kaynagi": None,
              "_gecen_yil_fiyat": None, "_hesap_fiyati": None}
         if isinstance(c, Exception):
@@ -381,7 +389,7 @@ def hedef_fiyat(s: Session, senaryo_id: int, marj: Decimal | None = None, tarih:
     satirlar = []
     for k in kaynak:
         marka = markalar.get(k["kod"]) or None
-        r = {"kod": k["kod"], "ad": k["ad"], "marka": marka, "aile": k["aile"], "adet": k["adet"], "maliyet": None, "hesap_fiyati": None,
+        r = {"kod": k["kod"], "ad": k["ad"], "marka": marka, "aile": k["aile"], "aile_anahtari": k["aile_anahtari"], "adet": k["adet"], "maliyet": None, "hesap_fiyati": None,
              "gecen_yil_fiyat": None, "mevcut_marj": None, "hedef_fiyat": None, "gereken_zam": None, "liste_fiyati_yurtici": None,
              "liste_fiyati_yurtdisi": None, "yillik_ek_gelir": None, "bolge": k["bolge"], "hata": k["hata"], "maliyet_kaynagi": k["maliyet_kaynagi"]}
         if k["hata"] is None:
@@ -441,7 +449,7 @@ def onemli_malzemeler(s: Session, senaryo_id: int, esik: Decimal = VARSAYILAN_ON
     sen = hs.senaryo_getir(s, senaryo_id)
     esik = Decimal(str(esik))
     if not (SIFIR < esik <= 1):
-        raise DogrulamaHatasi("eşik 0 ile 1 arasında olmalı (0.8 = %80)", {"esik": str(esik)})
+        raise DogrulamaHatasi("Eşik 0 ile 1 arasında olmalı (0,8 = %80).", {"esik": str(esik)})
     t = tarih or date.today()
     hesaplar = hs.toplu_hesapla(s, sen.id, t)
     urunler = {u.kod: u for u in s.scalars(select(m.Urun).where(m.Urun.kod.in_([k for k, _ in hesaplar])))} if hesaplar else {}

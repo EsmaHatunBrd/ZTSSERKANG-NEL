@@ -90,7 +90,7 @@ def test_yanit_ve_sayfa_sayisi(ortam, kitap):
 def test_hesaplanamayan_urun_yalniz_ozette(kitap):
     _r, wb = kitap
     x = _ozet(wb)[HATALI_KOD]
-    assert x["Durum"].startswith("hesaplanamadı: ") and "üretim hedefi yok" in x["Durum"]
+    assert x["Durum"].startswith("hesaplanamadı: ") and "üretim bilgisi yok" in x["Durum"]
     assert x["Sayfa"] is None and x["Birim maliyet TL"] is None and x["Malzeme toplamı"] is None
     assert not any(ad.startswith("HESAPSIZ") for ad in wb.sheetnames)   # ayrı sayfa açılmaz
 

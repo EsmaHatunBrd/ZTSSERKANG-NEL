@@ -160,7 +160,7 @@ def test_kilit_zinciri_sonraki_donem_uyarisi_ve_409(istemci):  # noqa: F811
     assert _kilit(istemci, eylul, True, zorla=True).status_code == 200
     assert _kilit(istemci, did, True, zorla=True).status_code == 200
     r = _kilit(istemci, eylul, False)
-    assert r.status_code == 409 and r.json()["kod"] == "sonraki_kilitli" and "önce Ekim 2026 kilidini açın" in r.json()["mesaj"]
+    assert r.status_code == 409 and r.json()["kod"] == "sonraki_kilitli" and "Önce Ekim 2026 kilidini açın" in r.json()["mesaj"]
     assert r.json()["alanlar"] == {"donem_id": did}
     r = _kilit(istemci, did, False)
     assert r.status_code == 200 and r.json()["uyari"] is None   # Ekim'den devralan dönem yok
@@ -203,7 +203,7 @@ def test_kilidi_yalniz_genel_direktor_acar(girisli):
     assert r.status_code == 200 and r.json()["kilitli"] is True and r.json()["kilitleyen"] == "muhasebeci"
     # açma: muhasebe 403, Genel Direktör 200
     r = muhasebe.put(f"{A}/smm/donemler/{did}/kilit", json={"kilitli": False})
-    assert r.status_code == 403 and r.json()["mesaj"] == "dönem kilidini yalnız Genel Direktör açabilir"
+    assert r.status_code == 403 and r.json()["mesaj"] == "Dönem kilidini yalnız Genel Direktör açabilir."
     assert r.json()["kod"] == "kilit_acma_yetkisi"
     assert muhasebe.get(f"{A}/smm/donemler/{did}/veri").json()["donem"]["kilitli"] is True
     r = genel.put(f"{A}/smm/donemler/{did}/kilit", json={"kilitli": False})

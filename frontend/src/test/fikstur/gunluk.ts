@@ -12,7 +12,7 @@ export const gunlukSatirlari: GunlukSatiri[] = [
     zaman: "2026-10-22T08:00:00+00:00",
     kullanici: "Esma",
     tur: "parametre",
-    baslik: "Parametre: kur.USD",
+    baslik: "Parametre: USD kuru",
     urun_kodu: null,
     senaryo_id: 1,
     eski: "50",

@@ -65,6 +65,11 @@ export const KOPYA_BOLUMLERI: {
     etiket: "Fire kuralları",
     aciklama: "Bugün geçerli fire kuralları",
   },
+  {
+    anahtar: "sablon",
+    etiket: "Fiyat Çalışması Excel şablonu",
+    aciklama: "Kaynak çalışmaya yüklenen kitap; yeni çalışmada İndir › Fiyat Çalışması Excel'i bununla hazırlanır",
+  },
 ];
 
 const KOPYALANAN_ETIKETI: {
@@ -80,6 +85,7 @@ const KOPYALANAN_ETIKETI: {
   { anahtar: "hedef", etiket: "üretim hedefi" },
   { anahtar: "kapasite", etiket: "kapasite kaydı" },
   { anahtar: "fire", etiket: "fire kuralı" },
+  { anahtar: "sablon", etiket: "Excel şablonu" },
 ];
 
 /** "Kopyalandı: 67 reçete, 661 malzeme fiyatı, …" (sıfır olanlar yazılmaz). */
@@ -165,6 +171,7 @@ export const YALNIZ_PARAMETRELER: SenaryoKopyaSecimi = {
   gider: false,
   uretim: false,
   fire_kurallari: false,
+  sablon: false,
 };
 
 /** Sekmeler arası geçişte yazılanlar kaybolmasın (B4): sekme içeriği kaldırılınca form değerleri diyalogda saklanır. */
@@ -327,6 +334,7 @@ const kopyaSemasi = z.object({
     gider: z.boolean(),
     uretim: z.boolean(),
     fire_kurallari: z.boolean(),
+    sablon: z.boolean(),
   }),
 });
 type KopyaForm = z.infer<typeof kopyaSemasi>;
@@ -372,6 +380,7 @@ function KopyaSekmesi({
         gider: true,
         uretim: true,
         fire_kurallari: true,
+        sablon: true,
       },
       ...(taslak as Partial<KopyaForm>),
     },

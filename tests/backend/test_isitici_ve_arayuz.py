@@ -70,6 +70,7 @@ def test_arayuz_dist_varsa_sunulur(tmp_path, monkeypatch):
     assert "arayuz" in c.get("/urunler/ABC?senaryo=1").text          # SPA yolu → index.html
     assert c.get("/assets/a.js").text == "1"
     assert c.get("/api/v1/olmayan").status_code == 404 and c.get("/api/v1/olmayan").json()["hata"] == "bulunamadi"
+    assert c.get("/api/v1/olmayan").json()["mesaj"] == "Aranan sayfa ya da kayıt bulunamadı."   # geliştirici sözcüğü ("uç") yok
 
 
 def test_arayuz_dist_yoksa_baglanmaz(tmp_path, monkeypatch):
@@ -78,3 +79,6 @@ def test_arayuz_dist_yoksa_baglanmaz(tmp_path, monkeypatch):
     monkeypatch.setattr(uygulama, "ARAYUZ_DIZINI", tmp_path / "yok")
     c = TestClient(uygulama.uygulama_olustur())
     assert c.get("/").status_code == 404
+    # dist yokken de bilinmeyen adres ortak hata biçiminde, sade Türkçe döner ({"detail": "Not Found"} değil)
+    r = c.get("/api/v1/olmayan")
+    assert r.status_code == 404 and r.json() == {"hata": "bulunamadi", "mesaj": "Aranan sayfa ya da kayıt bulunamadı.", "alanlar": {}, "kod": None}

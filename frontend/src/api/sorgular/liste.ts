@@ -44,7 +44,8 @@ function yenile(qc: ReturnType<typeof useQueryClient>) {
 export function useListeFiyatiKaydet(senaryo: number | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (govde: ListeFiyatiGiris) =>
+    // `neden`: Değişiklik Günlüğüne yazılan zorunlu gerekçe (gövdede; ekleme ve güncelleme aynı uç).
+    mutationFn: (govde: ListeFiyatiGiris & { neden: string }) =>
       cagir(api.PUT("/api/v1/liste-fiyatlari", { params: { query: { senaryo: senaryo ?? undefined } }, body: govde })),
     onSuccess: () => yenile(qc),
   });
@@ -53,10 +54,10 @@ export function useListeFiyatiKaydet(senaryo: number | null | undefined) {
 export function useListeFiyatiSil() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ urun_kodu, yil, pazar }: { urun_kodu: string; yil: number; pazar: ListePazari }) =>
+    mutationFn: ({ urun_kodu, yil, pazar, neden }: { urun_kodu: string; yil: number; pazar: ListePazari; neden: string }) =>
       cagir(
         api.DELETE("/api/v1/liste-fiyatlari/{urun_kodu}/{yil}", {
-          params: { path: { urun_kodu, yil }, query: { pazar } },
+          params: { path: { urun_kodu, yil }, query: { pazar, neden } },
         }),
       ),
     onSuccess: () => yenile(qc),

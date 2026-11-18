@@ -7,7 +7,11 @@ Kaynaklar ve kurallar:
   faaliyet = diger_giderler_toplami (pazarlama + yönetim), finansman = finansman["TL"]; toplamları finansman dahil maliyet TL'dir.
 - Marj: ürün kâr oranı = satış TL / maliyet TL - 1 (hesaplanan ürünler). Basit ortalama ve geçen yıl satış adediyle ağırlıklı ortalama
   (Σ(satış - maliyet) x adet / Σ maliyet x adet; adedi bilinen ürün yoksa null). Hedef: genel `satis_kar` parametresi; eşik: `marj_esigi`.
-- Hedef altı: `analiz_servisi.hedef_alti` (ilk 10 + toplam). Kur riski: `analiz_servisi.kur_riski(oran=0,10)` özeti ve en riskli 5 ürün.
+- Geçen yılın satış fiyatıyla marj (Kârlılık haritasıyla aynı kaynak ve formül): maliyet = `analiz_servisi.analiz_maliyeti`, satış =
+  geçen yıl adet ağırlıklı TL fiyat (`_gecen_yil_tl_fiyat`, bugünkü kurla). gecen_yil_agirlikli_ortalama = Σ(satış - maliyet) x adet /
+  Σ maliyet x adet, yalnız geçen yıl fiyatı ve adedi olan ürünlerde (yoksa null).
+- Hedef altı (marj eşiğinin altındaki ürünler): ürün marjı = satış / maliyet - 1; satış geçen yıl fiyatı (fiyat_kaynagi "gecen_yil"),
+  satış geçmişi yoksa hesaplanan satış fiyatı ("hesap"). Kârlılık haritasının "düşük marj" bölgesiyle aynı ürünler (ilk 10 + toplam). Kur riski: `analiz_servisi.kur_riski(oran=0,10)` özeti ve en riskli 5 ürün.
 - Teklifler: `teklif_servisi.senaryo_teklifleri`; açık = taslak + gönderildi; en eski 5 açık teklif (olusturma sırası).
 - Veri kontrolü: `tutarlilik_servisi.kontroller` (süreç içi önbellekte varsa oradan; yoksa hesaplanır ve önbelleğe konur).
 - Stok etkisi: stok devri kaydı yoksa null. toplam_etki_tl = Σ stok adedi x (güncel stok maliyeti - bu yılın maliyeti) (ortalama maliyet
@@ -49,10 +53,11 @@ def _urun_satirlari(s: Session, sen: m.Senaryo, t: date) -> tuple[list[dict], li
             continue
         r = c.sonuc
         maliyet = r.finansman_dahil_maliyet_tl
+        analiz_maliyet, _ = analiz_servisi.analiz_maliyeti(c)
         hesaplanan.append({"kod": kod, "ad": u.ad, "urun_id": u.id, "malzeme": r.malzeme_toplami, "uretim": r.uretim_gideri_toplami,
                            "faaliyet": r.diger_giderler_toplami, "finansman": r.finansman.get("TL", SIFIR), "maliyet": maliyet,
                            "satis": r.satis_fiyati_tl, "kar_orani": (r.satis_fiyati_tl / maliyet - 1) if maliyet else None,
-                           "stok": c.stok_devri})
+                           "stok": c.stok_devri, "analiz_maliyet": analiz_maliyet, "gecen_yil_fiyat": None})
     return hesaplanan, hatali
 
 
@@ -69,9 +74,30 @@ def _marj(s: Session, sen: m.Senaryo, t: date, satirlar: list[dict]) -> dict:
         agirlikli_pay += (r["satis"] - r["maliyet"]) * adet
         agirlikli_maliyet += r["maliyet"] * adet
     degerler = ps.gecerli_degerler(s, sen.id, t)
+    gy_pay = gy_maliyet = SIFIR
+    gy_urun = 0
+    for r in satirlar:   # geçen yılın satış fiyatıyla (Kârlılık haritası): yalnız fiyatı ve adedi bilinen ürünler
+        adet = adetler.get(r["kod"])
+        if adet is None or r["gecen_yil_fiyat"] is None or not r["analiz_maliyet"]:
+            continue
+        gy_urun += 1
+        gy_pay += (r["gecen_yil_fiyat"] - r["analiz_maliyet"]) * adet
+        gy_maliyet += r["analiz_maliyet"] * adet
     return {"ortalama": sum(oranlar, SIFIR) / len(oranlar) if oranlar else None,
             "agirlikli_ortalama": agirlikli_pay / agirlikli_maliyet if agirlikli_maliyet else None, "adetli_urun": adetli,
-            "hedef": degerler.get("satis_kar"), "marj_esigi": analiz_servisi.marj_esigi(s, sen.id), "adet_kaynagi": "satis_gecmisi"}
+            "hedef": degerler.get("satis_kar"), "marj_esigi": analiz_servisi.marj_esigi(s, sen.id), "adet_kaynagi": "satis_gecmisi",
+            "gecen_yil_agirlikli_ortalama": gy_pay / gy_maliyet if gy_maliyet else None, "gecen_yil_urun": gy_urun}
+
+
+def _gecen_yil_fiyatlari(s: Session, sen: m.Senaryo, t: date, satirlar: list[dict]) -> None:
+    """Her satıra geçen yıl adet ağırlıklı TL satış fiyatını (`gecen_yil_fiyat`; satış geçmişi yoksa None) yazar. Kaynak ve formül
+    Kârlılık haritasıyla aynı (`analiz_servisi._gecen_yil` + `_gecen_yil_tl_fiyat`, bugünkü kurla)."""
+    if not satirlar:
+        return
+    kurlar = {k: v for k, v in ps.gecerli_degerler(s, sen.id, t).items() if k.startswith("kur.")}
+    gecen = analiz_servisi._gecen_yil(s, sen, {r["urun_id"] for r in satirlar})
+    for r in satirlar:
+        r["gecen_yil_fiyat"] = analiz_servisi._gecen_yil_tl_fiyat(gecen.get(r["urun_id"]), kurlar)
 
 
 def _maliyet_yapisi(satirlar: list[dict]) -> dict:
@@ -84,12 +110,20 @@ def _maliyet_yapisi(satirlar: list[dict]) -> dict:
     return {"urun_sayisi": n, "toplam_tl": toplam, "urun_basina_tl": (toplam / n) if n else None, "kalemler": kalemler}
 
 
-def _hedef_alti(s: Session, sen: m.Senaryo, t: date, satirlar: dict[str, dict]) -> dict:
-    esik, alti = analiz_servisi.hedef_alti(s, sen.id, t)
+def _hedef_alti(s: Session, sen: m.Senaryo, satirlar: list[dict]) -> dict:
+    """Marj eşiğinin altındaki ürünler: geçen yılın satış fiyatıyla (yoksa hesaplanan satış fiyatıyla) marj < eşik."""
+    esik = analiz_servisi.marj_esigi(s, sen.id)
+    alti = []
+    for r in satirlar:
+        maliyet = r["analiz_maliyet"]
+        satis, kaynak = (r["gecen_yil_fiyat"], "gecen_yil") if r["gecen_yil_fiyat"] is not None else (r["satis"], "hesap")
+        if not maliyet or satis is None:
+            continue
+        marj = satis / maliyet - 1
+        if marj < esik:
+            alti.append({"kod": r["kod"], "ad": r["ad"], "kar_orani": marj, "maliyet": maliyet, "satis": satis, "fiyat_kaynagi": kaynak})
     alti.sort(key=lambda x: (x["kar_orani"], x["kod"]))
-    kayitlar = [{"kod": x["kod"], "ad": x["ad"], "kar_orani": x["kar_orani"],
-                 "maliyet": (satirlar.get(x["kod"]) or {}).get("maliyet"), "satis": (satirlar.get(x["kod"]) or {}).get("satis")} for x in alti[:ILK_N]]
-    return {"esik": esik, "toplam": len(alti), "kayitlar": kayitlar}
+    return {"esik": esik, "toplam": len(alti), "kayitlar": alti[:ILK_N]}
 
 
 def _kur_riski(s: Session, sen: m.Senaryo, t: date) -> dict:
@@ -142,7 +176,7 @@ def ozet(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
     sen = hs.senaryo_getir(s, senaryo_id)
     t = tarih or date.today()
     hesaplanan, hatali = _urun_satirlari(s, sen, t)
-    kodla = {r["kod"]: r for r in hesaplanan}
+    _gecen_yil_fiyatlari(s, sen, t, hesaplanan)
     kontroller = _kontroller(s, sen.id, t)
     en_pahali = sorted(hesaplanan, key=lambda r: (-r["maliyet"], r["kod"]))[:ILK_5]
     out = {"baslik": {"senaryo_id": sen.id, "sezon_ad": sen.sezon.ad, "ad": sen.ad, "tur": sen.tur, "kilitli": sen.kilitli, "hesap_tarihi": t,
@@ -150,7 +184,7 @@ def ozet(s: Session, senaryo_id: int, tarih: date | None = None) -> dict:
            "urunler": {"toplam": len(hesaplanan) + len(hatali), "hesaplanan": len(hesaplanan), "hatali": len(hatali)},
            "marj": _marj(s, sen, t, hesaplanan),
            "maliyet_yapisi": _maliyet_yapisi(hesaplanan),
-           "hedef_alti": _hedef_alti(s, sen, t, kodla),
+           "hedef_alti": _hedef_alti(s, sen, hesaplanan),
            "kur_riski": _kur_riski(s, sen, t),
            "teklifler": _teklifler(s, sen),
            "veri_kontrolu": _veri_kontrolu(kontroller),

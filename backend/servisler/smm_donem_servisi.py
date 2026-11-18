@@ -25,9 +25,9 @@ def onceki_donem(s: Session, yil: int, ay: int) -> m.SmmDonem | None:
 
 def yeni_donem(s: Session, yil: int, ay: int, kullanici: str = "sistem") -> dict:
     if not (2000 <= yil <= 2100 and 1 <= ay <= 12):
-        raise DogrulamaHatasi("dönem geçersiz", {"yil": yil, "ay": ay})
+        raise DogrulamaHatasi("Dönem geçersiz; yıl ve ay (1-12) girin.", {"yil": yil, "ay": ay})
     if s.scalar(select(m.SmmDonem).where(m.SmmDonem.yil == yil, m.SmmDonem.ay == ay)) is not None:
-        raise CatismaHatasi(f"{AY_ADLARI[ay]} {yil} dönemi zaten var")
+        raise CatismaHatasi(f"{AY_ADLARI[ay]} {yil} dönemi zaten var.")
     onceki = onceki_donem(s, yil, ay)
     d = m.SmmDonem(yil=yil, ay=ay, olusturan=kullanici, recete_kaynagi="ana", finansman=SIFIR,
                    devir_donem_id=onceki.id if onceki else None,
@@ -159,12 +159,12 @@ def devir_yenile(s: Session, donem_id: int, neden: str | None, elle_ez: bool = F
     dönemde olmayan kalemin açılışı sıfırlanır. Elle girilmiş açılış değerleri korunur (`elle_ez` ile onlar da ezilir). Eski değerler
     değişiklik kaydında saklanır."""
     if not (neden or "").strip():
-        raise DogrulamaHatasi("neden zorunlu")
+        raise DogrulamaHatasi("Neden girin.")
     d = donem_getir(s, donem_id)
     kilit_denetle(d)
     onceki = devir_kaynagi(s, d)
     if onceki is None:
-        raise DogrulamaHatasi("bu dönemin açılışı bir önceki dönemden devralınmamış; yenilenecek devir yok")
+        raise DogrulamaHatasi("Bu dönemin açılışı bir önceki dönemden devralınmamış; yenilenecek devir yok.")
     kapanis = _kapanis(s, onceki)
     kalemler = _donem_kalemleri(s, d)
     elle = _elle_dbs_kodlari(s, d)
@@ -202,13 +202,13 @@ def devir_yenile(s: Session, donem_id: int, neden: str | None, elle_ez: bool = F
 
 def recete_kaynagi(s: Session, donem_id: int, kaynak: str, kullanici: str = "sistem") -> dict:
     if kaynak not in KAYNAKLAR:
-        raise DogrulamaHatasi("reçete kaynağı 'excel' ya da 'ana' olmalı", {"kaynak": kaynak})
+        raise DogrulamaHatasi("Reçete kaynağı Excel ya da ana reçete olmalı.", {"kaynak": kaynak})
     d = donem_getir(s, donem_id)
     kilit_denetle(d)
     if kaynak == "excel" and s.scalar(select(m.SmmReceteSatiri.id).where(m.SmmReceteSatiri.donem_id == d.id).limit(1)) is None:
-        raise DogrulamaHatasi("bu dönemle Excel reçetesi yüklenmedi; yalnız kalıcı reçeteler kullanılabilir")
+        raise DogrulamaHatasi("Bu dönemle Excel reçetesi yüklenmedi; yalnız kalıcı reçeteler kullanılabilir.")
     if kaynak == "ana" and s.scalar(select(m.SmmAnaRecete.id).limit(1)) is None:
-        raise DogrulamaHatasi("kalıcı reçete yok; önce Reçeteler sayfasından Canias dökümünü yükleyin")
+        raise DogrulamaHatasi("Kalıcı reçete yok; önce Reçeteler sayfasından Canias dökümünü yükleyin.")
     eski = d.recete_kaynagi or "excel"
     if eski != kaynak:
         d.recete_kaynagi = kaynak

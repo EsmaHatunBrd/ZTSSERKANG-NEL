@@ -26,9 +26,9 @@ def kimlik_denetle(request: Request, s: OturumDep) -> m.Kullanici | None:
         return None
     k = ks.oturumdaki_kullanici(s, request.cookies.get(CEREZ))
     if k.sifre_degismeli and request.method != "GET":
-        raise YetkiHatasi("önce kendi şifrenizi belirleyin", kod="sifre_degismeli")
+        raise YetkiHatasi("Devam etmeden önce kendi şifrenizi belirleyin.", kod="sifre_degismeli")
     if not ks.yazabilir_mi(k.rol, request.method, request.url.path):
-        raise YetkiHatasi(f"{ks.ROLLER.get(k.rol, k.rol)} rolünün bu işleme izni yok")
+        raise YetkiHatasi(f"{ks.ROLLER.get(k.rol, k.rol)} rolünün bu işleme izni yok.")
     request.state.kullanici = k
     return k
 

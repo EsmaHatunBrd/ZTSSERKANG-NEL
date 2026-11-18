@@ -34,13 +34,13 @@ GIDER_ADI = {"710": "Direkt İlk Madde ve Malzeme Giderleri", "711": "Direkt İl
 
 def _tur(tur: str) -> str:
     if tur not in TURLER:
-        raise DogrulamaHatasi("mizan türü 'gider' ya da 'stok' olmalı", {"tur": tur})
+        raise DogrulamaHatasi("Mizan türü gider ya da stok olmalı.", {"tur": tur})
     return tur
 
 
 def _neden(neden: str | None) -> str:
     if not (neden or "").strip():
-        raise DogrulamaHatasi("neden zorunlu")
+        raise DogrulamaHatasi("Neden girin.")
     return neden.strip()
 
 
@@ -48,26 +48,26 @@ def _tutar(v) -> Decimal:
     try:
         d = Decimal(str(v).replace(",", ".").strip())
     except (InvalidOperation, ValueError):
-        raise DogrulamaHatasi("bakiye sayı olmalı", {"bakiye": str(v)})
+        raise DogrulamaHatasi("Bakiye bir sayı olmalı.", {"bakiye": str(v)})
     if not d.is_finite():
-        raise DogrulamaHatasi("bakiye sayı olmalı", {"bakiye": str(v)})
+        raise DogrulamaHatasi("Bakiye bir sayı olmalı.", {"bakiye": str(v)})
     return d
 
 
 def _hesap(tur: str, hesap: str | None) -> str:
     h = (hesap or "").strip()
     if not h:
-        raise DogrulamaHatasi("hesap kodu zorunlu")
+        raise DogrulamaHatasi("Hesap kodu girin.")
     if tur == "gider" and not (len(h) == 3 and h.isdigit() and h[0] == "7"):
-        raise DogrulamaHatasi("gider mizanında hesap kodu 7 ile başlayan 3 haneli ana hesap olmalı (ör. 720, 730)", {"hesap": h})
+        raise DogrulamaHatasi("Gider mizanında hesap kodu 7 ile başlayan 3 haneli ana hesap olmalı (ör. 720, 730).", {"hesap": h})
     if tur == "stok" and not (h[:2] == "15" and h[:3].isdigit()):
-        raise DogrulamaHatasi("stok mizanında hesap kodu 15 ile başlamalı (ör. 150, 151.04.002)", {"hesap": h})
+        raise DogrulamaHatasi("Stok mizanında hesap kodu 15 ile başlamalı (ör. 150, 151.04.002).", {"hesap": h})
     return h
 
 
 def _bakiye_denetle(tur: str, hesap: str, bakiye: Decimal) -> None:
     if tur == "gider" and hesap in ASAMA_HESAPLARI and bakiye < 0:
-        raise DogrulamaHatasi(f"{hesap} gider tutarı eksi olamaz", {"bakiye": str(bakiye)})
+        raise DogrulamaHatasi(f"{hesap} gider tutarı eksi olamaz.", {"bakiye": str(bakiye)})
 
 
 def satirlar(d: m.SmmDonem, tur: str, isaretsiz: bool = False) -> list[dict]:
@@ -142,7 +142,7 @@ def _hazirla(s: Session, donem_id: int, tur: str, neden: str | None) -> tuple[m.
 def _bul(kayitlar: list[dict], tur: str, hesap: str) -> dict:
     x = next((x for x in kayitlar if x["hesap"] == (hesap or "").strip()), None)
     if x is None:
-        raise BulunamadiHatasi("mizan satırı bulunamadı", {"tur": tur, "hesap": hesap})
+        raise BulunamadiHatasi(f"Mizanda {hesap} hesabı bulunamadı.", {"tur": tur, "hesap": hesap})
     return x
 
 
@@ -152,7 +152,7 @@ def satir_ekle(s: Session, donem_id: int, tur: str, hesap: str, ad: str | None, 
     d, tur, neden, kayitlar, elle = _hazirla(s, donem_id, tur, neden)
     hesap = _hesap(tur, hesap)
     if any(x["hesap"] == hesap for x in kayitlar):
-        raise CatismaHatasi("bu hesap kodu mizanda zaten var", {"hesap": hesap})
+        raise CatismaHatasi(f"{hesap} hesap kodu mizanda zaten var.", {"hesap": hesap})
     tutar = _tutar(bakiye)
     _bakiye_denetle(tur, hesap, tutar)
     ad = (ad or "").strip() or (GIDER_ADI.get(hesap) if tur == "gider" else None)

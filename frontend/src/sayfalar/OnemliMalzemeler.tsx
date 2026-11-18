@@ -26,6 +26,15 @@ const yuzdeMetni = (p: string) => `%${paraBicimle(p, "", 1).trim()}`;
 /** Türkçe belirtme eki: "%80'ini", "%90'ını". */
 const esikMetni = (esik: number) => `%${esik}'${esik === 90 ? "ını" : "ini"}`;
 const sayiMetni = (x: string, basamak: number) => paraBicimle(x, "", basamak).trim();
+/**
+ * Maliyete giren (enflasyon/kur dahil) birim fiyat: yıllık tutar ÷ yıllık miktar, TL, 4 hane (Decimal). Miktar 0 ise "—"; tutar 0
+ * (fiyatsız kalem) ise de "—" (0,0000 TL fiyat varmış gibi okunmasın).
+ */
+function maliyeteGirenBirimFiyat(r: Pick<OnemliMalzemeSatiri, "yillik_tutar_tl" | "yillik_miktar">): string {
+  const miktar = D(r.yillik_miktar);
+  const tutar = D(r.yillik_tutar_tl);
+  return miktar.isZero() || tutar.isZero() ? "—" : paraBicimle(tutar.div(miktar), "TL", 4);
+}
 
 /** Adres çubuğundaki parametreyle eşlenen yerel durum (bkz. FiyatEgilimi): denetim anında değişir, adres dışarıdan değişirse ona uyar. */
 function useAdresDegeri<T>(ham: string | null, coz: (ham: string | null) => T): [T, (t: T) => void] {
@@ -139,7 +148,9 @@ export default function OnemliMalzemeler() {
         <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
         <span>
           Yıllık tutar = ürünün yıllık adedi × o malzemenin üründeki (fireli) tutarı, tüm ürünlerde toplanır. Yıllık adet geçen yılın satış
-          adedidir. Birim fiyat malzemenin kendi para birimindedir. Fiyat kaydına gitmek için satıra tıklayın. Hiçbir şey kaydedilmez.
+          adedidir. Maliyete giren birim fiyat = yıllık tutar ÷ yıllık miktar (TL; enflasyon ve kur dahil); altındaki gri "liste" değeri
+          fiyat listesindeki fiyattır ve malzemenin kendi para birimindedir. Fiyat kaydına gitmek için satıra tıklayın. Hiçbir şey
+          kaydedilmez.
           {v && v.adetsiz_urun > 0 && (
             <span data-testid="adetsiz-notu">
               {" "}
@@ -193,7 +204,7 @@ export default function OnemliMalzemeler() {
                   <TableHead className="text-right">Sıra</TableHead>
                   <TableHead>Kod</TableHead>
                   <TableHead>Malzeme</TableHead>
-                  <TableHead className="text-right">Birim fiyat</TableHead>
+                  <TableHead className="text-right">Maliyete giren birim fiyat (TL)</TableHead>
                   <TableHead className="text-right">Yıllık miktar</TableHead>
                   <TableHead className="text-right">Yıllık tutar</TableHead>
                   <TableHead className="text-right">Pay %</TableHead>
@@ -243,7 +254,14 @@ export default function OnemliMalzemeler() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right tabular-nums whitespace-nowrap">
-                        {r.birim_fiyat === null ? "—" : paraBicimle(r.birim_fiyat, r.para_birimi ?? "", 4)}
+                        <span className="flex flex-col items-end">
+                          <span>{maliyeteGirenBirimFiyat(r)}</span>
+                          {r.birim_fiyat !== null && (
+                            <span className="text-xs text-muted-foreground">
+                              liste {paraBicimle(r.birim_fiyat, r.para_birimi ?? "", 4)}
+                            </span>
+                          )}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right tabular-nums whitespace-nowrap">
                         {sayiMetni(r.yillik_miktar, 0)}

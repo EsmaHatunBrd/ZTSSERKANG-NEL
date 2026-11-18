@@ -19,7 +19,7 @@ def aileler(s: OturumDep, sen: SenaryoDep, tum: bool = Query(False)):
 def aile_trendi(s: OturumDep, aile: str, sen: SenaryoDep, tarih: date | None = None, tum: bool = Query(False)):
     us = ks.aile_urunleri(s, aile, None if tum else sen.id)
     if not us:
-        raise BulunamadiHatasi("aile bulunamadı", {"aile": aile})
+        raise BulunamadiHatasi(f"{aile} ailesi bulunamadı.", {"aile": aile})
     return {"aile": aile, "aile_ad": aile_servisi.aile_gorunen_ad(aile, us), "satirlar": ks.ambalaj_kg_trendi(s, aile, sen, tarih, tum)}
 
 

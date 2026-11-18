@@ -1,18 +1,21 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Download, Plus, Trash2 } from "lucide-react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
-import { hataMetni, type ApiHatasi } from "@/api/istemci";
+import { api, cagir, hataMetni, type ApiHatasi } from "@/api/istemci";
+import { anahtar } from "@/api/sorgular/anahtarlar";
 import type { Sema } from "@/api/tipler";
 import { useRecete, useReceteKaydet } from "@/api/sorgular/urunler";
 import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { useYazmaKilidi } from "@/bilesenler/DuzenlemeKilidi";
 import { useSenaryo } from "@/bilesenler/SenaryoSecici";
 import { Button } from "@/bilesenler/ui/button";
+import type { ReceteSatiri } from "@/api/tipler";
 import { sayiApi, sayiGecerli } from "@/yardimcilar/sayi";
-import { FIRE_ARALIK_MESAJI, fireOraniMetni, fireYuzdeHatasi } from "../urun/yardimci";
+import { FIRE_ARALIK_MESAJI, fireOraniMetni, fireYuzdeHatasi, fireYuzdeMetni } from "../urun/yardimci";
 import { Girdi as Input } from "@/bilesenler/Girdi";
 
 const sayiOpsiyonel = z
@@ -34,11 +37,16 @@ const satirSemasi = z.object({
   brut_miktar_elle: sayiOpsiyonel,
   birim_fiyat_elle: sayiOpsiyonel,
   dugum_tipi: z.enum(["yaprak", "ara_mamul"]),
+  // Mevcut reçeteden getirilen satırın formda görünmeyen alanları: yeni sürümde aynen korunur.
+  seviye: z.number().int().nullable().optional(),
+  zs_elle: z.string().nullable().optional(),
+  para_birimi_elle: z.string().nullable().optional(),
 });
 
 export const receteSemasi = z.object({
   urun_kodu: z.string().trim().min(1, "Ürün kodu zorunlu"),
   satirlar: z.array(satirSemasi).min(1, "En az bir satır girin"),
+  neden: z.string().trim().min(1, "Neden zorunlu: değişikliğin nedenini yazın").max(300, "Neden en çok 300 karakter olabilir"),
 });
 
 type FormDegerleri = z.infer<typeof receteSemasi>;
@@ -56,6 +64,28 @@ const BOS_SATIR: SatirDegeri = {
 };
 
 const nokta = (v: string) => sayiApi(v) ?? v;
+/** API sayısı -> formda gösterilen Türkçe metin (virgüllü). */
+const virgul = (v: string | null | undefined) => (v == null ? "" : v.replace(".", ","));
+
+/**
+ * Mevcut reçete satırı -> form satırı. Fire yalnız satıra elle yazılmışsa (fire_override) gelir; kuraldan gelen fire boş kalır,
+ * böylece yeni sürümde de kurala bağlı kalır.
+ */
+function formSatiri(r: ReceteSatiri): SatirDegeri {
+  return {
+    malzeme_kodu: r.malzeme_kodu,
+    ad: r.ad ?? "",
+    miktar: virgul(r.miktar),
+    birim: r.birim ?? "",
+    fire_override: r.fire_override != null ? virgul(fireYuzdeMetni(r.fire_override)) : "",
+    brut_miktar_elle: virgul(r.brut_miktar_elle),
+    birim_fiyat_elle: virgul(r.birim_fiyat_elle),
+    dugum_tipi: r.dugum_tipi,
+    seviye: r.seviye ?? null,
+    zs_elle: r.zs_elle ?? null,
+    para_birimi_elle: r.para_birimi_elle ?? null,
+  };
+}
 
 /** Form satırı -> API gövdesi; boş isteğe bağlı alanlar gönderilmez. */
 function apiSatiri(s: SatirDegeri): Sema["ReceteSatirGiris"] {
@@ -69,6 +99,9 @@ function apiSatiri(s: SatirDegeri): Sema["ReceteSatirGiris"] {
   if (s.fire_override) g.fire_override = fireOraniMetni(s.fire_override) ?? undefined;
   if (s.brut_miktar_elle) g.brut_miktar_elle = nokta(s.brut_miktar_elle);
   if (s.birim_fiyat_elle) g.birim_fiyat_elle = nokta(s.birim_fiyat_elle);
+  if (s.seviye != null) g.seviye = s.seviye;
+  if (s.zs_elle) g.zs_elle = s.zs_elle as Sema["ReceteSatirGiris"]["zs_elle"];
+  if (s.para_birimi_elle) g.para_birimi_elle = s.para_birimi_elle;
   return g;
 }
 
@@ -91,6 +124,7 @@ function ReceteDegisimOnayi({
   kod,
   senaryoId,
   yeniSatir,
+  neden,
   bekliyor,
   onOnayla,
   onVazgec,
@@ -98,6 +132,7 @@ function ReceteDegisimOnayi({
   kod: string;
   senaryoId: number | null;
   yeniSatir: number;
+  neden: string;
   bekliyor: boolean;
   onOnayla: () => void;
   onVazgec: () => void;
@@ -125,6 +160,10 @@ function ReceteDegisimOnayi({
             ? `Bu çalışmada reçetesi yok: ilk reçete versiyonu ${yeniSatir} satırla açılır ve ürün çalışmaya dahil olur`
             : `Mevcut reçete ${mevcutSatir} satır → yeni ${yeniSatir} satır; tüm reçete değiştirilecek`}
       </p>
+      <p className="text-sm">
+        <span className="text-muted-foreground">Neden: </span>
+        {neden}
+      </p>
     </OnayDiyalogu>
   );
 }
@@ -145,15 +184,61 @@ export function ElleReceteFormu({ urunKodu, gomulu = false }: Props = {}) {
     register,
     control,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<FormDegerleri>({
     resolver: zodResolver(receteSemasi),
-    defaultValues: { urun_kodu: urunKodu ?? "", satirlar: [BOS_SATIR] },
+    defaultValues: { urun_kodu: urunKodu ?? "", satirlar: [BOS_SATIR], neden: "" },
   });
-  const { fields, append, remove } = useFieldArray({ control, name: "satirlar" });
+  const { fields, append, remove, replace } = useFieldArray({ control, name: "satirlar" });
 
   const hata = (ekle.error as ApiHatasi | null) ?? null;
-  const [bekleyen, setBekleyen] = useState<{ kod: string; satirlar: Sema["ReceteSatirGiris"][] } | null>(null);
+  const [bekleyen, setBekleyen] = useState<{ kod: string; satirlar: Sema["ReceteSatirGiris"][]; neden: string } | null>(null);
+
+  // "Mevcut reçeteyi getir": seçili çalışmadaki aktif reçetenin satırları forma dolar (düzenleyip yeni sürüm olarak kaydedilir).
+  const qc = useQueryClient();
+  const [getirOnayi, setGetirOnayi] = useState<string | null>(null);
+  const [getirMesaji, setGetirMesaji] = useState<string | null>(null);
+  const [getirHatasi, setGetirHatasi] = useState<string | null>(null);
+  const [getiriliyor, setGetiriliyor] = useState(false);
+
+  async function getirUygula(kod: string) {
+    if (senaryoId == null) {
+      setSenaryoYok(true);
+      return;
+    }
+    setGetiriliyor(true);
+    try {
+      const recete = await qc.fetchQuery({
+        queryKey: [...anahtar.recete(kod, senaryoId), null],
+        queryFn: () => cagir(api.GET("/api/v1/urunler/{kod}/recete", { params: { path: { kod }, query: { senaryo: senaryoId } } })),
+        staleTime: 0,
+      });
+      if (recete.satirlar.length === 0) {
+        setGetirMesaji(`${kod} ürününün bu çalışmada reçetesi yok; satırları elle girin.`);
+        return;
+      }
+      replace(recete.satirlar.map(formSatiri));
+      setGetirMesaji(`Mevcut reçete getirildi: Versiyon ${recete.versiyon}, ${recete.satirlar.length} satır. Düzenleyip kaydedin.`);
+    } catch (e) {
+      setGetirHatasi(hataMetni(e as ApiHatasi));
+    } finally {
+      setGetiriliyor(false);
+    }
+  }
+
+  function mevcutuGetir() {
+    const kod = getValues("urun_kodu").trim();
+    setGetirMesaji(null);
+    setGetirHatasi(null);
+    if (!kod) {
+      setGetirMesaji("Önce ürün kodunu yazın.");
+      return;
+    }
+    // Formda yazılmış satır varsa üzerine yazmadan önce sorulur.
+    if (getValues("satirlar").some((x) => x.malzeme_kodu.trim() !== "")) setGetirOnayi(kod);
+    else void getirUygula(kod);
+  }
 
   function gonder(d: FormDegerleri) {
     if (senaryoId == null) {
@@ -162,12 +247,15 @@ export function ElleReceteFormu({ urunKodu, gomulu = false }: Props = {}) {
     }
     setSenaryoYok(false);
     // Reçete yazımı tüm satırları değiştirir: önce mevcut/yeni satır sayısıyla onay istenir.
-    setBekleyen({ kod: d.urun_kodu, satirlar: d.satirlar.map(apiSatiri) });
+    setBekleyen({ kod: d.urun_kodu, satirlar: d.satirlar.map(apiSatiri), neden: d.neden.trim() });
   }
 
   function onayla() {
     if (!bekleyen || senaryoId == null) return;
-    ekle.mutate({ kod: bekleyen.kod, senaryo: senaryoId, satirlar: bekleyen.satirlar }, { onSettled: () => setBekleyen(null) });
+    ekle.mutate(
+      { kod: bekleyen.kod, senaryo: senaryoId, satirlar: bekleyen.satirlar, neden: bekleyen.neden },
+      { onSettled: () => setBekleyen(null) },
+    );
   }
 
   return (
@@ -175,17 +263,33 @@ export function ElleReceteFormu({ urunKodu, gomulu = false }: Props = {}) {
       <p className="max-w-3xl text-sm text-amber-700 dark:text-amber-400">
         {gomulu
           ? "Reçetenin tüm satırlarını girin; kaydedince ilk reçete versiyonu açılır ve hesap gelir."
-          : "Bu işlem ürün için yeni bir reçete versiyonu oluşturur; reçetenin tüm satırlarını girin."}
+          : "Bu işlem ürün için yeni bir reçete versiyonu oluşturur; reçetenin tüm satırlarını girin ya da mevcut reçeteyi getirip düzenleyin."}
       </p>
 
       <form noValidate onSubmit={handleSubmit(gonder)} className="flex flex-col gap-4" aria-label="Elle reçete girişi">
         {urunKodu === undefined && (
-          <div className="flex max-w-xs flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <label htmlFor="recete-urun" className="text-sm font-medium">
               Ürün kodu
             </label>
-            <Input id="recete-urun" aria-invalid={!!errors.urun_kodu} {...register("urun_kodu")} />
+            <div className="flex flex-wrap items-center gap-2">
+              <Input id="recete-urun" className="max-w-xs" aria-invalid={!!errors.urun_kodu} {...register("urun_kodu")} />
+              <Button type="button" variant="outline" size="sm" onClick={mevcutuGetir} disabled={getiriliyor}>
+                <Download aria-hidden />
+                {getiriliyor ? "Getiriliyor…" : "Mevcut reçeteyi getir"}
+              </Button>
+            </div>
             {errors.urun_kodu && <p className="text-sm text-destructive">{errors.urun_kodu.message}</p>}
+            {getirMesaji && (
+              <p role="status" className="text-sm text-muted-foreground">
+                {getirMesaji}
+              </p>
+            )}
+            {getirHatasi && (
+              <p role="alert" className="text-sm text-destructive">
+                {getirHatasi}
+              </p>
+            )}
           </div>
         )}
 
@@ -244,6 +348,26 @@ export function ElleReceteFormu({ urunKodu, gomulu = false }: Props = {}) {
         </ol>
         {errors.satirlar?.message && <p className="text-sm text-destructive">{errors.satirlar.message}</p>}
 
+        <div className="flex max-w-3xl flex-col gap-1">
+          <label htmlFor="recete-neden" className="text-sm font-medium">
+            Neden (zorunlu)
+          </label>
+          <Input
+            id="recete-neden"
+            placeholder="Ör. Kapak tedarikçisi değişti"
+            aria-invalid={!!errors.neden}
+            aria-describedby={errors.neden ? "recete-neden-hata" : undefined}
+            {...register("neden")}
+          />
+          {errors.neden ? (
+            <p id="recete-neden-hata" className="text-sm text-destructive">
+              {errors.neden.message}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Değişiklik Günlüğünde reçete sürümüyle birlikte görünür.</p>
+          )}
+        </div>
+
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={() => append(BOS_SATIR)}>
             <Plus aria-hidden />
@@ -260,10 +384,26 @@ export function ElleReceteFormu({ urunKodu, gomulu = false }: Props = {}) {
           kod={bekleyen.kod}
           senaryoId={senaryoId}
           yeniSatir={bekleyen.satirlar.length}
+          neden={bekleyen.neden}
           bekliyor={ekle.isPending}
           onOnayla={onayla}
           onVazgec={() => setBekleyen(null)}
         />
+      )}
+
+      {getirOnayi && (
+        <OnayDiyalogu
+          baslik="Formdaki satırlar değişecek"
+          onayMetni="Mevcut reçeteyi getir"
+          onOnayla={() => {
+            const kod = getirOnayi;
+            setGetirOnayi(null);
+            void getirUygula(kod);
+          }}
+          onVazgec={() => setGetirOnayi(null)}
+        >
+          <p>{`Formdaki satırlar silinip ${getirOnayi} ürününün bu çalışmadaki mevcut reçetesi yüklenecek.`}</p>
+        </OnayDiyalogu>
       )}
 
       {senaryoYok && (

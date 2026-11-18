@@ -41,12 +41,14 @@ def _urun(s: Session, kod: str) -> m.Urun | None:
     return s.scalar(select(m.Urun).where(m.Urun.kod == (kod or "").strip()))
 
 
-def _yaz(s: Session, urun: m.Urun, musteri: str, tarih: date, fiyat: Decimal, para_birimi: str, adet: Decimal, kullanici: str, denetim: bool = True) -> m.SatisGecmisi:
+def _yaz(s: Session, urun: m.Urun, musteri: str, tarih: date, fiyat: Decimal, para_birimi: str, adet: Decimal, kullanici: str, denetim: bool = True,
+         neden: str | None = None) -> m.SatisGecmisi:
     k = m.SatisGecmisi(urun_id=urun.id, musteri=musteri.strip(), tarih=tarih, fiyat=fiyat, para_birimi=para_birimi, adet=adet, olusturan=kullanici)
     s.add(k); s.flush()
     if denetim:
+        yeni = decimal_str({"urun_kodu": urun.kod, "musteri": k.musteri, "tarih": tarih, "fiyat": fiyat, "para_birimi": para_birimi, "adet": adet})
         s.add(m.DegisiklikKaydi(tablo="satis_gecmisi", kayit_id=k.id, islem="ekle", eski=None, kullanici=kullanici,
-                                yeni=decimal_str({"urun_kodu": urun.kod, "musteri": k.musteri, "tarih": tarih, "fiyat": fiyat, "para_birimi": para_birimi, "adet": adet})))
+                                yeni={**yeni, "_neden": neden} if neden else yeni))
     return k
 
 
@@ -78,15 +80,17 @@ def listele(s: Session, urun_kodu: str | None = None, musteri: str | None = None
     return [_cikis(k, u) for k, u in satirlar], toplam
 
 
-def ekle(s: Session, urun_kodu: str, musteri: str, tarih: date, fiyat: Decimal, para_birimi: str, adet: Decimal, kullanici: str = "sistem") -> dict:
+def ekle(s: Session, urun_kodu: str, musteri: str, tarih: date, fiyat: Decimal, para_birimi: str, adet: Decimal, kullanici: str = "sistem",
+         neden: str | None = None) -> dict:
+    """Elle tek satır. `neden` Değişiklik Günlüğü'ne yazılır (API ucunda zorunlu)."""
     urun = _urun(s, urun_kodu)
     if urun is None:
-        raise BulunamadiHatasi("ürün bulunamadı", {"urun_kodu": urun_kodu})
+        raise BulunamadiHatasi(f"{urun_kodu} kodlu ürün bulunamadı.", {"urun_kodu": urun_kodu})
     para_birimi = (para_birimi or "").strip().upper()
     h = _hatalar(urun, musteri, tarih, fiyat, para_birimi, adet)
     if h:
-        raise DogrulamaHatasi("satış satırı geçersiz", {"hatalar": h})
-    return _cikis(_yaz(s, urun, musteri, tarih, fiyat, para_birimi, adet, kullanici), urun)
+        raise DogrulamaHatasi(f"Satış satırı kaydedilmedi: {'; '.join(h)}.", {"hatalar": h})
+    return _cikis(_yaz(s, urun, musteri, tarih, fiyat, para_birimi, adet, kullanici, neden=neden), urun)
 
 
 def _anahtar(urun_id: int, musteri: str, tarih: date, fiyat: Decimal, adet: Decimal) -> tuple:
@@ -185,13 +189,13 @@ def toplu_yukle_ayrintili(s: Session, satirlar: list[dict], kullanici: str = "si
     return len(eklenecek), [], len(kayitli)
 
 
-def sil(s: Session, id: int, kullanici: str = "sistem") -> None:
+def sil(s: Session, id: int, kullanici: str = "sistem", neden: str | None = None) -> None:
     """Satış kaydı kalıcı silinir (append-only değil); silinen içerik DegisiklikKaydi.eski içinde saklanır."""
     k = s.get(m.SatisGecmisi, id)
     if k is None:
-        raise BulunamadiHatasi("satış kaydı bulunamadı", {"id": id})
+        raise BulunamadiHatasi("Satış kaydı bulunamadı.", {"id": id})
     urun = s.get(m.Urun, k.urun_id)
-    s.add(m.DegisiklikKaydi(tablo="satis_gecmisi", kayit_id=k.id, islem="sil", yeni=None, kullanici=kullanici,
+    s.add(m.DegisiklikKaydi(tablo="satis_gecmisi", kayit_id=k.id, islem="sil", yeni={"_neden": neden} if neden else None, kullanici=kullanici,
                             eski=decimal_str({"urun_kodu": urun.kod if urun else None, "musteri": k.musteri, "tarih": k.tarih, "fiyat": k.fiyat,
                                               "para_birimi": k.para_birimi, "adet": k.adet})))
     s.delete(k)

@@ -262,7 +262,7 @@ def test_yanlis_tek_sayfa_satin_alma_ve_gider_422_hicbir_sey_yazilmaz(istemci, o
     for yol, ek in (("gider-dagitim", {}),):
         for asama in ("onizle", "uygula"):
             r = _post(c, f"{yol}/{asama}", _yanlis_sayfa(), sid, neden="x", **ek)
-            assert r.status_code == 422 and "beklenen düzen değil" in r.json()["mesaj"], (yol, asama, r.text)
+            assert r.status_code == 422 and "beklenen düzende değil" in r.json()["mesaj"], (yol, asama, r.text)
     # gider sayfasını satın almaya, satın alma sayfasını gider/üretime yüklemek de reddedilir
     assert _post(c, "satin-alma/onizle", _gider(), sid).status_code == 422
     assert _post(c, "gider-dagitim/onizle", _satin([M1]), sid).status_code == 422

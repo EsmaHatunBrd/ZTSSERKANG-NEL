@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyRound, UserPlus } from "lucide-react";
 import { hataMetniVarsa } from "@/api/istemci";
 import {
@@ -10,6 +10,7 @@ import {
   type Rol,
 } from "@/api/sorgular/kimlik";
 import { useOturum } from "@/bilesenler/GirisKapisi";
+import { OnayDiyalogu } from "@/bilesenler/OnayDiyalogu";
 import { SayfaBasligi } from "@/bilesenler/SayfaBasligi";
 import { Badge } from "@/bilesenler/ui/badge";
 import { Button } from "@/bilesenler/ui/button";
@@ -41,6 +42,22 @@ function sifreOner(): string {
   return Array.from(d, (x) => harfler[x % harfler.length]).join("");
 }
 
+/** Özel ada Türkçe ilgi eki: "Bir" -> "Bir'in", "Ayşe" -> "Ayşe'nin", "Ali Kaya" -> "Ali Kaya'nın". */
+function ilgiEki(ad: string): string {
+  const a = ad.trim();
+  const unluler = "aıoueiöüAIOUEİÖÜ";
+  const son = [...a]
+    .reverse()
+    .find((h) => unluler.includes(h))
+    ?.toLocaleLowerCase("tr");
+  const ek = son === "a" || son === "ı" ? "ın" : son === "o" || son === "u" ? "un" : son === "ö" || son === "ü" ? "ün" : "in";
+  const sonHarf = a.slice(-1);
+  return `${a}'${sonHarf && unluler.includes(sonHarf) ? "n" : ""}${ek}`;
+}
+
+/** Satırdaki bekleyen onay: pasifleştir/etkinleştir, şifre sıfırla ya da rol değişikliği (seçilen yeni rolle). */
+type Onay = { tur: "aktif" } | { tur: "sifre" } | { tur: "rol"; yeni: Rol };
+
 function zaman(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -49,8 +66,26 @@ function zaman(iso: string | null | undefined): string {
     : d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function YeniKullanici({ onBilgi }: { onBilgi: (m: string) => void }) {
+/** Son başlatılan işlem: `no` her işlemde artar, `kimden` işlemi başlatan form/satır. */
+interface Islem {
+  no: number;
+  kimden: string;
+}
+
+interface IslemProps {
+  /** Yeni bir işlem başlayınca başka form/satırların eski hata mesajları temizlenir (başlatanın kendi isteği bozulmaz). */
+  islem: Islem;
+  /** Yeni işlem başlıyor: sayfadaki eski mesajlar temizlenir. */
+  onIslem: (kimden: string) => void;
+  onBilgi: (m: string) => void;
+}
+
+function YeniKullanici({ islem, onIslem, onBilgi }: IslemProps) {
   const ekle = useKullaniciEkle();
+  const ekleSifirla = ekle.reset;
+  useEffect(() => {
+    if (islem.kimden !== "yeni") ekleSifirla();
+  }, [islem, ekleSifirla]);
   const [ad, setAd] = useState("");
   const [kadi, setKadi] = useState("");
   const [rol, setRol] = useState<Rol>("muhasebe");
@@ -61,6 +96,7 @@ function YeniKullanici({ onBilgi }: { onBilgi: (m: string) => void }) {
       className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-xs"
       onSubmit={(e) => {
         e.preventDefault();
+        onIslem("yeni");
         ekle.mutate(
           { ad: ad.trim(), kullanici_adi: kadi.trim().toLowerCase(), rol, gecici_sifre: sifre },
           {
@@ -133,10 +169,70 @@ function YeniKullanici({ onBilgi }: { onBilgi: (m: string) => void }) {
   );
 }
 
-function Satir({ k, ben, onBilgi }: { k: GirisKullanicisi; ben: boolean; onBilgi: (m: string) => void }) {
+function Satir({ k, ben, islem, onIslem, onBilgi }: IslemProps & { k: GirisKullanicisi; ben: boolean }) {
   const guncelle = useKullaniciGuncelle();
   const sifirla = useSifreSifirla();
+  const [onay, setOnay] = useState<Onay | null>(null);
+  const { reset: guncelleSifirla } = guncelle;
+  const { reset: sifreSifirla } = sifirla;
+  // Başka bir işlem başlayınca bu satırın eski hatası da silinir.
+  useEffect(() => {
+    if (islem.kimden === `satir-${k.id}`) return;
+    guncelleSifirla();
+    sifreSifirla();
+  }, [islem, k.id, guncelleSifirla, sifreSifirla]);
+  const bekliyor = guncelle.isPending || sifirla.isPending;
   const hata = hataMetniVarsa(guncelle.error) ?? hataMetniVarsa(sifirla.error);
+
+  function onayla() {
+    if (!onay) return;
+    onIslem(`satir-${k.id}`);
+    const kapat = (mesaj: string) => ({
+      onSuccess: () => {
+        setOnay(null);
+        onBilgi(mesaj);
+      },
+    });
+    if (onay.tur === "rol")
+      guncelle.mutate({ id: k.id, govde: { rol: onay.yeni } }, kapat(`${ilgiEki(k.ad)} rolü ${ROL_AD[onay.yeni]} olarak değiştirildi.`));
+    else if (onay.tur === "aktif")
+      guncelle.mutate(
+        { id: k.id, govde: { aktif: !k.aktif } },
+        kapat(k.aktif ? `${k.ad} pasifleştirildi; açık oturumları kapatıldı.` : `${k.ad} etkinleştirildi.`),
+      );
+    else {
+      const yeni = sifreOner();
+      sifirla.mutate(
+        { id: k.id, gecici_sifre: yeni },
+        {
+          onSuccess: () => {
+            setOnay(null);
+            onBilgi(`${k.ad} için yeni geçici şifre: ${yeni} — kişiye iletin; açık oturumları kapatıldı.`);
+          },
+        },
+      );
+    }
+  }
+
+  const baslik =
+    onay?.tur === "rol"
+      ? `${ilgiEki(k.ad)} rolü ${ROL_AD[k.rol]} → ${ROL_AD[onay.yeni]} olsun mu?`
+      : onay?.tur === "sifre"
+        ? `${k.ad} için şifre sıfırlansın mı?`
+        : k.aktif
+          ? `${k.ad} pasifleştirilsin mi?`
+          : `${k.ad} etkinleştirilsin mi?`;
+  const govde =
+    onay?.tur === "rol"
+      ? `Yeni rol: ${ROL_ACIKLAMA[onay.yeni]}.`
+      : onay?.tur === "sifre"
+        ? "Yeni geçici şifre üretilir, açık oturumları kapanır."
+        : k.aktif
+          ? "Açık oturumları hemen kapanır; bir daha giriş yapamaz. İstediğinizde yeniden etkinleştirebilirsiniz."
+          : "Kullanıcı yeniden giriş yapabilir.";
+  const onayMetni =
+    onay?.tur === "rol" ? "Rolü değiştir" : onay?.tur === "sifre" ? "Şifreyi sıfırla" : k.aktif ? "Pasifleştir" : "Etkinleştir";
+
   return (
     <TableRow data-pasif={k.aktif ? undefined : "true"} className={k.aktif ? undefined : "text-muted-foreground"}>
       <TableCell>
@@ -144,18 +240,17 @@ function Satir({ k, ben, onBilgi }: { k: GirisKullanicisi; ben: boolean; onBilgi
           {k.ad} {ben && <Badge variant="outline">siz</Badge>}
         </span>
         <span className="block font-mono text-xs text-muted-foreground">{k.kullanici_adi}</span>
-        {hata && (
-          <span role="alert" className="block text-xs text-destructive">
-            {hata}
-          </span>
-        )}
       </TableCell>
       <TableCell>
         <select
           aria-label={`Rol — ${k.ad}`}
-          value={k.rol}
-          disabled={guncelle.isPending}
-          onChange={(e) => guncelle.mutate({ id: k.id, govde: { rol: e.target.value as Rol } })}
+          // Onay beklerken seçilen rol görünür; Vazgeç'te kayıtlı role döner.
+          value={onay?.tur === "rol" ? onay.yeni : k.rol}
+          disabled={bekliyor}
+          onChange={(e) => {
+            const yeni = e.target.value as Rol;
+            if (yeni !== k.rol) setOnay({ tur: "rol", yeni });
+          }}
           className={SECIM}
         >
           {ROL_SIRASI.map((r) => (
@@ -177,32 +272,36 @@ function Satir({ k, ben, onBilgi }: { k: GirisKullanicisi; ben: boolean; onBilgi
       <TableCell className="tabular-nums">{zaman(k.son_giris)}</TableCell>
       <TableCell>
         <span className="flex flex-wrap gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={sifirla.isPending}
-            onClick={() => {
-              const yeni = sifreOner();
-              sifirla.mutate(
-                { id: k.id, gecici_sifre: yeni },
-                { onSuccess: () => onBilgi(`${k.ad} için yeni geçici şifre: ${yeni} — kişiye iletin; açık oturumları kapatıldı.`) },
-              );
-            }}
-          >
+          <Button type="button" variant="outline" size="sm" disabled={bekliyor} onClick={() => setOnay({ tur: "sifre" })}>
             <KeyRound aria-hidden /> Şifre sıfırla
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            disabled={guncelle.isPending || ben}
+            disabled={bekliyor || ben}
             title={ben ? "Kendinizi pasifleştiremezsiniz" : undefined}
-            onClick={() => guncelle.mutate({ id: k.id, govde: { aktif: !k.aktif } })}
+            onClick={() => setOnay({ tur: "aktif" })}
           >
             {k.aktif ? "Pasifleştir" : "Etkinleştir"}
           </Button>
         </span>
+        {onay && (
+          <OnayDiyalogu
+            baslik={baslik}
+            onayMetni={onayMetni}
+            bekliyor={bekliyor}
+            hata={hata}
+            onOnayla={onayla}
+            onVazgec={() => {
+              guncelle.reset();
+              sifirla.reset();
+              setOnay(null);
+            }}
+          >
+            <p>{govde}</p>
+          </OnayDiyalogu>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -214,6 +313,12 @@ export default function Kullanicilar() {
   const izinli = girisZorunlu && yonetici;
   const liste = useKullanicilar(izinli);
   const [bilgi, setBilgi] = useState<string | null>(null);
+  const [islem, setIslem] = useState<Islem>({ no: 0, kimden: "" });
+  // Yeni işlem: önceki işlemlerin başarı ve hata mesajları birikmesin.
+  const yeniIslem = (kimden: string) => {
+    setBilgi(null);
+    setIslem((i) => ({ no: i.no + 1, kimden }));
+  };
 
   return (
     <section className="flex flex-col gap-4 p-4">
@@ -232,7 +337,7 @@ export default function Kullanicilar() {
               {bilgi}
             </p>
           )}
-          <YeniKullanici onBilgi={setBilgi} />
+          <YeniKullanici islem={islem} onIslem={yeniIslem} onBilgi={setBilgi} />
           {liste.error && (
             <p role="alert" className="text-sm text-destructive">
               {hataMetniVarsa(liste.error)}
@@ -250,7 +355,7 @@ export default function Kullanicilar() {
             </TableHeader>
             <TableBody>
               {(liste.data?.kayitlar ?? []).map((k) => (
-                <Satir key={k.id} k={k} ben={k.id === kullanici?.id} onBilgi={setBilgi} />
+                <Satir key={k.id} k={k} ben={k.id === kullanici?.id} islem={islem} onIslem={yeniIslem} onBilgi={setBilgi} />
               ))}
             </TableBody>
           </Table>
