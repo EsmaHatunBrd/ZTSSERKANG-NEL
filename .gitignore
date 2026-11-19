@@ -37,3 +37,7 @@ frontend/e2e/.oturum.json
 # Sunucuya özel kurulum ayarları ve sunucu günlükleri
 kurulum/ayarlar.env
 veri/gunluk/
+
+# Gerçek şirket verisi içeren belgeler (ekran görüntüleri, raporlar) — git dışı
+docs/aktarim/
+docs/briefler/
