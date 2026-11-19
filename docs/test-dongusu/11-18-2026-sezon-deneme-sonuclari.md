@@ -180,6 +180,32 @@ Sezon kuru koşusu, bugünkü düzeltmelerin üzerinde baştan sona koşturuldu.
 - Kullanıcı ekleme gibi genel olaylar her çalışmanın günlük süzgecinde de görünüyor.
 - SMM Üretim Maliyeti kartlarında Excel kıyası olmayan dönemde "Excel'le 0/0 aynı" yazıyor.
 
+## Birim fiyat girişlerinin yansıması (19.11.2026)
+
+Betik: `test-dongusu/deneme/11-19-2026-fiyat-girisi-denemesi.py`. Sonuçlar aynı adla `-sonuc.txt` dosyasında. Bütçenin temiz bir kopyasında, beklenen değerler formülle bağımsız hesaplandı. **226 kontrolün 226'sı tuttu.**
+
+**Maliyete giriş kuralı** (bütün reçete satırlarından ölçüldü):
+- Satın alma (S) TL × 1,25 (enflasyon)
+- Ziraat (Z) TL × 1
+- USD × 42, EUR × 48 (kur, enflasyon yok)
+- Satıra elle yazılan fiyat da aynı kurala uyuyor (S'de × 1,25)
+- Satır farkı ürün maliyetine × 1,20 (finansman) ile yansıyor
+
+**Denenen girişler:**
+1. Satın alma TL fiyatı (kapak)
+2. Ziraat TL fiyatı (hıyar)
+3. USD ve EUR fiyatları
+4. İleri tarihli fiyat: bugünkü hesaba girmiyor, o tarihten sonraki hesaba giriyor
+5. Yeni malzeme kartı + ilk fiyat + reçeteye ekleme
+6. Ürün ekranında satıra elle fiyat: yalnız o ürün değişiyor
+
+**Her girişten sonra kontrol edilenler:**
+- Ürün ekranı, Genel Bakış, Kârlılık, Marjı koruyan fiyat, Kur riski, Liste çalışması aynı maliyeti gösteriyor.
+- Malzemeyi kullanmayan ürünler ve başka çalışma (bütçe) değişmiyor.
+- Önemli malzemeler, fiyat eğilimi, zam etkisi, teklif fiyatı ve günlük tutarlı.
+
+Ekrandaki üç fiyat giriş yeri (Malzeme Fiyatları, Veri Girişi › Malzeme fiyatı, Veri Girişi › Yeni malzeme) aynı sunucu ucunu (`POST /malzemeler/{kod}/fiyatlar`) kullanıyor.
+
 ## Kalan
 
 SMM ekranlarında elle ekle/değiştir/sil denemesi (stok kalemi düzeltme, mizan elle girişi, üretim süresi) yapılmadı. Test sunucusu 8048'de açık; veritabanı `test-dongusu/deneme/11-18-2026-direktor-deneme.db`.
